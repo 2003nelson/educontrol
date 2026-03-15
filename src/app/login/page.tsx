@@ -25,7 +25,6 @@ export default function LoginPage() {
       return
     }
 
-    // Verificar si es primera vez (metadata)
     const meta = data.user?.user_metadata
     if (meta?.primer_login === true) {
       router.push('/cambiar-password')
@@ -37,10 +36,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{
+        backgroundImage: 'url(/fondo.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-10 w-full max-w-md">
 
-        {/* Logo dinámico — por ahora placeholder */}
+        {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
             <span className="text-white text-2xl font-bold">E</span>
