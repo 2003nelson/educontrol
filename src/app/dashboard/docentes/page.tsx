@@ -1,31 +1,52 @@
 'use client'
 import { useState } from 'react'
 import Header from '@/components/Header'
-import DocenteModal from '@/components/DocenteModal'
-
-type Docente = {
-  id: string
-  nombre: string
-  materia: string
-  email: string
-  grupos: string
-}
+import DocenteModal, { type Docente, type Asignacion } from '@/components/DocenteModal'
 
 const docentesIniciales: Docente[] = [
-  { id: '1', nombre: 'Prof. Carlos Méndez', materia: 'Matemáticas', email: 'cmendez@escuela.edu.mx', grupos: '101, 201, 301' },
-  { id: '2', nombre: 'Prof. Laura Sánchez', materia: 'Español', email: 'lsanchez@escuela.edu.mx', grupos: '102, 202' },
-  { id: '3', nombre: 'Prof. Roberto Pérez', materia: 'Historia', email: 'rperez@escuela.edu.mx', grupos: '103, 303, 503' },
+  {
+    id: '1',
+    nombre: 'Prof. Carlos Méndez',
+    email: 'cmendez@escuela.edu.mx',
+    asignaciones: [
+      { grupo: '101', materia: 'Matemáticas' },
+      { grupo: '201', materia: 'Matemáticas' },
+      { grupo: '301', materia: 'Cálculo' },
+    ],
+  },
+  {
+    id: '2',
+    nombre: 'Prof. Laura Sánchez',
+    email: 'lsanchez@escuela.edu.mx',
+    asignaciones: [
+      { grupo: '102', materia: 'Español' },
+      { grupo: '202', materia: 'Español' },
+    ],
+  },
+  {
+    id: '3',
+    nombre: 'Prof. Roberto Pérez',
+    email: 'rperez@escuela.edu.mx',
+    asignaciones: [
+      { grupo: '103', materia: 'Historia' },
+      { grupo: '303', materia: 'Historia' },
+      { grupo: '503', materia: 'Historia Universal' },
+    ],
+  },
 ]
 
 export default function DocentesPage() {
-  const [docentes, setDocentes] = useState<Docente[]>(docentesIniciales)
-  const [busqueda, setBusqueda] = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
+  const [docentes, setDocentes]               = useState<Docente[]>(docentesIniciales)
+  const [busqueda, setBusqueda]               = useState('')
+  const [modalAbierto, setModalAbierto]       = useState(false)
   const [docenteEditando, setDocenteEditando] = useState<Docente | null>(null)
 
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    d.materia.toLowerCase().includes(busqueda.toLowerCase())
+    d.asignaciones.some(a =>
+      a.materia.toLowerCase().includes(busqueda.toLowerCase()) ||
+      a.grupo.includes(busqueda)
+    )
   )
 
   function handleGuardar(data: Omit<Docente, 'id'>) {
@@ -49,84 +70,110 @@ export default function DocentesPage() {
     setModalAbierto(true)
   }
 
+  function materiasUnicas(asignaciones: Asignacion[]) {
+    return [...new Set(asignaciones.map(a => a.materia))].join(', ')
+  }
+
   return (
     <div className="flex flex-col h-full">
       <Header titulo="Directorio de Docentes" />
 
       <div className="p-6">
-        {/* Barra de acciones */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+              <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+            </span>
             <input
               type="text"
-              placeholder="Buscar por nombre o materia..."
+              placeholder="Buscar por nombre, materia o grupo..."
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-72 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
-            <span className="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
           </div>
           <button
             onClick={() => { setDocenteEditando(null); setModalAbierto(true) }}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+            className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+            style={{ background: '#1e3a5f' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}
           >
             <span className="text-lg leading-none">+</span> Agregar Docente
           </button>
         </div>
 
-        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Docente</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Materia</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Correo</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Grupos</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Acciones</th>
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                {['Docente', 'Materias', 'Correo', 'Grupos', 'Acciones'].map(col => (
+                  <th key={col} className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: '#94a3b8' }}>
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {docentesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-gray-400 text-sm">
+                  <td colSpan={5} className="text-center py-12 text-sm" style={{ color: '#94a3b8' }}>
                     No se encontraron docentes
                   </td>
                 </tr>
               ) : (
-                docentesFiltrados.map((docente, i) => (
-                  <tr key={docente.id} className={`border-b border-gray-50 hover:bg-gray-50 transition ${i % 2 === 0 ? '' : 'bg-gray-50/30'}`}>
+                docentesFiltrados.map(docente => (
+                  <tr key={docente.id}
+                    style={{ borderBottom: '1px solid #f8fafc' }}
+                    className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold text-sm">
-                            {docente.nombre.charAt(5)}
-                          </span>
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                          style={{ background: '#1e3a5f' }}>
+                          {docente.nombre.charAt(5)}
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{docente.nombre}</span>
+                        <span className="text-sm font-medium" style={{ color: '#1e3a5f' }}>
+                          {docente.nombre}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">{docente.materia}</span>
+                      <span className="text-sm" style={{ color: '#475569' }}>
+                        {materiasUnicas(docente.asignaciones)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">{docente.email}</span>
+                      <span className="text-sm" style={{ color: '#64748b' }}>{docente.email}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">{docente.grupos}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {docente.asignaciones.map((a, i) => (
+                          <span key={i}
+                            className="text-xs font-semibold px-2 py-0.5 rounded-md"
+                            style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}
+                            title={a.materia}>
+                            {a.grupo}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditar(docente)}
-                          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
-                        >
+                        <button onClick={() => handleEditar(docente)}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
+                          style={{ background: '#eff6ff', color: '#2563eb' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}>
                           Editar
                         </button>
-                        <button
-                          onClick={() => handleEliminar(docente.id)}
-                          className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition"
-                        >
+                        <button onClick={() => handleEliminar(docente.id)}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
+                          style={{ background: '#fef2f2', color: '#dc2626' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
                           Eliminar
                         </button>
                       </div>
@@ -136,17 +183,14 @@ export default function DocentesPage() {
               )}
             </tbody>
           </table>
-
-          {/* Footer tabla */}
-          <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
-            <p className="text-xs text-gray-400">
+          <div className="px-6 py-3 border-t" style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
+            <p className="text-xs" style={{ color: '#94a3b8' }}>
               {docentesFiltrados.length} docente{docentesFiltrados.length !== 1 ? 's' : ''} encontrado{docentesFiltrados.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Modal */}
       {modalAbierto && (
         <DocenteModal
           docente={docenteEditando}
