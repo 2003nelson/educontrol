@@ -75,13 +75,12 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Promedio Actual</p>
               <p className="text-3xl font-bold text-gray-800 mt-1">8.7</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Evolución Mensual</p>
-              <p className="text-3xl font-bold text-green-500 mt-1">+1.2%</p>
-            </div>
             <div className="flex gap-2">
               <button className="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-semibold px-4 py-2 rounded-lg transition">
                 ▼ Filtrar Semana
+              </button>
+              <button className="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-semibold px-4 py-2 rounded-lg transition">
+                ▼ Filtrar Mes
               </button>
               <button className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
                 ▼ Filtrar Grupo
