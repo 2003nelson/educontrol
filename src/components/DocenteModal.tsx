@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 
-// Un docente puede tener el mismo grupo con diferente materia
 export type Asignacion = {
   grupo: string
   materia: string
@@ -20,7 +19,6 @@ type Props = {
   onCerrar: () => void
 }
 
-// Grupos disponibles en el sistema
 const GRUPOS_DISPONIBLES = [
   '101', '102', '103',
   '201', '202', '203',
@@ -44,7 +42,6 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   const [busquedaGrupo, setBusquedaGrupo] = useState('')
   const [error, setError]                 = useState('')
 
-  // Grupos filtrados por búsqueda
   const gruposFiltrados = GRUPOS_DISPONIBLES.filter(g =>
     g.includes(busquedaGrupo.trim())
   )
@@ -72,55 +69,59 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div
+        className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto"
+        style={{ width: '60vw', minWidth: '560px', maxWidth: '860px' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4">
+        <div className="flex items-center justify-between px-8 pt-7 pb-4">
           <h2 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>
             {docente ? 'Editar Docente' : 'Nuevo Docente'}
           </h2>
-          <button onClick={onCerrar}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">
+          <button
+            onClick={onCerrar}
+            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+          >
             ✕
           </button>
         </div>
 
-        <div className="px-6 pb-6 space-y-4">
+        <div className="px-8 pb-8 space-y-5">
 
-          {/* Nombre */}
-          <div>
-            <label className="text-sm font-medium" style={{ color: '#475569' }}>
-              Nombre completo
-            </label>
-            <input
-              type="text"
-              placeholder="Prof. Nombre Apellido"
-              value={form.nombre}
-              onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
-              className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ borderColor: '#e2e8f0' }}
-            />
+          {/* Nombre y Email en fila */}
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label className="text-sm font-medium" style={{ color: '#475569' }}>
+                Nombre completo
+              </label>
+              <input
+                type="text"
+                placeholder="Prof. Nombre Apellido"
+                value={form.nombre}
+                onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
+                className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                style={{ borderColor: '#e2e8f0' }}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium" style={{ color: '#475569' }}>
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                placeholder="correo@escuela.edu.mx"
+                value={form.email}
+                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                style={{ borderColor: '#e2e8f0' }}
+              />
+            </div>
           </div>
 
-          {/* Email */}
+          {/* Grupos asignados */}
           <div>
-            <label className="text-sm font-medium" style={{ color: '#475569' }}>
-              Correo electrónico
-            </label>
-            <input
-              type="email"
-              placeholder="correo@escuela.edu.mx"
-              value={form.email}
-              onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-              className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ borderColor: '#e2e8f0' }}
-            />
-          </div>
-
-          {/* Grupos asignados — etiquetas */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-medium" style={{ color: '#475569' }}>
                 Grupos asignados
               </label>
@@ -135,12 +136,10 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               </button>
             </div>
 
-            {/* Tags de asignaciones actuales */}
+            {/* Tags */}
             <div className="flex flex-wrap gap-2 min-h-9">
               {asignaciones.length === 0 && !mostrarTabla && (
-                <p className="text-xs" style={{ color: '#94a3b8' }}>
-                  Sin grupos asignados
-                </p>
+                <p className="text-xs" style={{ color: '#94a3b8' }}>Sin grupos asignados</p>
               )}
               {asignaciones.map((a, i) => (
                 <span
@@ -168,25 +167,21 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               ))}
             </div>
 
-            {/* Panel para agregar nuevo grupo */}
+            {/* Panel agregar grupo */}
             {mostrarTabla && (
-              <div className="mt-3 rounded-xl overflow-hidden"
-                style={{ border: '1px solid #e2e8f0' }}>
+              <div className="mt-3 rounded-xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
 
-                {/* Campo materia */}
-                <div className="p-3 border-b" style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
+                {/* Materia + buscador en fila */}
+                <div className="grid grid-cols-2 gap-3 p-4 border-b"
+                  style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
                   <input
                     type="text"
-                    placeholder="Materia para este grupo (ej. Matemáticas)"
+                    placeholder="Materia (ej. Matemáticas)"
                     value={nuevaMateria}
                     onChange={e => setNuevaMateria(e.target.value)}
                     className="w-full text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                     style={{ border: '1px solid #e2e8f0' }}
                   />
-                </div>
-
-                {/* Buscador de grupos */}
-                <div className="p-3 border-b" style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2">
                       <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
@@ -198,27 +193,27 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                       placeholder="Buscar grupo..."
                       value={busquedaGrupo}
                       onChange={e => setBusquedaGrupo(e.target.value)}
-                      className="pl-8 pr-3 py-1.5 text-sm rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      className="pl-8 pr-3 py-2 text-sm rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
                       style={{ border: '1px solid #e2e8f0' }}
                     />
                   </div>
                 </div>
 
                 {/* Tabla de grupos */}
-                <div className="max-h-48 overflow-y-auto">
+                <div className="max-h-52 overflow-y-auto">
                   <table className="w-full">
                     <thead>
                       <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                        <th className="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider"
+                        <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
                           style={{ color: '#94a3b8' }}>Grupo</th>
-                        <th className="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider"
+                        <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
                           style={{ color: '#94a3b8' }}>Semestre</th>
-                        <th className="px-4 py-2" />
+                        <th className="px-5 py-2.5" />
                       </tr>
                     </thead>
                     <tbody>
                       {gruposFiltrados.map(grupo => {
-                        const semestre = Math.ceil(parseInt(grupo.charAt(0)) )
+                        const semestre     = parseInt(grupo.charAt(0))
                         const seleccionado = grupoSelec === grupo
                         return (
                           <tr
@@ -229,17 +224,15 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                               borderBottom: '1px solid #f8fafc',
                               background: seleccionado ? '#eff6ff' : 'white',
                             }}
-                            onMouseEnter={e => {
-                              if (!seleccionado) e.currentTarget.style.background = '#f8fafc'
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = seleccionado ? '#eff6ff' : 'white'
-                            }}
+                            onMouseEnter={e => { if (!seleccionado) e.currentTarget.style.background = '#f8fafc' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = seleccionado ? '#eff6ff' : 'white' }}
                           >
-                            <td className="px-4 py-2.5">
+                            <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-                                  style={{ background: seleccionado ? '#2563eb' : '#1e3a5f' }}>
+                                <div
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
+                                  style={{ background: seleccionado ? '#2563eb' : '#1e3a5f' }}
+                                >
                                   {grupo.charAt(0)}
                                 </div>
                                 <span className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
@@ -247,12 +240,12 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-2.5">
+                            <td className="px-5 py-3">
                               <span className="text-xs" style={{ color: '#64748b' }}>
                                 {semestre}° Semestre
                               </span>
                             </td>
-                            <td className="px-4 py-2.5 text-right">
+                            <td className="px-5 py-3 text-right">
                               {seleccionado && (
                                 <span className="text-xs font-semibold px-2 py-1 rounded-lg"
                                   style={{ background: '#dbeafe', color: '#2563eb' }}>
@@ -267,15 +260,13 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                   </table>
                 </div>
 
-                {/* Error y botón confirmar */}
-                <div className="p-3 border-t flex items-center justify-between gap-3"
+                {/* Footer panel */}
+                <div className="px-5 py-3 border-t flex items-center justify-between gap-3"
                   style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
                   {error
                     ? <p className="text-xs font-medium" style={{ color: '#dc2626' }}>{error}</p>
                     : <p className="text-xs" style={{ color: '#94a3b8' }}>
-                        {grupoSelec
-                          ? `Grupo ${grupoSelec} seleccionado`
-                          : 'Selecciona un grupo de la tabla'}
+                        {grupoSelec ? `Grupo ${grupoSelec} seleccionado` : 'Selecciona un grupo de la tabla'}
                       </p>
                   }
                   <button
