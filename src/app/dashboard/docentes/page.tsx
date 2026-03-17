@@ -40,6 +40,7 @@ export default function DocentesPage() {
   const [busqueda, setBusqueda]               = useState('')
   const [modalAbierto, setModalAbierto]       = useState(false)
   const [docenteEditando, setDocenteEditando] = useState<Docente | null>(null)
+  const [docenteAEliminar, setDocenteAEliminar] = useState<Docente | null>(null)
 
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -61,8 +62,10 @@ export default function DocentesPage() {
     setDocenteEditando(null)
   }
 
-  function handleEliminar(id: string) {
-    setDocentes(prev => prev.filter(d => d.id !== id))
+  function confirmarEliminar() {
+    if (!docenteAEliminar) return
+    setDocentes(prev => prev.filter(d => d.id !== docenteAEliminar.id))
+    setDocenteAEliminar(null)
   }
 
   function handleEditar(docente: Docente) {
@@ -79,6 +82,7 @@ export default function DocentesPage() {
       <Header titulo="Directorio de Docentes" />
 
       <div className="p-6">
+        {/* Barra de acciones */}
         <div className="flex items-center justify-between mb-6">
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -105,6 +109,7 @@ export default function DocentesPage() {
           </button>
         </div>
 
+        {/* Tabla */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
@@ -162,18 +167,22 @@ export default function DocentesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button onClick={() => handleEditar(docente)}
+                        <button
+                          onClick={() => handleEditar(docente)}
                           className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                           style={{ background: '#eff6ff', color: '#2563eb' }}
                           onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}>
+                          onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}
+                        >
                           Editar
                         </button>
-                        <button onClick={() => handleEliminar(docente.id)}
+                        <button
+                          onClick={() => setDocenteAEliminar(docente)}
                           className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                           style={{ background: '#fef2f2', color: '#dc2626' }}
                           onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
+                          onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}
+                        >
                           Eliminar
                         </button>
                       </div>
@@ -183,6 +192,7 @@ export default function DocentesPage() {
               )}
             </tbody>
           </table>
+
           <div className="px-6 py-3 border-t" style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
             <p className="text-xs" style={{ color: '#94a3b8' }}>
               {docentesFiltrados.length} docente{docentesFiltrados.length !== 1 ? 's' : ''} encontrado{docentesFiltrados.length !== 1 ? 's' : ''}
@@ -191,12 +201,68 @@ export default function DocentesPage() {
         </div>
       </div>
 
+      {/* Modal editar / agregar */}
       {modalAbierto && (
         <DocenteModal
           docente={docenteEditando}
           onGuardar={handleGuardar}
           onCerrar={() => { setModalAbierto(false); setDocenteEditando(null) }}
         />
+      )}
+
+      {/* Modal confirmación eliminar */}
+      {docenteAEliminar && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+
+            {/* Ícono advertencia */}
+            <div className="flex justify-center mb-5">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                style={{ background: '#fef2f2' }}>
+                <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2"
+                  viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                    d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+              </div>
+            </div>
+
+            <h3 className="text-base font-bold text-center mb-2" style={{ color: '#1e3a5f' }}>
+              ¿Estás seguro?
+            </h3>
+            <p className="text-sm text-center mb-1" style={{ color: '#475569' }}>
+              Estás a punto de eliminar a
+            </p>
+            <p className="text-sm font-bold text-center mb-4" style={{ color: '#1e3a5f' }}>
+              {docenteAEliminar.nombre}
+            </p>
+            <p className="text-xs text-center mb-6" style={{ color: '#94a3b8' }}>
+              No podrás recuperarlo si lo borras.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDocenteAEliminar(null)}
+                className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
+                style={{ background: '#2563eb' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}
+              >
+                Regresar
+              </button>
+              <button
+                onClick={confirmarEliminar}
+                className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
+                style={{ background: '#dc2626' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}
+              >
+                Eliminar
+              </button>
+            </div>
+
+          </div>
+        </div>
       )}
     </div>
   )
