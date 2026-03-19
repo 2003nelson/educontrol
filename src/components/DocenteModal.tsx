@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export type Asignacion = {
   grupo: string
@@ -68,31 +69,60 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
     onGuardar({ nombre: form.nombre, email: form.email, asignaciones })
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  // typeof window evita error en SSR sin necesitar useEffect
+  if (typeof window === 'undefined') return null
+
+  return createPortal(
+    <div
+      onClick={onCerrar}
+      style={{
+        position:       'fixed',
+        inset:          0,
+        zIndex:         9999,
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: 'center',
+        background:     'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
       <div
-        className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto"
-        style={{ width: '60vw', minWidth: '560px', maxWidth: '860px' }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background:    'white',
+          borderRadius:  '1rem',
+          boxShadow:     '0 20px 60px rgba(0,0,0,0.2)',
+          width:         '60vw',
+          minWidth:      '560px',
+          maxWidth:      '860px',
+          maxHeight:     '88vh',
+          display:       'flex',
+          flexDirection: 'column',
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 pt-7 pb-4">
-          <h2 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>
+        {/* Header fijo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.5rem 2rem 1rem', flexShrink: 0 }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>
             {docente ? 'Editar Docente' : 'Nuevo Docente'}
           </h2>
           <button
             onClick={onCerrar}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none"
+            style={{ color: '#94a3b8', fontSize: '1.25rem', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#475569')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
           >
             ✕
           </button>
         </div>
 
-        <div className="px-8 pb-8 space-y-5">
+        {/* Contenido con scroll interno */}
+        <div style={{ overflowY: 'auto', padding: '0 2rem 2rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
           {/* Nombre y Email en fila */}
-          <div className="grid grid-cols-2 gap-5">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div>
-              <label className="text-sm font-medium" style={{ color: '#475569' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
                 Nombre completo
               </label>
               <input
@@ -100,12 +130,13 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                 placeholder="Prof. Nombre Apellido"
                 value={form.nombre}
                 onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
-                className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ borderColor: '#e2e8f0' }}
+                style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
+                onBlur={e => (e.currentTarget.style.boxShadow = 'none')}
               />
             </div>
             <div>
-              <label className="text-sm font-medium" style={{ color: '#475569' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
                 Correo electrónico
               </label>
               <input
@@ -113,22 +144,22 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                 placeholder="correo@escuela.edu.mx"
                 value={form.email}
                 onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                className="mt-1 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ borderColor: '#e2e8f0' }}
+                style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
+                onBlur={e => (e.currentTarget.style.boxShadow = 'none')}
               />
             </div>
           </div>
 
           {/* Grupos asignados */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium" style={{ color: '#475569' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569' }}>
                 Grupos asignados
               </label>
               <button
                 onClick={() => { setMostrarTabla(prev => !prev); setError('') }}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition"
-                style={{ background: '#eff6ff', color: '#2563eb' }}
+                style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.375rem 0.75rem', borderRadius: '0.5rem', background: '#eff6ff', color: '#2563eb', border: 'none', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}
               >
@@ -137,27 +168,19 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
             </div>
 
             {/* Tags */}
-            <div className="flex flex-wrap gap-2 min-h-9">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', minHeight: '2.25rem' }}>
               {asignaciones.length === 0 && !mostrarTabla && (
-                <p className="text-xs" style={{ color: '#94a3b8' }}>Sin grupos asignados</p>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Sin grupos asignados</p>
               )}
               {asignaciones.map((a, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
-                  style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}
-                >
-                  <span
-                    className="w-5 h-5 rounded-md text-white text-xs flex items-center justify-center font-bold shrink-0"
-                    style={{ background: '#1e3a5f' }}
-                  >
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 600, padding: '0.375rem 0.75rem', borderRadius: '0.5rem', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                  <span style={{ width: '1.25rem', height: '1.25rem', borderRadius: '0.375rem', background: '#1e3a5f', color: 'white', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
                     {a.grupo.charAt(0)}
                   </span>
                   {a.grupo} — {a.materia}
                   <button
                     onClick={() => eliminarAsignacion(i)}
-                    className="ml-1 w-4 h-4 rounded-full flex items-center justify-center transition hover:bg-red-100"
-                    style={{ color: '#94a3b8' }}
+                    style={{ marginLeft: '0.25rem', width: '1rem', height: '1rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
                     onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
                     onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
                   >
@@ -169,21 +192,17 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
 
             {/* Panel agregar grupo */}
             {mostrarTabla && (
-              <div className="mt-3 rounded-xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
-
-                {/* Materia + buscador en fila */}
-                <div className="grid grid-cols-2 gap-3 p-4 border-b"
-                  style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
+              <div style={{ marginTop: '0.75rem', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
                   <input
                     type="text"
                     placeholder="Materia (ej. Matemáticas)"
                     value={nuevaMateria}
                     onChange={e => setNuevaMateria(e.target.value)}
-                    className="w-full text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    style={{ border: '1px solid #e2e8f0' }}
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
                   />
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
                       <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                       </svg>
@@ -193,22 +212,18 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                       placeholder="Buscar grupo..."
                       value={busquedaGrupo}
                       onChange={e => setBusquedaGrupo(e.target.value)}
-                      className="pl-8 pr-3 py-2 text-sm rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      style={{ border: '1px solid #e2e8f0' }}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.5rem 0.75rem 0.5rem 2rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
 
-                {/* Tabla de grupos */}
-                <div className="max-h-52 overflow-y-auto">
-                  <table className="w-full">
+                <div style={{ maxHeight: '12rem', overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                        <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: '#94a3b8' }}>Grupo</th>
-                        <th className="text-left px-5 py-2.5 text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: '#94a3b8' }}>Semestre</th>
-                        <th className="px-5 py-2.5" />
+                        <th style={{ textAlign: 'left', padding: '0.625rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupo</th>
+                        <th style={{ textAlign: 'left', padding: '0.625rem 1.25rem', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Semestre</th>
+                        <th style={{ padding: '0.625rem 1.25rem' }} />
                       </tr>
                     </thead>
                     <tbody>
@@ -219,36 +234,24 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                           <tr
                             key={grupo}
                             onClick={() => setGrupoSelec(seleccionado ? '' : grupo)}
-                            className="cursor-pointer transition-colors"
-                            style={{
-                              borderBottom: '1px solid #f8fafc',
-                              background: seleccionado ? '#eff6ff' : 'white',
-                            }}
+                            style={{ borderBottom: '1px solid #f8fafc', background: seleccionado ? '#eff6ff' : 'white', cursor: 'pointer' }}
                             onMouseEnter={e => { if (!seleccionado) e.currentTarget.style.background = '#f8fafc' }}
                             onMouseLeave={e => { e.currentTarget.style.background = seleccionado ? '#eff6ff' : 'white' }}
                           >
-                            <td className="px-5 py-3">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-                                  style={{ background: seleccionado ? '#2563eb' : '#1e3a5f' }}
-                                >
+                            <td style={{ padding: '0.75rem 1.25rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '0.5rem', background: seleccionado ? '#2563eb' : '#1e3a5f', color: 'white', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                   {grupo.charAt(0)}
                                 </div>
-                                <span className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
-                                  {grupo}
-                                </span>
+                                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f' }}>{grupo}</span>
                               </div>
                             </td>
-                            <td className="px-5 py-3">
-                              <span className="text-xs" style={{ color: '#64748b' }}>
-                                {semestre}° Semestre
-                              </span>
+                            <td style={{ padding: '0.75rem 1.25rem' }}>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{semestre}° Semestre</span>
                             </td>
-                            <td className="px-5 py-3 text-right">
+                            <td style={{ padding: '0.75rem 1.25rem', textAlign: 'right' }}>
                               {seleccionado && (
-                                <span className="text-xs font-semibold px-2 py-1 rounded-lg"
-                                  style={{ background: '#dbeafe', color: '#2563eb' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '0.5rem', background: '#dbeafe', color: '#2563eb' }}>
                                   Seleccionado
                                 </span>
                               )}
@@ -260,19 +263,16 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                   </table>
                 </div>
 
-                {/* Footer panel */}
-                <div className="px-5 py-3 border-t flex items-center justify-between gap-3"
-                  style={{ borderColor: '#f1f5f9', background: '#fafafa' }}>
+                <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                   {error
-                    ? <p className="text-xs font-medium" style={{ color: '#dc2626' }}>{error}</p>
-                    : <p className="text-xs" style={{ color: '#94a3b8' }}>
+                    ? <p style={{ fontSize: '0.75rem', fontWeight: 500, color: '#dc2626', margin: 0 }}>{error}</p>
+                    : <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
                         {grupoSelec ? `Grupo ${grupoSelec} seleccionado` : 'Selecciona un grupo de la tabla'}
                       </p>
                   }
                   <button
                     onClick={agregarAsignacion}
-                    className="text-xs font-semibold px-4 py-2 rounded-lg text-white transition shrink-0"
-                    style={{ background: '#1e3a5f' }}
+                    style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.5rem 1rem', borderRadius: '0.5rem', background: '#1e3a5f', color: 'white', border: 'none', cursor: 'pointer', flexShrink: 0 }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
                     onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}
                   >
@@ -284,27 +284,27 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
           </div>
 
           {/* Acciones */}
-          <div className="flex gap-3 pt-2">
+          <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <button
               onClick={onCerrar}
-              className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
-              style={{ borderColor: '#e2e8f0', color: '#64748b' }}
+              style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 500, borderRadius: '0.75rem', border: '1px solid #e2e8f0', color: '#64748b', background: 'white', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'white')}
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
-              style={{ background: '#1e3a5f' }}
+              style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: '0.75rem', border: 'none', background: '#1e3a5f', color: 'white', cursor: 'pointer' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
               onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}
             >
               {docente ? 'Guardar cambios' : 'Agregar docente'}
             </button>
           </div>
-
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

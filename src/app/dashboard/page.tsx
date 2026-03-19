@@ -1,8 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type TipoFiltro   = 'semana' | 'mes' | 'grupo' | null
 type TipoInforme  = 'escuela' | 'grupo' | 'bimestre'
 
@@ -18,15 +18,13 @@ const GRUPOS  = [
 const OPCION_GENERAL = { key: 'general', label: 'General — Toda la institución' }
 
 const stats = [
-  { label: 'POBLACIÓN',       value: '840',  suffix: 'alumnos', color: 'text-gray-800'  },
-  { label: 'PROMEDIO GRAL',   value: '8.7',  suffix: '',        color: 'text-blue-600'  },
-  { label: 'ASISTENCIA MEDIA',value: '89.7', suffix: '%',       color: 'text-green-500' },
+  { label: 'POBLACIÓN',        value: '840',  suffix: 'alumnos', color: 'text-gray-800'  },
+  { label: 'PROMEDIO GRAL',    value: '8.7',  suffix: '',        color: 'text-blue-600'  },
+  { label: 'ASISTENCIA MEDIA', value: '89.7', suffix: '%',       color: 'text-green-500' },
 ]
 
 // ─── Filter Dropdown ──────────────────────────────────────────────────────────
-function FilterDropdown({
-  opciones, seleccionado, onSeleccionar, onCerrar,
-}: {
+function FilterDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
   opciones: { key: string; label: string }[]
   seleccionado: string
   onSeleccionar: (key: string) => void
@@ -73,13 +71,13 @@ function FilterDropdown({
   )
 }
 
-// ─── Modal Descargar Informe ──────────────────────────────────────────────────
+// ─── Modal Descargar Informe — usa Portal para cubrir toda la pantalla ────────
 function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
-  const [tipo, setTipo]           = useState<TipoInforme>('escuela')
-  const [grupoInf, setGrupoInf]   = useState('')
+  const [tipo, setTipo]               = useState<TipoInforme>('escuela')
+  const [grupoInf, setGrupoInf]       = useState('')
   const [semestreInf, setSemestreInf] = useState('')
   const [bimestreInf, setBimestreInf] = useState('')
-  const [contenido, setContenido] = useState({ calificaciones: true, asistencia: true })
+  const [contenido, setContenido]     = useState({ calificaciones: true, asistencia: true })
 
   const opciones: { key: TipoInforme; titulo: string; desc: string; icono: string }[] = [
     { key: 'escuela',  titulo: 'Escuela completa', desc: 'Reporte general de toda la institución', icono: '🏫' },
@@ -87,12 +85,31 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
     { key: 'bimestre', titulo: 'Por bimestre',      desc: 'Reporte de un bimestre en particular',   icono: '📅' },
   ]
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+  if (typeof window === 'undefined') return null
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-8 pt-7 pb-5 border-b" style={{ borderColor: '#f1f5f9' }}>
+  return createPortal(
+    <div
+      onClick={onCerrar}
+      style={{
+        position:       'fixed',
+        inset:          0,
+        zIndex:         9999,
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: 'center',
+        background:     'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col"
+        style={{ maxHeight: '88vh' }}
+      >
+        {/* Header fijo */}
+        <div className="flex items-center justify-between px-8 pt-7 pb-5 border-b shrink-0"
+          style={{ borderColor: '#f1f5f9' }}>
           <div>
             <h2 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>Descargar Informe</h2>
             <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>Selecciona el tipo y alcance del informe</p>
@@ -100,22 +117,20 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
           <button onClick={onCerrar} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
         </div>
 
-        <div className="px-8 py-6 space-y-6">
+        {/* Contenido con scroll interno */}
+        <div className="overflow-y-auto px-8 py-6 space-y-6 flex-1">
 
           {/* Tipo de informe */}
           <div>
             <p className="text-sm font-semibold mb-3" style={{ color: '#475569' }}>Tipo de informe</p>
             <div className="grid grid-cols-3 gap-3">
               {opciones.map(op => (
-                <button
-                  key={op.key}
-                  onClick={() => setTipo(op.key)}
+                <button key={op.key} onClick={() => setTipo(op.key)}
                   className="rounded-xl p-4 text-left transition-all"
                   style={{
                     border:     tipo === op.key ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                     background: tipo === op.key ? '#eff6ff' : 'white',
-                  }}
-                >
+                  }}>
                   <span className="text-2xl mb-2 block">{op.icono}</span>
                   <p className="text-sm font-semibold" style={{ color: tipo === op.key ? '#2563eb' : '#1e3a5f' }}>
                     {op.titulo}
@@ -131,24 +146,18 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Grupo</label>
-                <select
-                  value={grupoInf}
-                  onChange={e => setGrupoInf(e.target.value)}
+                <select value={grupoInf} onChange={e => setGrupoInf(e.target.value)}
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}
-                >
+                  style={{ borderColor: '#e2e8f0' }}>
                   <option value="">Selecciona un grupo</option>
                   {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Semestre</label>
-                <select
-                  value={semestreInf}
-                  onChange={e => setSemestreInf(e.target.value)}
+                <select value={semestreInf} onChange={e => setSemestreInf(e.target.value)}
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}
-                >
+                  style={{ borderColor: '#e2e8f0' }}>
                   <option value="">Todos los semestres</option>
                   {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}° Semestre</option>)}
                 </select>
@@ -160,12 +169,9 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Bimestre</label>
-                <select
-                  value={bimestreInf}
-                  onChange={e => setBimestreInf(e.target.value)}
+                <select value={bimestreInf} onChange={e => setBimestreInf(e.target.value)}
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}
-                >
+                  style={{ borderColor: '#e2e8f0' }}>
                   <option value="">Selecciona bimestre</option>
                   <option value="1">Bimestre 1</option>
                   <option value="2">Bimestre 2</option>
@@ -174,24 +180,18 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
               </div>
               <div>
                 <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Grupo</label>
-                <select
-                  value={grupoInf}
-                  onChange={e => setGrupoInf(e.target.value)}
+                <select value={grupoInf} onChange={e => setGrupoInf(e.target.value)}
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}
-                >
+                  style={{ borderColor: '#e2e8f0' }}>
                   <option value="">Todos los grupos</option>
                   {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Semestre</label>
-                <select
-                  value={semestreInf}
-                  onChange={e => setSemestreInf(e.target.value)}
+                <select value={semestreInf} onChange={e => setSemestreInf(e.target.value)}
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}
-                >
+                  style={{ borderColor: '#e2e8f0' }}>
                   <option value="">Todos</option>
                   {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}° Semestre</option>)}
                 </select>
@@ -209,15 +209,13 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
               ].map(op => {
                 const activo = contenido[op.key as keyof typeof contenido]
                 return (
-                  <button
-                    key={op.key}
+                  <button key={op.key}
                     onClick={() => setContenido(prev => ({ ...prev, [op.key]: !prev[op.key as keyof typeof prev] }))}
                     className="flex items-center gap-3 flex-1 rounded-xl p-4 text-left transition-all"
                     style={{
                       border:     activo ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                       background: activo ? '#eff6ff' : 'white',
-                    }}
-                  >
+                    }}>
                     <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition"
                       style={{ background: activo ? '#2563eb' : '#e2e8f0' }}>
                       {activo && (
@@ -227,9 +225,7 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>
-                        {op.label}
-                      </p>
+                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>{op.label}</p>
                       <p className="text-xs" style={{ color: '#94a3b8' }}>{op.desc}</p>
                     </div>
                   </button>
@@ -255,26 +251,23 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 
           {/* Botones */}
           <div className="flex gap-3">
-            <button
-              onClick={onCerrar}
+            <button onClick={onCerrar}
               className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
-              style={{ borderColor: '#e2e8f0', color: '#64748b' }}
-            >
+              style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
               Cancelar
             </button>
             <button
               className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition flex items-center justify-center gap-2"
               style={{ background: '#1e3a5f' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}
-            >
+              onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
               ↓ Descargar PDF
             </button>
           </div>
-
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -307,7 +300,7 @@ export default function DashboardPage() {
 
       <div className="flex gap-4 p-4 flex-1">
 
-        {/* ── Panel principal ── */}
+        {/* Panel principal */}
         <div className="flex-1 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -319,35 +312,29 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setVistaGrafica('asistencias')}
+              <button onClick={() => setVistaGrafica('asistencias')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                 style={{
                   background: vistaGrafica === 'asistencias' ? '#eff6ff' : 'white',
                   color:      vistaGrafica === 'asistencias' ? '#2563eb' : '#6b7280',
                   border:     '1px solid #e2e8f0',
-                }}
-              >
+                }}>
                 Asistencias
               </button>
-              <button
-                onClick={() => setVistaGrafica('calificaciones')}
+              <button onClick={() => setVistaGrafica('calificaciones')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                 style={{
                   background: vistaGrafica === 'calificaciones' ? '#eff6ff' : 'white',
                   color:      vistaGrafica === 'calificaciones' ? '#2563eb' : '#6b7280',
                   border:     '1px solid #e2e8f0',
-                }}
-              >
+                }}>
                 Calificaciones
               </button>
-              <button
-                onClick={() => setModalInforme(true)}
+              <button onClick={() => setModalInforme(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition"
                 style={{ background: '#1e3a5f' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}
-              >
+                onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
                 ↓ Descargar Informe
               </button>
             </div>
@@ -390,12 +377,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
-                  style={{
-                    border:     '1px solid #e2e8f0',
-                    background: filtroActivo('semana') ? '#eff6ff' : 'white',
-                    color:      filtroActivo('semana') ? '#2563eb' : '#4b5563',
-                  }}
-                >
+                  style={{ border: '1px solid #e2e8f0', background: filtroActivo('semana') ? '#eff6ff' : 'white', color: filtroActivo('semana') ? '#2563eb' : '#4b5563' }}>
                   ▼ {labelSeleccion('semana')}
                 </button>
                 {filtroAbierto === 'semana' && (
@@ -407,12 +389,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => setFiltroAbierto(filtroAbierto === 'mes' ? null : 'mes')}
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
-                  style={{
-                    border:     '1px solid #e2e8f0',
-                    background: filtroActivo('mes') ? '#eff6ff' : 'white',
-                    color:      filtroActivo('mes') ? '#2563eb' : '#4b5563',
-                  }}
-                >
+                  style={{ border: '1px solid #e2e8f0', background: filtroActivo('mes') ? '#eff6ff' : 'white', color: filtroActivo('mes') ? '#2563eb' : '#4b5563' }}>
                   ▼ {labelSeleccion('mes')}
                 </button>
                 {filtroAbierto === 'mes' && (
@@ -426,8 +403,7 @@ export default function DashboardPage() {
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
                   style={{ background: filtroActivo('grupo') ? '#2563eb' : '#1e3a5f' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                  onMouseLeave={e => (e.currentTarget.style.background = filtroActivo('grupo') ? '#2563eb' : '#1e3a5f')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.background = filtroActivo('grupo') ? '#2563eb' : '#1e3a5f')}>
                   ▼ {labelSeleccion('grupo')}
                 </button>
                 {filtroAbierto === 'grupo' && (
@@ -439,7 +415,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Panel derecho ── */}
+        {/* Panel derecho */}
         <div className="w-72 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center gap-2 mb-6">
             <span className="text-blue-500">ℹ️</span>
@@ -461,12 +437,9 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-
       </div>
 
-      {/* Modal informe */}
       {modalInforme && <ModalInforme onCerrar={() => setModalInforme(false)} />}
-
     </div>
   )
 }
