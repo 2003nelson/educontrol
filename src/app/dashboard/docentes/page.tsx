@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 import DocenteModal, { type Docente, type Asignacion } from '@/components/DocenteModal'
 
@@ -36,10 +37,10 @@ const docentesIniciales: Docente[] = [
 ]
 
 export default function DocentesPage() {
-  const [docentes, setDocentes]               = useState<Docente[]>(docentesIniciales)
-  const [busqueda, setBusqueda]               = useState('')
-  const [modalAbierto, setModalAbierto]       = useState(false)
-  const [docenteEditando, setDocenteEditando] = useState<Docente | null>(null)
+  const [docentes, setDocentes]                 = useState<Docente[]>(docentesIniciales)
+  const [busqueda, setBusqueda]                 = useState('')
+  const [modalAbierto, setModalAbierto]         = useState(false)
+  const [docenteEditando, setDocenteEditando]   = useState<Docente | null>(null)
   const [docenteAEliminar, setDocenteAEliminar] = useState<Docente | null>(null)
 
   const docentesFiltrados = docentes.filter(d =>
@@ -210,23 +211,35 @@ export default function DocentesPage() {
         />
       )}
 
-      {/* Modal confirmación eliminar */}
-      {docenteAEliminar && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
-
-            {/* Ícono advertencia */}
+      {/* Modal confirmación eliminar — Portal */}
+      {docenteAEliminar && typeof window !== 'undefined' && createPortal(
+        <div
+          onClick={() => setDocenteAEliminar(null)}
+          style={{
+            position:             'fixed',
+            inset:                0,
+            zIndex:               9999,
+            display:              'flex',
+            alignItems:           'center',
+            justifyContent:       'center',
+            background:           'rgba(0,0,0,0.5)',
+            backdropFilter:       'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8"
+          >
             <div className="flex justify-center mb-5">
               <div className="w-14 h-14 rounded-full flex items-center justify-center"
                 style={{ background: '#fef2f2' }}>
-                <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2"
-                  viewBox="0 0 24 24">
+                <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round"
                     d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
                 </svg>
               </div>
             </div>
-
             <h3 className="text-base font-bold text-center mb-2" style={{ color: '#1e3a5f' }}>
               ¿Estás seguro?
             </h3>
@@ -239,7 +252,6 @@ export default function DocentesPage() {
             <p className="text-xs text-center mb-6" style={{ color: '#94a3b8' }}>
               No podrás recuperarlo si lo borras.
             </p>
-
             <div className="flex gap-3">
               <button
                 onClick={() => setDocenteAEliminar(null)}
@@ -260,9 +272,9 @@ export default function DocentesPage() {
                 Eliminar
               </button>
             </div>
-
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

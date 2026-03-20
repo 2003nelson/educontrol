@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
 type Permisos = {
@@ -19,11 +20,11 @@ type Usuario = {
 }
 
 const PERMISOS_INFO: { key: keyof Permisos; label: string; desc: string }[] = [
-  { key: 'inicio',      label: 'Inicio estadístico', desc: 'Gráficas y estadísticas'        },
-  { key: 'docentes',    label: 'Docentes',            desc: 'Gestión de docentes'            },
-  { key: 'seguimiento', label: 'Seguimiento',         desc: 'Seguimiento académico'          },
-  { key: 'sistema',     label: 'Sistema',             desc: 'Configuración del sistema'      },
-  { key: 'roles',       label: 'Roles',               desc: 'Usuarios y permisos'            },
+  { key: 'inicio',      label: 'Inicio estadístico', desc: 'Gráficas y estadísticas'   },
+  { key: 'docentes',    label: 'Docentes',            desc: 'Gestión de docentes'       },
+  { key: 'seguimiento', label: 'Seguimiento',         desc: 'Seguimiento académico'     },
+  { key: 'sistema',     label: 'Sistema',             desc: 'Configuración del sistema' },
+  { key: 'roles',       label: 'Roles',               desc: 'Usuarios y permisos'       },
 ]
 
 const MAX_USUARIOS = 5
@@ -69,6 +70,31 @@ function Avatar({ nombre }: { nombre: string }) {
       style={{ background: color }}>
       {iniciales}
     </div>
+  )
+}
+
+function Portal({ children, onCerrar }: { children: React.ReactNode; onCerrar: () => void }) {
+  if (typeof window === 'undefined') return null
+  return createPortal(
+    <div
+      onClick={onCerrar}
+      style={{
+        position:             'fixed',
+        inset:                0,
+        zIndex:               9999,
+        display:              'flex',
+        alignItems:           'center',
+        justifyContent:       'center',
+        background:           'rgba(0,0,0,0.5)',
+        backdropFilter:       'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
+      <div onClick={e => e.stopPropagation()} style={{ width: 'fit-content' }}>
+        {children}
+      </div>
+    </div>,
+    document.body
   )
 }
 
@@ -215,12 +241,10 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {/* ── Modal crear / editar ── */}
+      {/* Modal crear / editar */}
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+        <Portal onCerrar={() => setModalAbierto(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-
-            {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b"
               style={{ borderColor: '#f1f5f9' }}>
               <div>
@@ -234,10 +258,7 @@ export default function RolesPage() {
               <button onClick={() => setModalAbierto(false)}
                 className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
             </div>
-
             <div className="px-6 py-4 space-y-4">
-
-              {/* Nombre + Email en fila */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: '#475569' }}>
@@ -260,8 +281,6 @@ export default function RolesPage() {
                     style={{ borderColor: '#e2e8f0' }} />
                 </div>
               </div>
-
-              {/* Permisos en 2 columnas */}
               <div>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#475569' }}>
                   Permisos de acceso
@@ -283,8 +302,6 @@ export default function RolesPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Botones */}
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setModalAbierto(false)}
                   className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
@@ -301,12 +318,12 @@ export default function RolesPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
-      {/* ── Modal confirmar eliminar ── */}
+      {/* Modal confirmar eliminar */}
       {confirmEliminar && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <Portal onCerrar={() => setConfirmEliminar(null)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
             <div className="flex justify-center mb-5">
               <div className="w-14 h-14 rounded-full flex items-center justify-center"
@@ -338,7 +355,7 @@ export default function RolesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   )
