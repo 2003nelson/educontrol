@@ -5,12 +5,13 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 const navPrincipal = [
-  { nombre: 'Inicio',       href: '/dashboard' },
-  { nombre: 'Docentes',     href: '/dashboard/docentes' },
-  { nombre: 'Seguimiento',  href: '/dashboard/seguimiento' },
+  { nombre: 'Inicio',      href: '/dashboard' },
+  { nombre: 'Docentes',    href: '/dashboard/docentes' },
+  { nombre: 'Seguimiento', href: '/dashboard/seguimiento' },
 ]
 
 const navAvanzado = [
+  { nombre: 'Ciclo Escolar',    href: '/dashboard/ciclo' },
   { nombre: 'Sistema',          href: '/dashboard/sistema' },
   { nombre: 'Roles del sistema', href: '/dashboard/roles' },
 ]
