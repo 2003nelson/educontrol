@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import Header from '@/components/Header'
 
 type Vista         = 'semestres' | 'grupos' | 'alumnos'
@@ -16,59 +17,16 @@ const MATERIAS = [
   'Química', 'Inglés', 'Biología', 'Informática',
 ]
 
-function polarToCartesian(cx: number, cy: number, r: number, deg: number) {
-  const rad = (deg - 90) * (Math.PI / 180)
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
-}
-function buildSlicePath(cx: number, cy: number, r: number, start: number, end: number) {
-  if (end - start >= 360) end = start + 359.99
-  const s = polarToCartesian(cx, cy, r, start)
-  const e = polarToCartesian(cx, cy, r, end)
-  return `M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 ${end - start > 180 ? 1 : 0} 1 ${e.x},${e.y} Z`
-}
-function DonutChart({ slices }: { slices: SliceData[] }) {
-  const total = slices.reduce((s, d) => s + d.value, 0)
-  if (total === 0) return null
-  const cx = 70, cy = 70, r = 58
-  const paths = slices.reduce<{ paths: React.ReactNode[]; acc: number }>(
-    ({ paths, acc }, s, i) => {
-      const angle = (s.value / total) * 360
-      return {
-        paths: [...paths, <path key={i} d={buildSlicePath(cx, cy, r, acc, acc + angle)} fill={s.color} />],
-        acc: acc + angle,
-      }
-    },
-    { paths: [], acc: 0 }
-  ).paths
-  return (
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      {paths}
-      <circle cx={cx} cy={cy} r={32} fill="white" />
-    </svg>
-  )
-}
-
-function ArrowButton() {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 shrink-0"
-      style={{ background: hovered ? '#dbeafe' : 'transparent' }}>
-      <svg width="16" height="16" fill="none" stroke="#3b82f6" strokeWidth="2.5" viewBox="0 0 24 24"
-        style={{ transform: hovered ? 'translateX(2px)' : 'translateX(0)', transition: 'transform 0.2s' }}>
-        <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </div>
-  )
-}
+const semestresActivos = [
+  { numero: 1, ciclo: 'Ago–Dic 2025', grupos: ['101', '102', '103'], imagen: '/img1v.png', alumnos: 87 },
+  { numero: 3, ciclo: 'Ago–Dic 2025', grupos: ['301', '302', '303'], imagen: '/img2.png', alumnos: 82 },
+  { numero: 5, ciclo: 'Ago–Dic 2025', grupos: ['501', '502', '503'], imagen: '/img3v2.png', alumnos: 79 },
+]
 
 const semestresData = [
   { numero: 1, ciclo: 'Ago–Dic', grupos: ['101', '102', '103'] },
-  { numero: 2, ciclo: 'Feb–Jul', grupos: ['201', '202', '203'] },
   { numero: 3, ciclo: 'Ago–Dic', grupos: ['301', '302', '303'] },
-  { numero: 4, ciclo: 'Feb–Jul', grupos: ['401', '402', '403'] },
   { numero: 5, ciclo: 'Ago–Dic', grupos: ['501', '502', '503'] },
-  { numero: 6, ciclo: 'Feb–Jul', grupos: ['601', '602', '603'] },
 ]
 
 const alumnosMock: Alumno[] = [
@@ -135,6 +93,58 @@ function avg(nums: number[]) {
 function promedioColor(v: number)   { return v >= 70 ? '#16a34a' : '#dc2626' }
 function asistenciaColor(v: number) { return v >= 80 ? '#16a34a' : '#dc2626' }
 
+function polarToCartesian(cx: number, cy: number, r: number, deg: number) {
+  const rad = (deg - 90) * (Math.PI / 180)
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+function buildSlicePath(cx: number, cy: number, r: number, start: number, end: number) {
+  if (end - start >= 360) end = start + 359.99
+  const s = polarToCartesian(cx, cy, r, start)
+  const e = polarToCartesian(cx, cy, r, end)
+  return `M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 ${end - start > 180 ? 1 : 0} 1 ${e.x},${e.y} Z`
+}
+function DonutChart({ slices }: { slices: SliceData[] }) {
+  const total = slices.reduce((s, d) => s + d.value, 0)
+  if (total === 0) return null
+  const cx = 70, cy = 70, r = 58
+  const paths = slices.reduce<{ paths: React.ReactNode[]; acc: number }>(
+    ({ paths, acc }, s, i) => {
+      const angle = (s.value / total) * 360
+      return {
+        paths: [...paths, <path key={i} d={buildSlicePath(cx, cy, r, acc, acc + angle)} fill={s.color} />],
+        acc: acc + angle,
+      }
+    },
+    { paths: [], acc: 0 }
+  ).paths
+  return (
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      {paths}
+      <circle cx={cx} cy={cy} r={32} fill="white" />
+    </svg>
+  )
+}
+
+function ArrowButton() {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 shrink-0"
+      style={{
+        background: hovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)',
+        boxShadow:  hovered ? '0 2px 10px rgba(0,0,0,0.12)' : 'none',
+      }}
+    >
+      <svg width="18" height="18" fill="none" stroke="#1e3a5f" strokeWidth="2.5" viewBox="0 0 24 24"
+        style={{ transform: hovered ? 'translateX(2px)' : 'translateX(0)', transition: 'transform 0.2s' }}>
+        <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  )
+}
+
 export default function SeguimientoPage() {
   const [vista, setVista]                   = useState<Vista>('semestres')
   const [semestreActivo, setSemestreActivo] = useState<number | null>(null)
@@ -155,9 +165,7 @@ export default function SeguimientoPage() {
     if (vista === 'grupos')  { setVista('semestres'); setSemestreActivo(null) }
   }
   function cambiarFiltro(f: FiltroPeriodo) {
-    setFiltroPeriodo(f)
-    setBimestreSelec(1)
-    setSemanaSelec(1)
+    setFiltroPeriodo(f); setBimestreSelec(1); setSemanaSelec(1)
   }
   function toggleMateria(m: string) {
     setMateriaSelec(prev => prev === m ? null : m)
@@ -209,40 +217,103 @@ export default function SeguimientoPage() {
 
       <div className="p-4 space-y-4">
 
-        {/* VISTA 1: Semestres */}
+        {/* ── VISTA 1: Semestres activos ── */}
         {vista === 'semestres' && (
           <>
-            <p className="text-sm" style={{ color: '#64748b' }}>
-              Selecciona un semestre para ver sus grupos activos
-            </p>
-            <div className="grid grid-cols-3 gap-4">
-              {semestresData.map(s => (
-                <button key={s.numero} onClick={() => seleccionarSemestre(s.numero)}
-                  className="bg-white rounded-2xl p-6 shadow-sm text-left hover:shadow-md transition-all"
-                  style={{ border: '1px solid #e2e8f0' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold"
-                      style={{ background: '#eff6ff', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}>
-                      {s.numero}
-                    </div>
-                    <ArrowButton />
+            <div className="flex items-center justify-between">
+              <p className="text-sm" style={{ color: '#64748b' }}>
+                Semestres activos — Ciclo Ago–Dic 2025
+              </p>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                3 semestres en curso
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-5">
+              {semestresActivos.map(s => (
+                <button
+                  key={s.numero}
+                  onClick={() => seleccionarSemestre(s.numero)}
+                  className="relative overflow-hidden rounded-2xl text-left"
+                  style={{
+                    background: 'white',
+                    border:     '1px solid #e2e8f0',
+                    minHeight:  '260px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = '#3b82f6'
+                    e.currentTarget.style.transform   = 'translateY(-3px)'
+                    e.currentTarget.style.boxShadow   = '0 8px 24px rgba(59,130,246,0.15)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = '#e2e8f0'
+                    e.currentTarget.style.transform   = 'translateY(0)'
+                    e.currentTarget.style.boxShadow   = 'none'
+                  }}
+                >
+                  {/* Imagen decorativa — contenedor posicionado, más grande */}
+                  <div style={{
+                    position:      'absolute',
+                    right:         '-24px',
+                    bottom:        '-24px',
+                    width:         '220px',
+                    height:        '220px',
+                    opacity:       0.15,
+                    pointerEvents: 'none',
+                  }}>
+                    <Image
+                      src={s.imagen}
+                      alt=""
+                      fill
+                      style={{ objectFit: 'contain' }}
+                    />
                   </div>
-                  <h3 className="text-base font-bold mb-1" style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
-                    {s.numero}° Semestre
-                  </h3>
-                  <p className="text-xs" style={{ color: '#94a3b8' }}>{s.ciclo}</p>
-                  <p className="text-xs mt-2 font-medium" style={{ color: '#64748b' }}>
-                    {s.grupos.length} grupos activos
-                  </p>
+
+                  {/* Contenido */}
+                  <div className="relative flex flex-col p-7" style={{ minHeight: '260px' }}>
+                    <div className="flex items-start justify-between mb-5">
+                      <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold"
+                        style={{ background: '#eff6ff', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}
+                      >
+                        {s.numero}
+                      </div>
+                      <ArrowButton />
+                    </div>
+
+                    <h3 className="text-xl font-bold mb-1"
+                      style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
+                      {s.numero}° Semestre
+                    </h3>
+                    <p className="text-xs mb-auto" style={{ color: '#94a3b8' }}>{s.ciclo}</p>
+
+                    <div className="flex gap-5 pt-5 mt-4" style={{ borderTop: '1px solid #f1f5f9' }}>
+                      <div>
+                        <p className="text-xs mb-0.5" style={{ color: '#94a3b8' }}>Grupos</p>
+                        <p className="text-base font-bold" style={{ color: '#1e3a5f' }}>{s.grupos.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs mb-0.5" style={{ color: '#94a3b8' }}>Alumnos</p>
+                        <p className="text-base font-bold" style={{ color: '#1e3a5f' }}>{s.alumnos}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#94a3b8' }}>Estado</p>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                          Activo
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
           </>
         )}
 
-        {/* VISTA 2: Grupos */}
+        {/* ── VISTA 2: Grupos ── */}
         {vista === 'grupos' && semestre && (
           <>
             <div className="flex items-center justify-between">
@@ -269,7 +340,12 @@ export default function SeguimientoPage() {
                       style={{ background: '#1e3a5f', color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
                       {grupo}
                     </div>
-                    <ArrowButton />
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'transparent' }}>
+                      <svg width="16" height="16" fill="none" stroke="#3b82f6" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
                   </div>
                   <h3 className="text-base font-bold mb-1" style={{ color: '#1e3a5f' }}>Grupo {grupo}</h3>
                   <p className="text-xs" style={{ color: '#94a3b8' }}>{alumnosMock.length} alumnos</p>
@@ -279,11 +355,10 @@ export default function SeguimientoPage() {
           </>
         )}
 
-        {/* VISTA 3: Alumnos */}
+        {/* ── VISTA 3: Alumnos ── */}
         {vista === 'alumnos' && (
           <div className="space-y-3">
 
-            {/* Fila superior */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={volver}
@@ -315,7 +390,6 @@ export default function SeguimientoPage() {
               </div>
             </div>
 
-            {/* Sub-selector bimestre */}
             {filtroPeriodo === 'bimestre' && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium" style={{ color: '#64748b' }}>Bimestre:</span>
@@ -334,7 +408,6 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* Sub-selector semana */}
             {filtroPeriodo === 'semana' && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-medium" style={{ color: '#64748b' }}>Semana:</span>
@@ -353,7 +426,7 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* ── 1. Selector de materias — ARRIBA ── */}
+            {/* Selector materias */}
             <div className="bg-white rounded-2xl shadow-sm p-4" style={{ border: '1px solid #f1f5f9' }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
@@ -395,7 +468,7 @@ export default function SeguimientoPage() {
               )}
             </div>
 
-            {/* ── 2. Gráfica donut ── */}
+            {/* Gráfica donut */}
             <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: '1px solid #f1f5f9' }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
@@ -444,7 +517,7 @@ export default function SeguimientoPage() {
               </div>
             </div>
 
-            {/* ── 3. Búsqueda ── */}
+            {/* Búsqueda */}
             <div className="bg-white rounded-2xl shadow-sm p-3">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -459,7 +532,7 @@ export default function SeguimientoPage() {
               </div>
             </div>
 
-            {/* ── 4. Tabla Bimestre / Semana ── */}
+            {/* Tabla Bimestre / Semana */}
             {filtroPeriodo !== 'semestre' && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -533,7 +606,7 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* ── 5. Tabla Semestre ── */}
+            {/* Tabla Semestre */}
             {filtroPeriodo === 'semestre' && (
               <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
                 <table className="w-full">
@@ -543,14 +616,12 @@ export default function SeguimientoPage() {
                         style={{ color: '#94a3b8' }}>#</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider sticky left-8 bg-white"
                         style={{ color: '#94a3b8', minWidth: 180 }}>Alumno</th>
-                      {/* Cabeceras calificaciones — negro */}
                       {[1, 2, 3].map(b => (
                         <th key={`cal-${b}`} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
                           style={{ color: '#1e293b', minWidth: 80 }}>B{b} Cal.</th>
                       ))}
                       <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
                         style={{ color: '#1e293b', minWidth: 90 }}>Prom. Cal.</th>
-                      {/* Cabeceras asistencia — negro */}
                       {[1, 2, 3].map(b => (
                         <th key={`asis-${b}`} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
                           style={{ color: '#1e293b', minWidth: 80 }}>B{b} Asis.</th>
@@ -642,7 +713,6 @@ export default function SeguimientoPage() {
                 </table>
               </div>
             )}
-
           </div>
         )}
       </div>
