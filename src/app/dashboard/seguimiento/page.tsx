@@ -2,46 +2,30 @@
 import { useState } from 'react'
 import Header from '@/components/Header'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Vista         = 'semestres' | 'grupos' | 'alumnos'
 type FiltroPeriodo = 'semana' | 'bimestre' | 'semestre'
 type GraficaTipo   = 'asistencia' | 'calificaciones'
 
-type DatoBimestre = {
-  numero: 1 | 2 | 3
-  promedio: number
-  asistencia: number
-  faltas: number
-}
+type DatoBimestre = { numero: 1 | 2 | 3; promedio: number; asistencia: number; faltas: number }
+type DatoSemana   = { semana: number; asistencia: number; faltas: number }
+type Alumno       = { id: string; nombre: string; bimestres: DatoBimestre[]; semanas: DatoSemana[] }
+type SliceData    = { label: string; value: number; color: string }
 
-type DatoSemana = {
-  semana: number
-  asistencia: number
-  faltas: number
-}
+const MATERIAS = [
+  'Matemáticas', 'Español', 'Historia', 'Física',
+  'Química', 'Inglés', 'Biología', 'Informática',
+]
 
-type Alumno = {
-  id: string
-  nombre: string
-  bimestres: DatoBimestre[]
-  semanas: DatoSemana[]
-}
-
-type SliceData = { label: string; value: number; color: string }
-
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
 function polarToCartesian(cx: number, cy: number, r: number, deg: number) {
   const rad = (deg - 90) * (Math.PI / 180)
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
 }
-
 function buildSlicePath(cx: number, cy: number, r: number, start: number, end: number) {
   if (end - start >= 360) end = start + 359.99
   const s = polarToCartesian(cx, cy, r, start)
   const e = polarToCartesian(cx, cy, r, end)
   return `M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 ${end - start > 180 ? 1 : 0} 1 ${e.x},${e.y} Z`
 }
-
 function DonutChart({ slices }: { slices: SliceData[] }) {
   const total = slices.reduce((s, d) => s + d.value, 0)
   if (total === 0) return null
@@ -64,28 +48,20 @@ function DonutChart({ slices }: { slices: SliceData[] }) {
   )
 }
 
-// ─── Arrow Button ─────────────────────────────────────────────────────────────
 function ArrowButton() {
   const [hovered, setHovered] = useState(false)
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 shrink-0"
-      style={{ background: hovered ? '#dbeafe' : 'transparent' }}
-    >
-      <svg
-        width="16" height="16" fill="none" stroke="#3b82f6" strokeWidth="2.5"
-        viewBox="0 0 24 24"
-        style={{ transform: hovered ? 'translateX(2px)' : 'translateX(0)', transition: 'transform 0.2s' }}
-      >
+      style={{ background: hovered ? '#dbeafe' : 'transparent' }}>
+      <svg width="16" height="16" fill="none" stroke="#3b82f6" strokeWidth="2.5" viewBox="0 0 24 24"
+        style={{ transform: hovered ? 'translateX(2px)' : 'translateX(0)', transition: 'transform 0.2s' }}>
         <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     </div>
   )
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const semestresData = [
   { numero: 1, ciclo: 'Ago–Dic', grupos: ['101', '102', '103'] },
   { numero: 2, ciclo: 'Feb–Jul', grupos: ['201', '202', '203'] },
@@ -103,9 +79,7 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 88, asistencia: 90, faltas: 4 },
       { numero: 3, promedio: 94, asistencia: 98, faltas: 1 },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: i % 4 === 0 ? 80 : 100, faltas: i % 4 === 0 ? 1 : 0,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: i%4===0?80:100, faltas: i%4===0?1:0 })),
   },
   {
     id: '2', nombre: 'Martínez Ruiz, Carlos',
@@ -114,9 +88,7 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 75, asistencia: 70, faltas: 9 },
       { numero: 3, promedio: 80, asistencia: 75, faltas: 7 },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: i % 2 === 0 ? 60 : 80, faltas: i % 2 === 0 ? 2 : 1,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: i%2===0?60:80, faltas: i%2===0?2:1 })),
   },
   {
     id: '3', nombre: 'Pérez Torres, Diana',
@@ -125,9 +97,7 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 82, asistencia: 85, faltas: 4 },
       { numero: 3, promedio: 87, asistencia: 92, faltas: 3 },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: i % 5 === 0 ? 80 : 100, faltas: i % 5 === 0 ? 1 : 0,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: i%5===0?80:100, faltas: i%5===0?1:0 })),
   },
   {
     id: '4', nombre: 'López Sánchez, Eduardo',
@@ -136,9 +106,7 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 94, asistencia: 98,  faltas: 1 },
       { numero: 3, promedio: 97, asistencia: 100, faltas: 0 },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: 100, faltas: 0,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: 100, faltas: 0 })),
   },
   {
     id: '5', nombre: 'Hernández Cruz, Fernanda',
@@ -147,9 +115,7 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 68, asistencia: 75, faltas: 7 },
       { numero: 3, promedio: 73, asistencia: 82, faltas: 5 },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: i % 3 === 0 ? 60 : 80, faltas: i % 3 === 0 ? 2 : 1,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: i%3===0?60:80, faltas: i%3===0?2:1 })),
   },
   {
     id: '6', nombre: 'Ramírez Vega, Gabriel',
@@ -158,13 +124,10 @@ const alumnosMock: Alumno[] = [
       { numero: 2, promedio: 58, asistencia: 62, faltas: 11 },
       { numero: 3, promedio: 62, asistencia: 68, faltas: 9  },
     ],
-    semanas: Array.from({ length: 16 }, (_, i) => ({
-      semana: i + 1, asistencia: 60, faltas: 2,
-    })),
+    semanas: Array.from({ length: 16 }, (_, i) => ({ semana: i+1, asistencia: 60, faltas: 2 })),
   },
 ]
 
-// ─── Utility ──────────────────────────────────────────────────────────────────
 function avg(nums: number[]) {
   if (!nums.length) return 0
   return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length)
@@ -172,7 +135,6 @@ function avg(nums: number[]) {
 function promedioColor(v: number)   { return v >= 70 ? '#16a34a' : '#dc2626' }
 function asistenciaColor(v: number) { return v >= 80 ? '#16a34a' : '#dc2626' }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SeguimientoPage() {
   const [vista, setVista]                   = useState<Vista>('semestres')
   const [semestreActivo, setSemestreActivo] = useState<number | null>(null)
@@ -182,11 +144,12 @@ export default function SeguimientoPage() {
   const [semanaSelec, setSemanaSelec]       = useState<number>(1)
   const [graficaTipo, setGraficaTipo]       = useState<GraficaTipo>('calificaciones')
   const [busqueda, setBusqueda]             = useState('')
+  const [materiaSelec, setMateriaSelec]     = useState<string | null>(null)
 
   const semestre = semestresData.find(s => s.numero === semestreActivo)
 
   function seleccionarSemestre(num: number) { setSemestreActivo(num); setVista('grupos') }
-  function seleccionarGrupo(g: string)      { setGrupoActivo(g);      setVista('alumnos') }
+  function seleccionarGrupo(g: string)      { setGrupoActivo(g); setVista('alumnos') }
   function volver() {
     if (vista === 'alumnos') { setVista('grupos');    setGrupoActivo(null) }
     if (vista === 'grupos')  { setVista('semestres'); setSemestreActivo(null) }
@@ -195,6 +158,9 @@ export default function SeguimientoPage() {
     setFiltroPeriodo(f)
     setBimestreSelec(1)
     setSemanaSelec(1)
+  }
+  function toggleMateria(m: string) {
+    setMateriaSelec(prev => prev === m ? null : m)
   }
 
   const alumnosFiltrados = alumnosMock.filter(a =>
@@ -212,22 +178,23 @@ export default function SeguimientoPage() {
       const s = a.semanas.find(s => s.semana === semanaSelec)!
       return { alumno: a, promedio: 0, asistencia: s.asistencia, faltas: s.faltas }
     }
-    const promCal  = avg(a.bimestres.map(b => b.promedio))
-    const promAsis = avg(a.bimestres.map(b => b.asistencia))
-    const totalFal = a.bimestres.reduce((s, b) => s + b.faltas, 0)
-    return { alumno: a, promedio: promCal, asistencia: promAsis, faltas: totalFal }
+    return {
+      alumno: a,
+      promedio:   avg(a.bimestres.map(b => b.promedio)),
+      asistencia: avg(a.bimestres.map(b => b.asistencia)),
+      faltas:     a.bimestres.reduce((s, b) => s + b.faltas, 0),
+    }
   })
 
   const slicesGrafica: SliceData[] = (() => {
     const valores = filasActuales.map(f =>
       graficaTipo === 'calificaciones' ? f.promedio : f.asistencia
     ).filter(v => filtroPeriodo !== 'semana' || graficaTipo === 'asistencia' ? true : v > 0)
-
     if (graficaTipo === 'calificaciones') {
       return [
-        { label: 'Excelente (90-100)', value: valores.filter(v => v >= 90).length,              color: '#16a34a' },
-        { label: 'Regular (70-89)',    value: valores.filter(v => v >= 70 && v < 90).length,    color: '#3b82f6' },
-        { label: 'Reprobado (<70)',    value: valores.filter(v => v < 70).length,               color: '#dc2626' },
+        { label: 'Excelente (90-100)', value: valores.filter(v => v >= 90).length,          color: '#16a34a' },
+        { label: 'Regular (70-89)',    value: valores.filter(v => v >= 70 && v < 90).length, color: '#3b82f6' },
+        { label: 'Reprobado (<70)',    value: valores.filter(v => v < 70).length,            color: '#dc2626' },
       ]
     }
     return [
@@ -242,7 +209,7 @@ export default function SeguimientoPage() {
 
       <div className="p-4 space-y-4">
 
-        {/* ── VISTA 1: Semestres ── */}
+        {/* VISTA 1: Semestres */}
         {vista === 'semestres' && (
           <>
             <p className="text-sm" style={{ color: '#64748b' }}>
@@ -250,14 +217,11 @@ export default function SeguimientoPage() {
             </p>
             <div className="grid grid-cols-3 gap-4">
               {semestresData.map(s => (
-                <button
-                  key={s.numero}
-                  onClick={() => seleccionarSemestre(s.numero)}
+                <button key={s.numero} onClick={() => seleccionarSemestre(s.numero)}
                   className="bg-white rounded-2xl p-6 shadow-sm text-left hover:shadow-md transition-all"
                   style={{ border: '1px solid #e2e8f0' }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold"
                       style={{ background: '#eff6ff', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}>
@@ -278,33 +242,28 @@ export default function SeguimientoPage() {
           </>
         )}
 
-        {/* ── VISTA 2: Grupos ── */}
+        {/* VISTA 2: Grupos */}
         {vista === 'grupos' && semestre && (
           <>
             <div className="flex items-center justify-between">
               <p className="text-sm" style={{ color: '#64748b' }}>
                 Grupos activos del {semestre.numero}° semestre — {semestre.ciclo}
               </p>
-              <button
-                onClick={volver}
+              <button onClick={volver}
                 className="text-xs font-semibold px-3 py-1.5 rounded-lg transition"
                 style={{ background: '#f1f5f9', color: '#475569' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}
-              >
+                onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>
                 ← Volver
               </button>
             </div>
             <div className="grid grid-cols-3 gap-4">
               {semestre.grupos.map(grupo => (
-                <button
-                  key={grupo}
-                  onClick={() => seleccionarGrupo(grupo)}
+                <button key={grupo} onClick={() => seleccionarGrupo(grupo)}
                   className="bg-white rounded-2xl p-6 shadow-sm text-left hover:shadow-md transition-all"
                   style={{ border: '1px solid #e2e8f0' }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold"
                       style={{ background: '#1e3a5f', color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
@@ -320,62 +279,54 @@ export default function SeguimientoPage() {
           </>
         )}
 
-        {/* ── VISTA 3: Alumnos ── */}
+        {/* VISTA 3: Alumnos */}
         {vista === 'alumnos' && (
           <div className="space-y-3">
 
+            {/* Fila superior */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={volver}
+                <button onClick={volver}
                   className="text-xs font-semibold px-3 py-1.5 rounded-lg transition"
                   style={{ background: '#f1f5f9', color: '#475569' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>
                   ← Volver
                 </button>
                 <p className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
                   Grupo {grupoActivo} — {semestreActivo}° Semestre
                 </p>
               </div>
-
               <div className="flex gap-1.5 bg-white rounded-xl p-1 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
                 {([
                   { key: 'semana',   label: 'Semana'   },
                   { key: 'bimestre', label: 'Bimestre' },
                   { key: 'semestre', label: 'Semestre' },
                 ] as { key: FiltroPeriodo; label: string }[]).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => cambiarFiltro(key)}
+                  <button key={key} onClick={() => cambiarFiltro(key)}
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                     style={{
                       background: filtroPeriodo === key ? '#1e3a5f' : 'transparent',
                       color:      filtroPeriodo === key ? '#fff'    : '#64748b',
-                    }}
-                  >
+                    }}>
                     {label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Sub-selector: Bimestre */}
+            {/* Sub-selector bimestre */}
             {filtroPeriodo === 'bimestre' && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium" style={{ color: '#64748b' }}>Bimestre:</span>
                 <div className="flex gap-1.5">
                   {([1, 2, 3] as const).map(b => (
-                    <button
-                      key={b}
-                      onClick={() => setBimestreSelec(b)}
+                    <button key={b} onClick={() => setBimestreSelec(b)}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                       style={{
                         background: bimestreSelec === b ? '#3b82f6' : '#f1f5f9',
                         color:      bimestreSelec === b ? '#fff'    : '#64748b',
-                      }}
-                    >
+                      }}>
                       Bimestre {b}
                     </button>
                   ))}
@@ -383,21 +334,18 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* Sub-selector: Semana */}
+            {/* Sub-selector semana */}
             {filtroPeriodo === 'semana' && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-medium" style={{ color: '#64748b' }}>Semana:</span>
                 <div className="flex gap-1.5 flex-wrap">
                   {Array.from({ length: 16 }, (_, i) => i + 1).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setSemanaSelec(s)}
+                    <button key={s} onClick={() => setSemanaSelec(s)}
                       className="w-8 h-8 text-xs font-semibold rounded-lg transition"
                       style={{
                         background: semanaSelec === s ? '#3b82f6' : '#f1f5f9',
                         color:      semanaSelec === s ? '#fff'    : '#64748b',
-                      }}
-                    >
+                      }}>
                       {s}
                     </button>
                   ))}
@@ -405,7 +353,49 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* Gráfica donut */}
+            {/* ── 1. Selector de materias — ARRIBA ── */}
+            <div className="bg-white rounded-2xl shadow-sm p-4" style={{ border: '1px solid #f1f5f9' }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                  Filtrar por materia
+                </p>
+                {materiaSelec && (
+                  <button onClick={() => setMateriaSelec(null)}
+                    className="text-xs font-medium transition"
+                    style={{ color: '#64748b' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#1e3a5f')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#64748b')}>
+                    Ver todas
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {MATERIAS.map(m => {
+                  const activa = materiaSelec === m
+                  return (
+                    <button key={m} onClick={() => toggleMateria(m)}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                      style={{
+                        background: activa ? '#94a3b8' : '#2563eb',
+                        color:      'white',
+                        opacity:    materiaSelec && !activa ? 0.45 : 1,
+                        transform:  activa ? 'scale(0.97)' : 'scale(1)',
+                      }}
+                      onMouseEnter={e => { if (!activa) e.currentTarget.style.background = '#1d4ed8' }}
+                      onMouseLeave={e => { if (!activa) e.currentTarget.style.background = '#2563eb' }}>
+                      {m}
+                    </button>
+                  )
+                })}
+              </div>
+              {materiaSelec && (
+                <p className="text-xs mt-3 pt-2.5" style={{ color: '#64748b', borderTop: '1px solid #f1f5f9' }}>
+                  Mostrando datos de <span className="font-semibold" style={{ color: '#1e3a5f' }}>{materiaSelec}</span>
+                </p>
+              )}
+            </div>
+
+            {/* ── 2. Gráfica donut ── */}
             <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: '1px solid #f1f5f9' }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
@@ -413,21 +403,19 @@ export default function SeguimientoPage() {
                   {filtroPeriodo === 'bimestre' && ` — Bimestre ${bimestreSelec}`}
                   {filtroPeriodo === 'semana'   && ` — Semana ${semanaSelec}`}
                   {filtroPeriodo === 'semestre' && ' — Semestre completo'}
+                  {materiaSelec && ` · ${materiaSelec}`}
                 </p>
                 <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1">
                   {([
                     { key: 'calificaciones', label: 'Calificaciones' },
                     { key: 'asistencia',     label: 'Asistencia'     },
                   ] as { key: GraficaTipo; label: string }[]).map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setGraficaTipo(key)}
+                    <button key={key} onClick={() => setGraficaTipo(key)}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                       style={{
                         background: graficaTipo === key ? '#1e3a5f' : 'transparent',
                         color:      graficaTipo === key ? '#fff'    : '#64748b',
-                      }}
-                    >
+                      }}>
                       {label}
                     </button>
                   ))}
@@ -456,7 +444,7 @@ export default function SeguimientoPage() {
               </div>
             </div>
 
-            {/* Búsqueda */}
+            {/* ── 3. Búsqueda ── */}
             <div className="bg-white rounded-2xl shadow-sm p-3">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2">
@@ -464,18 +452,14 @@ export default function SeguimientoPage() {
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                   </svg>
                 </span>
-                <input
-                  type="text"
-                  placeholder="Buscar alumno..."
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
+                <input type="text" placeholder="Buscar alumno..."
+                  value={busqueda} onChange={e => setBusqueda(e.target.value)}
                   className="pl-9 pr-4 py-2 text-sm rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
-                />
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }} />
               </div>
             </div>
 
-            {/* Tabla Bimestre / Semana */}
+            {/* ── 4. Tabla Bimestre / Semana ── */}
             {filtroPeriodo !== 'semestre' && (
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <table className="w-full">
@@ -528,12 +512,10 @@ export default function SeguimientoPage() {
                           </span>
                         </td>
                         <td className="px-5 py-3.5">
-                          <button
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition"
+                          <button className="text-xs font-semibold px-3 py-1.5 rounded-lg transition"
                             style={{ background: '#eff6ff', color: '#2563eb' }}
                             onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
-                            onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}
-                          >
+                            onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}>
                             Editar
                           </button>
                         </td>
@@ -545,12 +527,13 @@ export default function SeguimientoPage() {
                   <p className="text-xs" style={{ color: '#94a3b8' }}>
                     {alumnosFiltrados.length} alumnos —{' '}
                     {filtroPeriodo === 'bimestre' ? `Bimestre ${bimestreSelec}` : `Semana ${semanaSelec}`}
+                    {materiaSelec && ` — ${materiaSelec}`}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Tabla Semestre */}
+            {/* ── 5. Tabla Semestre ── */}
             {filtroPeriodo === 'semestre' && (
               <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
                 <table className="w-full">
@@ -560,18 +543,20 @@ export default function SeguimientoPage() {
                         style={{ color: '#94a3b8' }}>#</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider sticky left-8 bg-white"
                         style={{ color: '#94a3b8', minWidth: 180 }}>Alumno</th>
+                      {/* Cabeceras calificaciones — negro */}
                       {[1, 2, 3].map(b => (
                         <th key={`cal-${b}`} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: '#3b82f6', minWidth: 80 }}>B{b} Cal.</th>
+                          style={{ color: '#1e293b', minWidth: 80 }}>B{b} Cal.</th>
                       ))}
                       <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: '#1e3a5f', minWidth: 90 }}>Prom. Cal.</th>
+                        style={{ color: '#1e293b', minWidth: 90 }}>Prom. Cal.</th>
+                      {/* Cabeceras asistencia — negro */}
                       {[1, 2, 3].map(b => (
                         <th key={`asis-${b}`} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: '#16a34a', minWidth: 80 }}>B{b} Asis.</th>
+                          style={{ color: '#1e293b', minWidth: 80 }}>B{b} Asis.</th>
                       ))}
                       <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: '#1e3a5f', minWidth: 100 }}>Prom. Asis.</th>
+                        style={{ color: '#1e293b', minWidth: 100 }}>Prom. Asis.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -579,8 +564,7 @@ export default function SeguimientoPage() {
                       const promCal  = avg(alumno.bimestres.map(b => b.promedio))
                       const promAsis = avg(alumno.bimestres.map(b => b.asistencia))
                       return (
-                        <tr key={alumno.id}
-                          style={{ borderBottom: '1px solid #f8fafc' }}
+                        <tr key={alumno.id} style={{ borderBottom: '1px solid #f8fafc' }}
                           className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-3 text-xs sticky left-0 bg-white" style={{ color: '#94a3b8' }}>{i + 1}</td>
                           <td className="px-4 py-3 sticky left-8 bg-white">
@@ -631,12 +615,12 @@ export default function SeguimientoPage() {
                         const vals = alumnosFiltrados.map(a => a.bimestres.find(x => x.numero === b)!.promedio)
                         return (
                           <td key={`foot-cal-${b}`} className="px-4 py-3">
-                            <span className="text-xs font-bold" style={{ color: '#3b82f6' }}>{avg(vals)}</span>
+                            <span className="text-xs font-bold" style={{ color: '#1e293b' }}>{avg(vals)}</span>
                           </td>
                         )
                       })}
                       <td className="px-4 py-3">
-                        <span className="text-xs font-bold" style={{ color: '#1e3a5f' }}>
+                        <span className="text-xs font-bold" style={{ color: '#1e293b' }}>
                           {avg(alumnosFiltrados.map(a => avg(a.bimestres.map(b => b.promedio))))}
                         </span>
                       </td>
@@ -644,12 +628,12 @@ export default function SeguimientoPage() {
                         const vals = alumnosFiltrados.map(a => a.bimestres.find(x => x.numero === b)!.asistencia)
                         return (
                           <td key={`foot-asis-${b}`} className="px-4 py-3">
-                            <span className="text-xs font-bold" style={{ color: '#16a34a' }}>{avg(vals)}%</span>
+                            <span className="text-xs font-bold" style={{ color: '#1e293b' }}>{avg(vals)}%</span>
                           </td>
                         )
                       })}
                       <td className="px-4 py-3">
-                        <span className="text-xs font-bold" style={{ color: '#1e3a5f' }}>
+                        <span className="text-xs font-bold" style={{ color: '#1e293b' }}>
                           {avg(alumnosFiltrados.map(a => avg(a.bimestres.map(b => b.asistencia))))}%
                         </span>
                       </td>

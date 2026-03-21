@@ -59,7 +59,7 @@ export default function Header({ titulo }: { titulo: string }) {
   }
 
   return (
-    <div className="px-4 pt-4">
+    <div className="px-4 pt-4 sticky top-0 z-40">
       <header
         className="flex items-center justify-between px-6 py-3 rounded-2xl"
         style={{
