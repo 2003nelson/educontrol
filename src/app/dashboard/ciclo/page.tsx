@@ -1,109 +1,138 @@
 'use client'
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type Semestre = {
-  id: string
-  numero: 1 | 2 | 3 | 4 | 5 | 6
-  nombre: string
-  inicio: string   // 'YYYY-MM-DD'
-  fin: string      // 'YYYY-MM-DD'
-  activo: boolean
-}
-
-const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const DIAS_SEMANA = ['L','M','X','J','V','S','D']
 
+type CampoActivo = 'inicio' | 'vacaciones_inicio' | 'vacaciones_fin' | 'cierre' | null
+
+type Semestre = {
+  id: string
+  numero: number
+  nombre: string
+  habilitado: boolean
+  completado: boolean
+}
+
 const semestresIniciales: Semestre[] = [
-  { id: '1', numero: 1, nombre: '1° Semestre', inicio: '2025-08-11', fin: '2025-12-19', activo: false },
-  { id: '2', numero: 2, nombre: '2° Semestre', inicio: '2026-02-02', fin: '2026-07-10', activo: true  },
-  { id: '3', numero: 3, nombre: '3° Semestre', inicio: '2026-08-10', fin: '2026-12-18', activo: false },
-  { id: '4', numero: 4, nombre: '4° Semestre', inicio: '2027-02-01', fin: '2027-07-09', activo: false },
-  { id: '5', numero: 5, nombre: '5° Semestre', inicio: '2027-08-09', fin: '2027-12-17', activo: false },
-  { id: '6', numero: 6, nombre: '6° Semestre', inicio: '2028-02-07', fin: '2028-07-14', activo: false },
+  { id: '1', numero: 1, nombre: '1° Semestre', habilitado: false, completado: true  },
+  { id: '2', numero: 2, nombre: '2° Semestre', habilitado: true,  completado: false },
+  { id: '3', numero: 3, nombre: '3° Semestre', habilitado: false, completado: false },
+  { id: '4', numero: 4, nombre: '4° Semestre', habilitado: false, completado: false },
+  { id: '5', numero: 5, nombre: '5° Semestre', habilitado: false, completado: false },
+  { id: '6', numero: 6, nombre: '6° Semestre', habilitado: false, completado: false },
 ]
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatFecha(iso: string) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-')
-  return `${d} ${MESES[parseInt(m) - 1]} ${y}`
+  return `${d} ${MESES_CORTO[parseInt(m) - 1]} ${y}`
 }
 
-function diasEntreFechas(inicio: string, fin: string) {
-  if (!inicio || !fin) return 0
-  const d1 = new Date(inicio), d2 = new Date(fin)
-  return Math.max(0, Math.round((d2.getTime() - d1.getTime()) / 86400000))
+function diasEntre(a: string, b: string) {
+  if (!a || !b) return 0
+  return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000))
 }
 
-// ─── Mini Calendar ────────────────────────────────────────────────────────────
-function MiniCalendar({
-  valor,
+// ─── Calendario inline ────────────────────────────────────────────────────────
+function Calendario({
+  campoActivo,
+  inicio,
+  vacIni,
+  vacFin,
+  cierre,
   onChange,
-  rangeStart,
-  rangeEnd,
 }: {
-  valor: string
-  onChange: (d: string) => void
-  rangeStart?: string
-  rangeEnd?: string
+  campoActivo: CampoActivo
+  inicio: string
+  vacIni: string
+  vacFin: string
+  cierre: string
+  onChange: (iso: string) => void
 }) {
   const hoy = new Date()
-  const inicial = valor ? new Date(valor + 'T12:00:00') : hoy
-  const [vista, setVista] = useState({ year: inicial.getFullYear(), month: inicial.getMonth() })
+  const ref  = campoActivo === 'inicio'             ? inicio
+             : campoActivo === 'vacaciones_inicio'  ? vacIni
+             : campoActivo === 'vacaciones_fin'     ? vacFin
+             : campoActivo === 'cierre'             ? cierre
+             : ''
+  const refDate = ref ? new Date(ref + 'T12:00:00') : hoy
+  const [vista, setVista] = useState({ year: refDate.getFullYear(), month: refDate.getMonth() })
 
   const primerDia = new Date(vista.year, vista.month, 1)
   const diasMes   = new Date(vista.year, vista.month + 1, 0).getDate()
-  // lunes = 0 … domingo = 6
   const offset    = (primerDia.getDay() + 6) % 7
 
   function prevMes() {
-    setVista(v => {
-      const m = v.month === 0 ? 11 : v.month - 1
-      const y = v.month === 0 ? v.year - 1 : v.year
-      return { year: y, month: m }
-    })
+    setVista(v => ({
+      month: v.month === 0 ? 11 : v.month - 1,
+      year:  v.month === 0 ? v.year - 1 : v.year,
+    }))
   }
   function nextMes() {
-    setVista(v => {
-      const m = v.month === 11 ? 0 : v.month + 1
-      const y = v.month === 11 ? v.year + 1 : v.year
-      return { year: y, month: m }
-    })
+    setVista(v => ({
+      month: v.month === 11 ? 0 : v.month + 1,
+      year:  v.month === 11 ? v.year + 1 : v.year,
+    }))
   }
-
   function toIso(day: number) {
-    const m = String(vista.month + 1).padStart(2, '0')
-    const d = String(day).padStart(2, '0')
-    return `${vista.year}-${m}-${d}`
+    return `${vista.year}-${String(vista.month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
   }
 
-  function enRango(day: number) {
-    if (!rangeStart || !rangeEnd) return false
-    const iso = toIso(day)
-    return iso >= rangeStart && iso <= rangeEnd
+  function estadoDia(iso: string) {
+    if (iso === inicio)  return 'inicio'
+    if (iso === cierre)  return 'cierre'
+    if (vacIni && vacFin && iso >= vacIni && iso <= vacFin) return 'vacaciones'
+    if (inicio && cierre && iso > inicio && iso < cierre && !(vacIni && vacFin && iso >= vacIni && iso <= vacFin)) return 'activo'
+    return 'normal'
   }
+
+  const coloresDia: Record<string, { bg: string; color: string; outline?: string }> = {
+    inicio:     { bg: '#1e3a5f', color: 'white' },
+    cierre:     { bg: '#dc2626', color: 'white' },
+    vacaciones: { bg: '#fef9c3', color: '#854d0e' },
+    activo:     { bg: '#dbeafe', color: '#1d4ed8' },
+    normal:     { bg: 'transparent', color: '#334155' },
+  }
+
+  const labelCampo = campoActivo === 'inicio'            ? 'Selecciona fecha de inicio'
+                   : campoActivo === 'vacaciones_inicio' ? 'Selecciona inicio de vacaciones'
+                   : campoActivo === 'vacaciones_fin'    ? 'Selecciona fin de vacaciones'
+                   : campoActivo === 'cierre'            ? 'Selecciona fecha de cierre'
+                   : 'Selecciona un campo para editar'
 
   return (
-    <div style={{ width: '260px', userSelect: 'none' }}>
-      {/* Header mes/año */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+    <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+
+      {/* Indicador campo activo */}
+      <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: '1px solid #f1f5f9' }}>
+        <div className="w-2 h-2 rounded-full"
+          style={{ background: campoActivo ? '#3b82f6' : '#cbd5e1' }} />
+        <p className="text-xs font-medium" style={{ color: campoActivo ? '#1e3a5f' : '#94a3b8' }}>
+          {labelCampo}
+        </p>
+      </div>
+
+      {/* Nav mes */}
+      <div className="flex items-center justify-between mb-4">
         <button onClick={prevMes}
-          style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', fontSize: '0.875rem', color: '#475569' }}>
+          className="w-8 h-8 rounded-full flex items-center justify-center transition"
+          style={{ border: 'none', background: '#f1f5f9', cursor: 'pointer', color: '#475569', fontSize: '1rem' }}>
           ‹
         </button>
-        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f' }}>
+        <p className="text-sm font-bold" style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
           {MESES[vista.month]} {vista.year}
         </p>
         <button onClick={nextMes}
-          style={{ width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', fontSize: '0.875rem', color: '#475569' }}>
+          className="w-8 h-8 rounded-full flex items-center justify-center transition"
+          style={{ border: 'none', background: '#f1f5f9', cursor: 'pointer', color: '#475569', fontSize: '1rem' }}>
           ›
         </button>
       </div>
 
-      {/* Cabecera días */}
+      {/* Días semana */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
         {DIAS_SEMANA.map(d => (
           <div key={d} style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', padding: '2px 0' }}>
@@ -112,285 +141,299 @@ function MiniCalendar({
         ))}
       </div>
 
-      {/* Días */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+      {/* Grid días */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
         {Array.from({ length: offset }).map((_, i) => <div key={`e-${i}`} />)}
         {Array.from({ length: diasMes }, (_, i) => i + 1).map(day => {
-          const iso        = toIso(day)
-          const seleccion  = valor === iso
-          const enR        = enRango(day)
-          const esHoy      = iso === hoy.toISOString().split('T')[0]
+          const iso    = toIso(day)
+          const estado = estadoDia(iso)
+          const esHoy  = iso === hoy.toISOString().split('T')[0]
+          const col    = coloresDia[estado]
+          const seleccionado = iso === ref
+
           return (
-            <button
-              key={day}
-              onClick={() => onChange(iso)}
+            <button key={day} onClick={() => campoActivo && onChange(iso)}
               style={{
-                width: '100%',
-                aspectRatio: '1',
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: seleccion ? 700 : 400,
-                background:  seleccion ? '#1e3a5f' : enR ? '#dbeafe' : 'transparent',
-                color:       seleccion ? 'white' : enR ? '#1d4ed8' : esHoy ? '#3b82f6' : '#334155',
-                outline:     esHoy && !seleccion ? '2px solid #3b82f6' : 'none',
-                outlineOffset: '-2px',
+                width: '100%', aspectRatio: '1', borderRadius: '50%',
+                border: seleccionado ? '2px solid #3b82f6' : esHoy ? '1.5px solid #93c5fd' : 'none',
+                cursor: campoActivo ? 'pointer' : 'default',
+                fontSize: '0.75rem', fontWeight: estado !== 'normal' ? 700 : 400,
+                background: col.bg, color: col.color,
+                transition: 'all 0.1s',
               }}
-              onMouseEnter={e => { if (!seleccion) e.currentTarget.style.background = '#f1f5f9' }}
-              onMouseLeave={e => { if (!seleccion) e.currentTarget.style.background = enR ? '#dbeafe' : 'transparent' }}
+              onMouseEnter={e => { if (campoActivo && estado === 'normal') e.currentTarget.style.background = '#f1f5f9' }}
+              onMouseLeave={e => { if (estado === 'normal') e.currentTarget.style.background = 'transparent' }}
             >
               {day}
             </button>
           )
         })}
       </div>
-    </div>
-  )
-}
 
-// ─── Modal editor de semestre ─────────────────────────────────────────────────
-function ModalSemestre({
-  semestre,
-  onGuardar,
-  onCerrar,
-}: {
-  semestre: Semestre
-  onGuardar: (id: string, inicio: string, fin: string) => void
-  onCerrar: () => void
-}) {
-  const [inicio, setInicio] = useState(semestre.inicio)
-  const [fin, setFin]       = useState(semestre.fin)
-  const [paso, setPaso]     = useState<'inicio' | 'fin'>('inicio')
-
-  function guardar() {
-    if (!inicio || !fin) return
-    onGuardar(semestre.id, inicio, fin)
-    onCerrar()
-  }
-
-  if (typeof window === 'undefined') return null
-
-  return createPortal(
-    <div
-      onClick={onCerrar}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
-      }}
-    >
-      <div onClick={e => e.stopPropagation()}
-        style={{ background: 'white', borderRadius: '1rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '600px' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-          <div>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>
-              {semestre.nombre}
-            </h2>
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.125rem 0 0' }}>
-              Define el inicio y fin del semestre
-            </p>
+      {/* Leyenda */}
+      <div className="flex flex-wrap gap-3 mt-4 pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
+        {[
+          { color: '#1e3a5f', label: 'Inicio' },
+          { color: '#dbeafe', label: 'Días activos', text: '#1d4ed8' },
+          { color: '#fef9c3', label: 'Vacaciones', text: '#854d0e' },
+          { color: '#dc2626', label: 'Cierre' },
+        ].map(l => (
+          <div key={l.label} className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ background: l.color }} />
+            <span className="text-xs" style={{ color: '#64748b' }}>{l.label}</span>
           </div>
-          <button onClick={onCerrar}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.25rem', fontWeight: 700, lineHeight: 1 }}>
-            ✕
-          </button>
-        </div>
-
-        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', gap: '1.5rem' }}>
-
-          {/* Selector inicio / fin */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '220px', flexShrink: 0 }}>
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {(['inicio', 'fin'] as const).map(p => (
-                <button key={p} onClick={() => setPaso(p)}
-                  style={{
-                    flex: 1, padding: '0.5rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
-                    fontSize: '0.75rem', fontWeight: 600,
-                    background: paso === p ? '#1e3a5f' : '#f1f5f9',
-                    color:      paso === p ? 'white'   : '#64748b',
-                  }}>
-                  {p === 'inicio' ? 'Fecha inicio' : 'Fecha fin'}
-                </button>
-              ))}
-            </div>
-
-            {/* Resumen fechas */}
-            <div style={{ background: '#f8fafc', borderRadius: '0.75rem', padding: '0.875rem', border: '1px solid #f1f5f9' }}>
-              <div style={{ marginBottom: '0.625rem' }}>
-                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' }}>
-                  Inicio
-                </p>
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: inicio ? '#1e3a5f' : '#cbd5e1', margin: 0 }}>
-                  {inicio ? formatFecha(inicio) : 'Sin definir'}
-                </p>
-              </div>
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.625rem' }}>
-                <p style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' }}>
-                  Fin
-                </p>
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: fin ? '#1e3a5f' : '#cbd5e1', margin: 0 }}>
-                  {fin ? formatFecha(fin) : 'Sin definir'}
-                </p>
-              </div>
-              {inicio && fin && (
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '0.625rem', marginTop: '0.625rem' }}>
-                  <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
-                    <span style={{ fontWeight: 600 }}>{diasEntreFechas(inicio, fin)}</span> días de semestre
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Calendario */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <MiniCalendar
-              valor={paso === 'inicio' ? inicio : fin}
-              onChange={d => {
-                if (paso === 'inicio') { setInicio(d); setPaso('fin') }
-                else setFin(d)
-              }}
-              rangeStart={inicio}
-              rangeEnd={fin}
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', gap: '0.75rem', padding: '1rem 1.5rem', borderTop: '1px solid #f1f5f9' }}>
-          <button onClick={onCerrar}
-            style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 500, borderRadius: '0.75rem', border: '1px solid #e2e8f0', color: '#64748b', background: 'white', cursor: 'pointer' }}>
-            Cancelar
-          </button>
-          <button onClick={guardar}
-            style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: '0.75rem', border: 'none', background: '#1e3a5f', color: 'white', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-            Guardar fechas
-          </button>
-        </div>
+        ))}
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CicloPage() {
+  const [inicio,  setInicio]  = useState('2026-02-02')
+  const [vacIni,  setVacIni]  = useState('2026-04-06')
+  const [vacFin,  setVacFin]  = useState('2026-04-10')
+  const [cierre,  setCierre]  = useState('2026-07-10')
+  const [campo,   setCampo]   = useState<CampoActivo>(null)
+  const [guardado, setGuardado] = useState(false)
   const [semestres, setSemestres] = useState<Semestre[]>(semestresIniciales)
-  const [editando, setEditando]   = useState<Semestre | null>(null)
 
-  function guardarFechas(id: string, inicio: string, fin: string) {
-    setSemestres(prev => prev.map(s => s.id === id ? { ...s, inicio, fin } : s))
+  function handleCalendario(iso: string) {
+    if (campo === 'inicio')            { setInicio(iso);  setCampo('vacaciones_inicio') }
+    else if (campo === 'vacaciones_inicio') { setVacIni(iso); setCampo('vacaciones_fin') }
+    else if (campo === 'vacaciones_fin')    { setVacFin(iso); setCampo('cierre') }
+    else if (campo === 'cierre')       { setCierre(iso);  setCampo(null) }
   }
+
+  function toggleSemestre(id: string) {
+    setSemestres(prev => prev.map(s =>
+      s.id === id ? { ...s, habilitado: !s.habilitado } : s
+    ))
+  }
+
+  function guardar() {
+    setGuardado(true)
+    setCampo(null)
+    setTimeout(() => setGuardado(false), 2500)
+  }
+
+  const diasClase = diasEntre(inicio, cierre) - diasEntre(vacIni, vacFin) - 1
+  const diasVac   = diasEntre(vacIni, vacFin) + 1
+
+  const campos: { key: CampoActivo; label: string; valor: string; color: string }[] = [
+    { key: 'inicio',            label: 'Fecha de inicio',           valor: inicio, color: '#1e3a5f' },
+    { key: 'vacaciones_inicio', label: 'Inicio de vacaciones',      valor: vacIni, color: '#d97706' },
+    { key: 'vacaciones_fin',    label: 'Fin de vacaciones',         valor: vacFin, color: '#d97706' },
+    { key: 'cierre',            label: 'Fecha de cierre',           valor: cierre, color: '#dc2626' },
+  ]
 
   return (
     <div className="flex flex-col h-full">
       <Header titulo="Ciclo Escolar" />
 
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-5">
 
-        <div>
-          <p className="text-sm" style={{ color: '#64748b' }}>
-            Define las fechas de inicio y fin de cada semestre del ciclo escolar.
-          </p>
-          <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>
-            El semestre activo se marca en azul. Haz clic en cualquier semestre para editar sus fechas.
-          </p>
+        {/* Título sección */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
+              Configuración del período escolar
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
+              Selecciona un campo y elige la fecha en el almanaque
+            </p>
+          </div>
+          <button
+            onClick={guardar}
+            className="flex items-center gap-2 text-sm font-semibold text-white px-4 py-2 rounded-xl transition"
+            style={{ background: guardado ? '#16a34a' : '#1e3a5f' }}
+            onMouseEnter={e => { if (!guardado) e.currentTarget.style.background = '#2563eb' }}
+            onMouseLeave={e => { if (!guardado) e.currentTarget.style.background = '#1e3a5f' }}
+          >
+            {guardado ? '✓ Guardado' : 'Guardar cambios'}
+          </button>
         </div>
 
-        {/* Grid de semestres */}
-        <div className="grid grid-cols-3 gap-4">
-          {semestres.map(s => {
-            const dias = diasEntreFechas(s.inicio, s.fin)
-            return (
-              <button
-                key={s.id}
-                onClick={() => setEditando(s)}
-                className="bg-white rounded-2xl p-5 text-left transition-all hover:shadow-md"
-                style={{
-                  border:     s.activo ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                  background: s.activo ? '#fafcff' : 'white',
-                }}
-                onMouseEnter={e => { if (!s.activo) e.currentTarget.style.borderColor = '#3b82f6' }}
-                onMouseLeave={e => { if (!s.activo) e.currentTarget.style.borderColor = '#e2e8f0' }}
-              >
-                {/* Número y badge activo */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
-                    style={{
-                      background: s.activo ? '#1e3a5f' : '#f1f5f9',
-                      color:      s.activo ? 'white'   : '#64748b',
-                      fontFamily: 'Outfit, sans-serif',
-                    }}>
-                    {s.numero}
-                  </div>
-                  {s.activo && (
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-                      Activo
-                    </span>
-                  )}
-                </div>
+        <div className="grid gap-5" style={{ gridTemplateColumns: '1fr 320px' }}>
 
-                <h3 className="text-sm font-bold mb-3" style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
-                  {s.nombre}
-                </h3>
+          {/* Columna izquierda */}
+          <div className="space-y-4">
 
-                {/* Fechas */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#94a3b8' }}>Inicio</span>
-                    <span className="text-xs font-semibold" style={{ color: '#475569' }}>
-                      {formatFecha(s.inicio)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#94a3b8' }}>Fin</span>
-                    <span className="text-xs font-semibold" style={{ color: '#475569' }}>
-                      {formatFecha(s.fin)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Barra de duración */}
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: '#f1f5f9' }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#94a3b8' }}>Duración</span>
-                    <span className="text-xs font-semibold" style={{ color: '#475569' }}>{dias} días</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#f1f5f9' }}>
-                    <div className="h-full rounded-full"
+            {/* Campos de fecha */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#94a3b8' }}>
+                Fechas del semestre
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {campos.map(c => {
+                  const activo = campo === c.key
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setCampo(activo ? null : c.key)}
+                      className="rounded-xl p-4 text-left transition-all"
                       style={{
-                        width:      `${Math.min(100, (dias / 180) * 100)}%`,
-                        background: s.activo ? '#3b82f6' : '#cbd5e1',
-                      }} />
-                  </div>
-                </div>
+                        border:     activo ? `2px solid ${c.color}` : '1px solid #e2e8f0',
+                        background: activo ? '#f8faff' : 'white',
+                      }}
+                      onMouseEnter={e => { if (!activo) e.currentTarget.style.borderColor = '#3b82f6' }}
+                      onMouseLeave={e => { if (!activo) e.currentTarget.style.borderColor = '#e2e8f0' }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: c.color }} />
+                        <p className="text-xs font-medium" style={{ color: '#64748b' }}>{c.label}</p>
+                      </div>
+                      <p className="text-sm font-bold" style={{ color: c.valor ? '#1e3a5f' : '#cbd5e1' }}>
+                        {c.valor ? formatFecha(c.valor) : 'Sin definir'}
+                      </p>
+                      {activo && (
+                        <p className="text-xs mt-1" style={{ color: c.color }}>
+                          Selecciona en el almanaque →
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
-                {/* Hint editar */}
-                <p className="text-xs mt-3 text-center" style={{ color: '#3b82f6' }}>
-                  Clic para editar fechas
-                </p>
-              </button>
-            )
-          })}
+            {/* Resumen */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#94a3b8' }}>
+                Resumen del período
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-xl p-3 text-center" style={{ background: '#eff6ff' }}>
+                  <p className="text-2xl font-bold" style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
+                    {diasEntre(inicio, cierre)}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#64748b' }}>Días totales</p>
+                </div>
+                <div className="rounded-xl p-3 text-center" style={{ background: '#f0fdf4' }}>
+                  <p className="text-2xl font-bold" style={{ color: '#16a34a', fontFamily: 'Outfit, sans-serif' }}>
+                    {Math.max(0, diasClase)}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#64748b' }}>Días de clase</p>
+                </div>
+                <div className="rounded-xl p-3 text-center" style={{ background: '#fffbeb' }}>
+                  <p className="text-2xl font-bold" style={{ color: '#d97706', fontFamily: 'Outfit, sans-serif' }}>
+                    {Math.max(0, diasVac)}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#64748b' }}>Días de vacaciones</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Habilitación de semestres */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                    Acceso por semestre
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#cbd5e1' }}>
+                    Habilita el acceso de docentes y alumnos por semestre
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {semestres.map(s => (
+                  <div
+                    key={s.id}
+                    className="rounded-xl p-3 flex items-center justify-between"
+                    style={{
+                      border:     s.habilitado ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                      background: s.completado ? '#f8fafc' : s.habilitado ? '#f0fdf4' : 'white',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                        style={{
+                          background: s.completado ? '#e2e8f0' : s.habilitado ? '#1e3a5f' : '#f1f5f9',
+                          color:      s.completado ? '#94a3b8'  : s.habilitado ? 'white'    : '#64748b',
+                          fontFamily: 'Outfit, sans-serif',
+                        }}>
+                        {s.numero}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold" style={{ color: '#1e3a5f' }}>{s.nombre}</p>
+                        <p className="text-xs" style={{ color: s.completado ? '#94a3b8' : s.habilitado ? '#16a34a' : '#94a3b8' }}>
+                          {s.completado ? 'Completado' : s.habilitado ? 'Activo' : 'Cerrado'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Toggle */}
+                    {!s.completado && (
+                      <button
+                        onClick={() => toggleSemestre(s.id)}
+                        className="relative inline-flex items-center rounded-full transition-all duration-300 shrink-0"
+                        style={{
+                          width:      '36px',
+                          height:     '20px',
+                          background: s.habilitado ? '#16a34a' : '#d1d5db',
+                          border:     'none',
+                          cursor:     'pointer',
+                        }}
+                      >
+                        <span
+                          className="inline-block rounded-full bg-white shadow-sm transition-all duration-300"
+                          style={{
+                            width:     '14px',
+                            height:    '14px',
+                            transform: s.habilitado ? 'translateX(18px)' : 'translateX(3px)',
+                          }}
+                        />
+                      </button>
+                    )}
+
+                    {s.completado && (
+                      <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Columna derecha — Almanaque */}
+          <div className="sticky top-4">
+            <Calendario
+              campoActivo={campo}
+              inicio={inicio}
+              vacIni={vacIni}
+              vacFin={vacFin}
+              cierre={cierre}
+              onChange={handleCalendario}
+            />
+
+            {/* Flujo guía */}
+            {campo && (
+              <div className="bg-white rounded-2xl p-4 mt-3 shadow-sm" style={{ border: '1px solid #e2e8f0' }}>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#64748b' }}>Flujo de configuración</p>
+                <div className="space-y-1.5">
+                  {campos.map((c, i) => (
+                    <div key={c.key} className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        style={{
+                          background: campo === c.key ? c.color : c.valor ? '#f0fdf4' : '#f1f5f9',
+                          color:      campo === c.key ? 'white'  : c.valor ? '#16a34a'  : '#94a3b8',
+                        }}>
+                        {c.valor && campo !== c.key ? '✓' : i + 1}
+                      </div>
+                      <p className="text-xs" style={{ color: campo === c.key ? '#1e3a5f' : '#94a3b8', fontWeight: campo === c.key ? 600 : 400 }}>
+                        {c.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Modal */}
-      {editando && (
-        <ModalSemestre
-          semestre={editando}
-          onGuardar={guardarFechas}
-          onCerrar={() => setEditando(null)}
-        />
-      )}
     </div>
   )
 }
