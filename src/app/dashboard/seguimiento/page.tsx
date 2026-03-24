@@ -19,8 +19,8 @@ const MATERIAS = [
 
 const semestresActivos = [
   { numero: 1, ciclo: 'Ago–Dic 2025', grupos: ['101', '102', '103'], imagen: '/img1v.png', alumnos: 87 },
-  { numero: 3, ciclo: 'Ago–Dic 2025', grupos: ['301', '302', '303'], imagen: '/img2.png', alumnos: 82 },
-  { numero: 5, ciclo: 'Ago–Dic 2025', grupos: ['501', '502', '503'], imagen: '/img3v2.png', alumnos: 79 },
+  { numero: 3, ciclo: 'Ago–Dic 2025', grupos: ['301', '302', '303'], imagen: '/img2.png',  alumnos: 82 },
+  { numero: 5, ciclo: 'Ago–Dic 2025', grupos: ['501', '502', '503'], imagen: '/img3.png',  alumnos: 79 },
 ]
 
 const semestresData = [
@@ -217,7 +217,7 @@ export default function SeguimientoPage() {
 
       <div className="p-4 space-y-4">
 
-        {/* ── VISTA 1: Semestres activos ── */}
+        {/* VISTA 1: Semestres activos */}
         {vista === 'semestres' && (
           <>
             <div className="flex items-center justify-between">
@@ -236,12 +236,7 @@ export default function SeguimientoPage() {
                   key={s.numero}
                   onClick={() => seleccionarSemestre(s.numero)}
                   className="relative overflow-hidden rounded-2xl text-left"
-                  style={{
-                    background: 'white',
-                    border:     '1px solid #e2e8f0',
-                    minHeight:  '260px',
-                    transition: 'all 0.2s ease',
-                  }}
+                  style={{ background: 'white', border: '1px solid #e2e8f0', minHeight: '260px', transition: 'all 0.2s ease' }}
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = '#3b82f6'
                     e.currentTarget.style.transform   = 'translateY(-3px)'
@@ -253,42 +248,21 @@ export default function SeguimientoPage() {
                     e.currentTarget.style.boxShadow   = 'none'
                   }}
                 >
-                  {/* Imagen decorativa — contenedor posicionado, más grande */}
-                  <div style={{
-                    position:      'absolute',
-                    right:         '-24px',
-                    bottom:        '-24px',
-                    width:         '220px',
-                    height:        '220px',
-                    opacity:       0.15,
-                    pointerEvents: 'none',
-                  }}>
-                    <Image
-                      src={s.imagen}
-                      alt=""
-                      fill
-                      style={{ objectFit: 'contain' }}
-                    />
+                  <div style={{ position: 'absolute', right: '-24px', bottom: '-24px', width: '220px', height: '220px', opacity: 0.15, pointerEvents: 'none' }}>
+                    <Image src={s.imagen} alt="" fill style={{ objectFit: 'contain' }} />
                   </div>
-
-                  {/* Contenido */}
                   <div className="relative flex flex-col p-7" style={{ minHeight: '260px' }}>
                     <div className="flex items-start justify-between mb-5">
-                      <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold"
-                        style={{ background: '#eff6ff', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}
-                      >
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold"
+                        style={{ background: '#eff6ff', color: '#2563eb', fontFamily: 'Outfit, sans-serif' }}>
                         {s.numero}
                       </div>
                       <ArrowButton />
                     </div>
-
-                    <h3 className="text-xl font-bold mb-1"
-                      style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
+                    <h3 className="text-xl font-bold mb-1" style={{ color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
                       {s.numero}° Semestre
                     </h3>
                     <p className="text-xs mb-auto" style={{ color: '#94a3b8' }}>{s.ciclo}</p>
-
                     <div className="flex gap-5 pt-5 mt-4" style={{ borderTop: '1px solid #f1f5f9' }}>
                       <div>
                         <p className="text-xs mb-0.5" style={{ color: '#94a3b8' }}>Grupos</p>
@@ -313,7 +287,7 @@ export default function SeguimientoPage() {
           </>
         )}
 
-        {/* ── VISTA 2: Grupos ── */}
+        {/* VISTA 2: Grupos */}
         {vista === 'grupos' && semestre && (
           <>
             <div className="flex items-center justify-between">
@@ -355,7 +329,7 @@ export default function SeguimientoPage() {
           </>
         )}
 
-        {/* ── VISTA 3: Alumnos ── */}
+        {/* VISTA 3: Alumnos */}
         {vista === 'alumnos' && (
           <div className="space-y-3">
 
@@ -426,7 +400,7 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            {/* Selector materias */}
+            {/* Selector materias — minimalista con animación saltar */}
             <div className="bg-white rounded-2xl shadow-sm p-4" style={{ border: '1px solid #f1f5f9' }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
@@ -447,15 +421,33 @@ export default function SeguimientoPage() {
                   const activa = materiaSelec === m
                   return (
                     <button key={m} onClick={() => toggleMateria(m)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                      className="text-xs font-semibold rounded-xl"
                       style={{
-                        background: activa ? '#94a3b8' : '#2563eb',
-                        color:      'white',
-                        opacity:    materiaSelec && !activa ? 0.45 : 1,
-                        transform:  activa ? 'scale(0.97)' : 'scale(1)',
+                        padding:    '0.5rem 1rem',
+                        background: activa ? '#1e3a5f'   : 'white',
+                        color:      activa ? 'white'     : '#475569',
+                        border:     activa ? '1px solid #1e3a5f' : '1px solid #e2e8f0',
+                        boxShadow:  activa ? '0 6px 16px rgba(30,58,95,0.25)' : '0 1px 3px rgba(0,0,0,0.06)',
+                        transform:  activa ? 'translateY(-4px)' : 'translateY(0)',
+                        opacity:    materiaSelec && !activa ? 0.5 : 1,
+                        transition: 'all 0.2s ease',
                       }}
-                      onMouseEnter={e => { if (!activa) e.currentTarget.style.background = '#1d4ed8' }}
-                      onMouseLeave={e => { if (!activa) e.currentTarget.style.background = '#2563eb' }}>
+                      onMouseEnter={e => {
+                        if (!activa) {
+                          e.currentTarget.style.borderColor = '#1e3a5f'
+                          e.currentTarget.style.color       = '#1e3a5f'
+                          e.currentTarget.style.transform   = 'translateY(-2px)'
+                          e.currentTarget.style.boxShadow   = '0 4px 10px rgba(30,58,95,0.12)'
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!activa) {
+                          e.currentTarget.style.borderColor = '#e2e8f0'
+                          e.currentTarget.style.color       = '#475569'
+                          e.currentTarget.style.transform   = 'translateY(0)'
+                          e.currentTarget.style.boxShadow   = '0 1px 3px rgba(0,0,0,0.06)'
+                        }
+                      }}>
                       {m}
                     </button>
                   )
