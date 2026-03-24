@@ -20,7 +20,7 @@ const MATERIAS = [
 const semestresActivos = [
   { numero: 1, ciclo: 'Ago–Dic 2025', grupos: ['101', '102', '103'], imagen: '/img1v.png', alumnos: 87 },
   { numero: 3, ciclo: 'Ago–Dic 2025', grupos: ['301', '302', '303'], imagen: '/img2.png',  alumnos: 82 },
-  { numero: 5, ciclo: 'Ago–Dic 2025', grupos: ['501', '502', '503'], imagen: '/img3.png',  alumnos: 79 },
+  { numero: 5, ciclo: 'Ago–Dic 2025', grupos: ['501', '502', '503'], imagen: '/img3v2.png',  alumnos: 79 },
 ]
 
 const semestresData = [
