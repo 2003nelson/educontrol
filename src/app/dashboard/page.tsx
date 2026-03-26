@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
-type TipoFiltro   = 'semana' | 'mes' | 'grupo' | null
-type TipoInforme  = 'escuela' | 'grupo' | 'bimestre'
+type TipoFiltro  = 'semana' | 'mes' | 'grupo' | null
+type TipoFormato = 'pdf' | 'excel' | null
 
 const SEMANAS = Array.from({ length: 16 }, (_, i) => ({ key: `semana-${i+1}`, label: `Semana ${i + 1}` }))
 const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -71,19 +71,14 @@ function FilterDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
   )
 }
 
-// ─── Modal Descargar Informe — usa Portal para cubrir toda la pantalla ────────
+// ─── Modal Descargar Informe ──────────────────────────────────────────────────
 function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
-  const [tipo, setTipo]               = useState<TipoInforme>('escuela')
-  const [grupoInf, setGrupoInf]       = useState('')
-  const [semestreInf, setSemestreInf] = useState('')
-  const [bimestreInf, setBimestreInf] = useState('')
-  const [contenido, setContenido]     = useState({ calificaciones: true, asistencia: true })
+  const [grupo,    setGrupo]    = useState('')
+  const [parcial,  setParcial]  = useState('')
+  const [formato,  setFormato]  = useState<TipoFormato>(null)
+  const [contenido, setContenido] = useState({ calificaciones: true, asistencia: true })
 
-  const opciones: { key: TipoInforme; titulo: string; desc: string; icono: string }[] = [
-    { key: 'escuela',  titulo: 'Escuela completa', desc: 'Reporte general de toda la institución', icono: '🏫' },
-    { key: 'grupo',    titulo: 'Por grupo',         desc: 'Reporte de un grupo específico',         icono: '👥' },
-    { key: 'bimestre', titulo: 'Por bimestre',      desc: 'Reporte de un bimestre en particular',   icono: '📅' },
-  ]
+  const listo = grupo && parcial && formato && (contenido.calificaciones || contenido.asistencia)
 
   if (typeof window === 'undefined') return null
 
@@ -91,141 +86,102 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
     <div
       onClick={onCerrar}
       style={{
-        position:       'fixed',
-        inset:          0,
-        zIndex:         9999,
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        background:     'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(3px)',
-        WebkitBackdropFilter: 'blur(3px)',
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
       }}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col"
-        style={{ maxHeight: '88vh' }}
-      >
-        {/* Header fijo */}
-        <div className="flex items-center justify-between px-8 pt-7 pb-5 border-b shrink-0"
+      <div onClick={e => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-xl w-full flex flex-col"
+        style={{ maxWidth: '560px', maxHeight: '88vh' }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b shrink-0"
           style={{ borderColor: '#f1f5f9' }}>
           <div>
-            <h2 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>Descargar Informe</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>Selecciona el tipo y alcance del informe</p>
+            <h2 className="text-base font-bold" style={{ color: '#1e3a5f' }}>Descargar Informe</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
+              Selecciona el grupo, parcial y formato de descarga
+            </p>
           </div>
-          <button onClick={onCerrar} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
+          <button onClick={onCerrar}
+            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
         </div>
 
-        {/* Contenido con scroll interno */}
-        <div className="overflow-y-auto px-8 py-6 space-y-6 flex-1">
+        <div className="overflow-y-auto px-7 py-5 space-y-5 flex-1">
 
-          {/* Tipo de informe */}
+          {/* Paso 1 — Grupo y Parcial */}
           <div>
-            <p className="text-sm font-semibold mb-3" style={{ color: '#475569' }}>Tipo de informe</p>
-            <div className="grid grid-cols-3 gap-3">
-              {opciones.map(op => (
-                <button key={op.key} onClick={() => setTipo(op.key)}
-                  className="rounded-xl p-4 text-left transition-all"
-                  style={{
-                    border:     tipo === op.key ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                    background: tipo === op.key ? '#eff6ff' : 'white',
-                  }}>
-                  <span className="text-2xl mb-2 block">{op.icono}</span>
-                  <p className="text-sm font-semibold" style={{ color: tipo === op.key ? '#2563eb' : '#1e3a5f' }}>
-                    {op.titulo}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{op.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Campos según tipo */}
-          {tipo === 'grupo' && (
-            <div className="grid grid-cols-2 gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
+              1 · Selecciona grupo y parcial
+            </p>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Grupo</label>
-                <select value={grupoInf} onChange={e => setGrupoInf(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: '#475569' }}>Grupo</label>
+                <select value={grupo} onChange={e => setGrupo(e.target.value)}
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  style={{ borderColor: '#e2e8f0', color: grupo ? '#1e3a5f' : '#94a3b8' }}>
                   <option value="">Selecciona un grupo</option>
                   {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Semestre</label>
-                <select value={semestreInf} onChange={e => setSemestreInf(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}>
-                  <option value="">Todos los semestres</option>
-                  {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}° Semestre</option>)}
+                <label className="text-xs font-medium block mb-1.5" style={{ color: '#475569' }}>Parcial</label>
+                <select value={parcial} onChange={e => setParcial(e.target.value)}
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  style={{ borderColor: '#e2e8f0', color: parcial ? '#1e3a5f' : '#94a3b8' }}>
+                  <option value="">Selecciona un parcial</option>
+                  <option value="1">1er Parcial</option>
+                  <option value="2">2do Parcial</option>
+                  <option value="3">3er Parcial</option>
+                  <option value="final">Calificación Final</option>
                 </select>
               </div>
             </div>
-          )}
+          </div>
 
-          {tipo === 'bimestre' && (
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Bimestre</label>
-                <select value={bimestreInf} onChange={e => setBimestreInf(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}>
-                  <option value="">Selecciona bimestre</option>
-                  <option value="1">Bimestre 1</option>
-                  <option value="2">Bimestre 2</option>
-                  <option value="3">Bimestre 3</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Grupo</label>
-                <select value={grupoInf} onChange={e => setGrupoInf(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}>
-                  <option value="">Todos los grupos</option>
-                  {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1" style={{ color: '#475569' }}>Semestre</label>
-                <select value={semestreInf} onChange={e => setSemestreInf(e.target.value)}
-                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0' }}>
-                  <option value="">Todos</option>
-                  {[1,2,3,4,5,6].map(s => <option key={s} value={s}>{s}° Semestre</option>)}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {/* Contenido del informe */}
+          {/* Paso 2 — Contenido */}
           <div>
-            <p className="text-sm font-semibold mb-3" style={{ color: '#475569' }}>Contenido del informe</p>
-            <div className="flex gap-4">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
+              2 · Contenido a incluir
+            </p>
+            <div className="grid grid-cols-2 gap-3">
               {[
-                { key: 'calificaciones', label: 'Calificaciones', desc: 'Promedio por bimestre y final' },
-                { key: 'asistencia',     label: 'Asistencia',     desc: 'Porcentaje y faltas por alumno' },
+                { key: 'calificaciones', label: 'Calificaciones', desc: 'Promedio por parcial y final',
+                  icon: (
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                  )
+                },
+                { key: 'asistencia', label: 'Asistencia', desc: 'Porcentaje y faltas por alumno',
+                  icon: (
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  )
+                },
               ].map(op => {
                 const activo = contenido[op.key as keyof typeof contenido]
                 return (
                   <button key={op.key}
                     onClick={() => setContenido(prev => ({ ...prev, [op.key]: !prev[op.key as keyof typeof prev] }))}
-                    className="flex items-center gap-3 flex-1 rounded-xl p-4 text-left transition-all"
+                    className="flex items-center gap-3 rounded-xl p-3.5 text-left transition-all"
                     style={{
                       border:     activo ? '2px solid #3b82f6' : '1px solid #e2e8f0',
                       background: activo ? '#eff6ff' : 'white',
                     }}>
-                    <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition"
-                      style={{ background: activo ? '#2563eb' : '#e2e8f0' }}>
-                      {activo && (
-                        <svg width="10" height="10" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: activo ? '#2563eb' : '#f1f5f9', color: activo ? 'white' : '#94a3b8' }}>
+                      {op.icon}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>{op.label}</p>
+                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>
+                        {op.label}
+                      </p>
                       <p className="text-xs" style={{ color: '#94a3b8' }}>{op.desc}</p>
                     </div>
                   </button>
@@ -234,34 +190,140 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             </div>
           </div>
 
-          {/* Resumen */}
-          <div className="rounded-xl p-4" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
-              Resumen del informe
+          {/* Paso 3 — Formato */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
+              3 · Formato de descarga
             </p>
-            <p className="text-sm" style={{ color: '#475569' }}>
-              <span className="font-semibold" style={{ color: '#1e3a5f' }}>Tipo: </span>
-              {tipo === 'escuela' ? 'Escuela completa' : tipo === 'grupo' ? `Grupo${grupoInf ? ` ${grupoInf}` : ' (todos)'}` : `Bimestre${bimestreInf ? ` ${bimestreInf}` : ' (todos)'}`}
-            </p>
-            <p className="text-sm mt-1" style={{ color: '#475569' }}>
-              <span className="font-semibold" style={{ color: '#1e3a5f' }}>Incluye: </span>
-              {[contenido.calificaciones && 'Calificaciones', contenido.asistencia && 'Asistencia'].filter(Boolean).join(' + ') || 'Nada seleccionado'}
-            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* PDF */}
+              <button onClick={() => setFormato(formato === 'pdf' ? null : 'pdf')}
+                className="rounded-xl p-4 text-left transition-all"
+                style={{
+                  border:     formato === 'pdf' ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                  background: formato === 'pdf' ? '#fef2f2' : 'white',
+                }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: formato === 'pdf' ? '#dc2626' : '#f1f5f9' }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <polyline points="14 2 14 8 20 8"
+                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="9" y1="13" x2="15" y2="13"
+                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="9" y1="17" x2="15" y2="17"
+                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: formato === 'pdf' ? '#dc2626' : '#1e3a5f' }}>
+                      PDF
+                    </p>
+                    <p className="text-xs" style={{ color: '#94a3b8' }}>Para imprimir o compartir</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {['Listo para imprimir', 'Firma del director'].map(tag => (
+                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: formato === 'pdf' ? '#fee2e2' : '#f1f5f9', color: formato === 'pdf' ? '#dc2626' : '#94a3b8' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </button>
+
+              {/* Excel */}
+              <button onClick={() => setFormato(formato === 'excel' ? null : 'excel')}
+                className="rounded-xl p-4 text-left transition-all"
+                style={{
+                  border:     formato === 'excel' ? '2px solid #16a34a' : '1px solid #e2e8f0',
+                  background: formato === 'excel' ? '#f0fdf4' : 'white',
+                }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: formato === 'excel' ? '#16a34a' : '#f1f5f9' }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <polyline points="14 2 14 8 20 8"
+                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="8" y1="13" x2="16" y2="13"
+                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="8" y1="17" x2="16" y2="17"
+                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="10" y1="9" x2="14" y2="9"
+                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: formato === 'excel' ? '#16a34a' : '#1e3a5f' }}>
+                      Excel
+                    </p>
+                    <p className="text-xs" style={{ color: '#94a3b8' }}>Para analizar o editar</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {['Editable', 'Filtros automáticos'].map(tag => (
+                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: formato === 'excel' ? '#dcfce7' : '#f1f5f9', color: formato === 'excel' ? '#16a34a' : '#94a3b8' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            </div>
           </div>
 
+          {/* Resumen */}
+          {listo && (
+            <div className="rounded-xl p-4" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
+                Resumen
+              </p>
+              <div className="space-y-1">
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Grupo: </span>
+                  {grupo}
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Parcial: </span>
+                  {parcial === 'final' ? 'Calificación Final' : `${parcial}° Parcial`}
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Incluye: </span>
+                  {[contenido.calificaciones && 'Calificaciones', contenido.asistencia && 'Asistencia'].filter(Boolean).join(' + ')}
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Formato: </span>
+                  {formato === 'pdf' ? 'PDF' : 'Excel (.xlsx)'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Botones */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-1">
             <button onClick={onCerrar}
               className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
               style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
               Cancelar
             </button>
             <button
+              disabled={!listo}
               className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition flex items-center justify-center gap-2"
-              style={{ background: '#1e3a5f' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-              ↓ Descargar PDF
+              style={{
+                background: !listo ? '#e2e8f0' : formato === 'pdf' ? '#dc2626' : '#16a34a',
+                cursor:     !listo ? 'not-allowed' : 'pointer',
+                color:      !listo ? '#94a3b8' : 'white',
+              }}
+              onMouseEnter={e => { if (listo) e.currentTarget.style.opacity = '0.88' }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}>
+              {!listo
+                ? 'Completa los campos'
+                : `↓ Descargar ${formato === 'pdf' ? 'PDF' : 'Excel'}`
+              }
             </button>
           </div>
         </div>
@@ -298,10 +360,10 @@ export default function DashboardPage() {
     <div className="flex flex-col h-full">
       <Header titulo="Centro Estadístico" />
 
-      <div className="flex gap-4 p-4 flex-1">
+      <div className="flex gap-4 px-4 pb-4 pt-3" style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
 
         {/* Panel principal */}
-        <div className="flex-1 bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex-1 bg-white rounded-2xl shadow-sm p-6 flex flex-col" style={{ minHeight: 0, overflowY: 'auto' }}>
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Promedio General</h2>
@@ -314,20 +376,12 @@ export default function DashboardPage() {
             <div className="flex gap-2">
               <button onClick={() => setVistaGrafica('asistencias')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                style={{
-                  background: vistaGrafica === 'asistencias' ? '#eff6ff' : 'white',
-                  color:      vistaGrafica === 'asistencias' ? '#2563eb' : '#6b7280',
-                  border:     '1px solid #e2e8f0',
-                }}>
+                style={{ background: vistaGrafica === 'asistencias' ? '#eff6ff' : 'white', color: vistaGrafica === 'asistencias' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
                 Asistencias
               </button>
               <button onClick={() => setVistaGrafica('calificaciones')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                style={{
-                  background: vistaGrafica === 'calificaciones' ? '#eff6ff' : 'white',
-                  color:      vistaGrafica === 'calificaciones' ? '#2563eb' : '#6b7280',
-                  border:     '1px solid #e2e8f0',
-                }}>
+                style={{ background: vistaGrafica === 'calificaciones' ? '#eff6ff' : 'white', color: vistaGrafica === 'calificaciones' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
                 Calificaciones
               </button>
               <button onClick={() => setModalInforme(true)}
@@ -340,8 +394,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Gráfica SVG */}
-          <div className="relative h-52 mb-6">
+          {/* Gráfica SVG — flex-1 para que crezca y llene el espacio */}
+          <div className="relative mb-6" style={{ flex: '1 1 0', minHeight: 0 }}>
             <svg viewBox="0 0 600 180" className="w-full h-full">
               <defs>
                 <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
@@ -350,11 +404,9 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               {[0,1,2,3,4].map(i => (
-                <line key={i} x1="40" y1={20 + i * 32} x2="580" y2={20 + i * 32}
-                  stroke="#F3F4F6" strokeWidth="1" />
+                <line key={i} x1="40" y1={20 + i * 32} x2="580" y2={20 + i * 32} stroke="#F3F4F6" strokeWidth="1" />
               ))}
-              <path d="M80,140 L160,120 L240,100 L320,60 L400,55 L480,70 L560,80 L560,160 L80,160 Z"
-                fill="url(#grad)" />
+              <path d="M80,140 L160,120 L240,100 L320,60 L400,55 L480,70 L560,80 L560,160 L80,160 Z" fill="url(#grad)" />
               <polyline points="80,140 160,120 240,100 320,60 400,55 480,70 560,80"
                 fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               {([[80,140],[160,120],[240,100],[320,60],[400,55],[480,70],[560,80]] as [number,number][]).map(([x,y], i) => (
@@ -374,32 +426,27 @@ export default function DashboardPage() {
             </div>
             <div className="flex gap-2">
               <div className="relative">
-                <button
-                  onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
+                <button onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
                   style={{ border: '1px solid #e2e8f0', background: filtroActivo('semana') ? '#eff6ff' : 'white', color: filtroActivo('semana') ? '#2563eb' : '#4b5563' }}>
                   ▼ {labelSeleccion('semana')}
                 </button>
                 {filtroAbierto === 'semana' && (
-                  <FilterDropdown opciones={SEMANAS} seleccionado={semanaSelec}
-                    onSeleccionar={setSemanaSelec} onCerrar={() => setFiltroAbierto(null)} />
+                  <FilterDropdown opciones={SEMANAS} seleccionado={semanaSelec} onSeleccionar={setSemanaSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
               <div className="relative">
-                <button
-                  onClick={() => setFiltroAbierto(filtroAbierto === 'mes' ? null : 'mes')}
+                <button onClick={() => setFiltroAbierto(filtroAbierto === 'mes' ? null : 'mes')}
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
                   style={{ border: '1px solid #e2e8f0', background: filtroActivo('mes') ? '#eff6ff' : 'white', color: filtroActivo('mes') ? '#2563eb' : '#4b5563' }}>
                   ▼ {labelSeleccion('mes')}
                 </button>
                 {filtroAbierto === 'mes' && (
-                  <FilterDropdown opciones={MESES} seleccionado={mesSelec}
-                    onSeleccionar={setMesSelec} onCerrar={() => setFiltroAbierto(null)} />
+                  <FilterDropdown opciones={MESES} seleccionado={mesSelec} onSeleccionar={setMesSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
               <div className="relative">
-                <button
-                  onClick={() => setFiltroAbierto(filtroAbierto === 'grupo' ? null : 'grupo')}
+                <button onClick={() => setFiltroAbierto(filtroAbierto === 'grupo' ? null : 'grupo')}
                   className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
                   style={{ background: filtroActivo('grupo') ? '#2563eb' : '#1e3a5f' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
@@ -407,8 +454,7 @@ export default function DashboardPage() {
                   ▼ {labelSeleccion('grupo')}
                 </button>
                 {filtroAbierto === 'grupo' && (
-                  <FilterDropdown opciones={GRUPOS} seleccionado={grupoSelec}
-                    onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
+                  <FilterDropdown opciones={GRUPOS} seleccionado={grupoSelec} onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
             </div>
@@ -416,7 +462,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Panel derecho */}
-        <div className="w-72 bg-white rounded-2xl shadow-sm p-6">
+        <div className="w-72 bg-white rounded-2xl shadow-sm p-6 flex flex-col" style={{ minHeight: 0, overflowY: 'auto' }}>
           <div className="flex items-center gap-2 mb-6">
             <span className="text-blue-500">ℹ️</span>
             <h3 className="font-semibold text-gray-700">Información Institucional</h3>
