@@ -29,7 +29,6 @@ const GRUPOS_DISPONIBLES = [
   '601', '602', '603',
 ]
 
-// Materias preestablecidas — vendrán de Supabase en el futuro
 const MATERIAS_DISPONIBLES = [
   'Matemáticas', 'Cálculo', 'Física', 'Química', 'Biología',
   'Español', 'Literatura', 'Historia', 'Geografía', 'Inglés',
@@ -150,7 +149,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               </button>
             </div>
 
-            {/* Tags materias — SIN botón eliminar */}
+            {/* Tags — sin botón eliminar */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', minHeight: materias.length === 0 ? '0' : '2.25rem' }}>
               {materias.length === 0 && !mostrarTabla && (
                 <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Sin materias asignadas</p>
@@ -176,7 +175,6 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
             {/* Panel agregar materia */}
             {mostrarTabla && (
               <div style={{ marginTop: '0.75rem', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', padding: '1rem', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
 
                   {/* Selector materia */}

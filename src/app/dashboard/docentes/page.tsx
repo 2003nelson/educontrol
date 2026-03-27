@@ -435,28 +435,29 @@ export default function DocentesPage() {
                   </div>
 
                   {/* Columna acciones */}
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => handleEditar(docente)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                      style={{ background: '#eff6ff', color: '#2563eb' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}>
-                      Editar
-                    </button>
-                    <button onClick={() => setDocenteLimpiarMaterias(docente)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                      style={{ background: '#fffbeb', color: '#d97706' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fef3c7')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#fffbeb')}>
-                      Materias
-                    </button>
-                    <button onClick={() => setDocenteAEliminar(docente)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                      style={{ background: '#fef2f2', color: '#dc2626' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
-                      Eliminar
-                    </button>
+                  <div className="flex gap-2 items-center">
+                    {[
+                      { letra: 'E', label: 'Editar',   bg: '#eff6ff', color: '#2563eb', hoverBg: '#dbeafe', action: () => handleEditar(docente) },
+                      { letra: 'M', label: 'Materias', bg: '#fffbeb', color: '#d97706', hoverBg: '#fef3c7', action: () => setDocenteLimpiarMaterias(docente) },
+                      { letra: 'X', label: 'Eliminar', bg: '#fef2f2', color: '#dc2626', hoverBg: '#fee2e2', action: () => setDocenteAEliminar(docente) },
+                    ].map(btn => (
+                      <button key={btn.letra}
+                        onClick={btn.action}
+                        title={btn.label}
+                        style={{
+                          width: '32px', height: '32px', borderRadius: '50%',
+                          background: btn.bg, color: btn.color,
+                          border: `1px solid ${btn.hoverBg}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                          flexShrink: 0, transition: 'all 0.15s',
+                          fontFamily: 'Outfit, sans-serif',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = btn.hoverBg; e.currentTarget.style.transform = 'scale(1.1)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = btn.bg; e.currentTarget.style.transform = 'scale(1)' }}>
+                        {btn.letra}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )
