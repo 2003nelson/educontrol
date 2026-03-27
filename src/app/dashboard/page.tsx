@@ -3,12 +3,10 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
-type TipoFiltro  = 'semana' | 'mes' | 'grupo' | null
+type TipoFiltro  = 'parcial' | 'grupo' | 'semana' | null
 type TipoFormato = 'pdf' | 'excel' | null
 
 const SEMANAS = Array.from({ length: 16 }, (_, i) => ({ key: `semana-${i+1}`, label: `Semana ${i + 1}` }))
-const MESES   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  .map((m, i) => ({ key: `mes-${i+1}`, label: m }))
 const GRUPOS  = [
   '101','102','103','201','202','203',
   '301','302','303','401','402','403',
@@ -337,23 +335,36 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 export default function DashboardPage() {
   const [vistaGrafica, setVistaGrafica]   = useState<'calificaciones' | 'asistencias'>('calificaciones')
   const [filtroAbierto, setFiltroAbierto] = useState<TipoFiltro>(null)
-  const [semanaSelec, setSemanaSelec]     = useState('general')
-  const [mesSelec, setMesSelec]           = useState('general')
   const [grupoSelec, setGrupoSelec]       = useState('general')
+  const [parcialSelec, setParcialSelec]   = useState('general')
+  const [semanaSelec, setSemanaSelec]     = useState('general')
   const [modalInforme, setModalInforme]   = useState(false)
 
-  function labelSeleccion(tipo: TipoFiltro) {
-    if (tipo === 'semana') return semanaSelec === 'general' ? 'Semana' : SEMANAS.find(s => s.key === semanaSelec)?.label ?? 'Semana'
-    if (tipo === 'mes')    return mesSelec    === 'general' ? 'Mes'    : MESES.find(m => m.key === mesSelec)?.label ?? 'Mes'
-    if (tipo === 'grupo')  return grupoSelec  === 'general' ? 'Grupo'  : `Grupo ${grupoSelec}`
-    return ''
+  const PARCIALES = [
+    { key: '1',     label: '1er Parcial'       },
+    { key: '2',     label: '2do Parcial'       },
+    { key: '3',     label: '3er Parcial'       },
+    { key: 'final', label: 'Calificación Final'},
+  ]
+
+  function labelGrupo()   { return grupoSelec  === 'general' ? 'Grupo'   : `Grupo ${grupoSelec}` }
+  function labelParcial() { return parcialSelec === 'general' ? 'Parcial' : PARCIALES.find(p => p.key === parcialSelec)?.label ?? 'Parcial' }
+  function labelSemana()  { return semanaSelec  === 'general' ? 'Semana'  : SEMANAS.find(s => s.key === semanaSelec)?.label ?? 'Semana' }
+
+  function subtitulo() {
+    const partes: string[] = []
+    if (grupoSelec !== 'general') partes.push(`Grupo ${grupoSelec}`)
+    else partes.push('Institución Completa')
+    if (vistaGrafica === 'calificaciones' && parcialSelec !== 'general')
+      partes.push(PARCIALES.find(p => p.key === parcialSelec)?.label ?? '')
+    if (vistaGrafica === 'asistencias' && semanaSelec !== 'general')
+      partes.push(SEMANAS.find(s => s.key === semanaSelec)?.label ?? '')
+    return partes.filter(Boolean).join(' — ')
   }
 
-  function filtroActivo(tipo: TipoFiltro) {
-    if (tipo === 'semana') return semanaSelec !== 'general'
-    if (tipo === 'mes')    return mesSelec    !== 'general'
-    if (tipo === 'grupo')  return grupoSelec  !== 'general'
-    return false
+  function cambiarVista(v: 'calificaciones' | 'asistencias') {
+    setVistaGrafica(v)
+    setFiltroAbierto(null)
   }
 
   return (
@@ -366,20 +377,18 @@ export default function DashboardPage() {
         <div className="flex-1 bg-white rounded-2xl shadow-sm p-6 flex flex-col" style={{ minHeight: 0, overflowY: 'auto' }}>
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">Promedio General</h2>
-              <p className="text-sm text-gray-400 mt-1">
-                {grupoSelec === 'general' ? 'Institución Completa' : `Grupo ${grupoSelec}`}
-                {mesSelec    !== 'general' && ` — ${MESES.find(m => m.key === mesSelec)?.label}`}
-                {semanaSelec !== 'general' && ` — ${SEMANAS.find(s => s.key === semanaSelec)?.label}`}
-              </p>
+              <h2 className="text-2xl font-bold text-gray-800">
+                {vistaGrafica === 'calificaciones' ? 'Promedio General' : 'Asistencia General'}
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">{subtitulo()}</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setVistaGrafica('asistencias')}
+              <button onClick={() => cambiarVista('asistencias')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                 style={{ background: vistaGrafica === 'asistencias' ? '#eff6ff' : 'white', color: vistaGrafica === 'asistencias' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
                 Asistencias
               </button>
-              <button onClick={() => setVistaGrafica('calificaciones')}
+              <button onClick={() => cambiarVista('calificaciones')}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
                 style={{ background: vistaGrafica === 'calificaciones' ? '#eff6ff' : 'white', color: vistaGrafica === 'calificaciones' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
                 Calificaciones
@@ -421,42 +430,71 @@ export default function DashboardPage() {
           {/* Métricas + filtros */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
             <div>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Promedio Actual</p>
-              <p className="text-3xl font-bold text-gray-800 mt-1">8.7</p>
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                {vistaGrafica === 'calificaciones' ? 'Promedio Actual' : 'Asistencia Media'}
+              </p>
+              <p className="text-3xl font-bold text-gray-800 mt-1">
+                {vistaGrafica === 'calificaciones' ? '8.7' : '89.7%'}
+              </p>
             </div>
+
             <div className="flex gap-2">
-              <div className="relative">
-                <button onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
-                  style={{ border: '1px solid #e2e8f0', background: filtroActivo('semana') ? '#eff6ff' : 'white', color: filtroActivo('semana') ? '#2563eb' : '#4b5563' }}>
-                  ▼ {labelSeleccion('semana')}
-                </button>
-                {filtroAbierto === 'semana' && (
-                  <FilterDropdown opciones={SEMANAS} seleccionado={semanaSelec} onSeleccionar={setSemanaSelec} onCerrar={() => setFiltroAbierto(null)} />
-                )}
-              </div>
-              <div className="relative">
-                <button onClick={() => setFiltroAbierto(filtroAbierto === 'mes' ? null : 'mes')}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
-                  style={{ border: '1px solid #e2e8f0', background: filtroActivo('mes') ? '#eff6ff' : 'white', color: filtroActivo('mes') ? '#2563eb' : '#4b5563' }}>
-                  ▼ {labelSeleccion('mes')}
-                </button>
-                {filtroAbierto === 'mes' && (
-                  <FilterDropdown opciones={MESES} seleccionado={mesSelec} onSeleccionar={setMesSelec} onCerrar={() => setFiltroAbierto(null)} />
-                )}
-              </div>
+              {/* Filtro Grupo — aparece en ambas vistas */}
               <div className="relative">
                 <button onClick={() => setFiltroAbierto(filtroAbierto === 'grupo' ? null : 'grupo')}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
-                  style={{ background: filtroActivo('grupo') ? '#2563eb' : '#1e3a5f' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                  onMouseLeave={e => (e.currentTarget.style.background = filtroActivo('grupo') ? '#2563eb' : '#1e3a5f')}>
-                  ▼ {labelSeleccion('grupo')}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
+                  style={{
+                    border:     '1px solid #e2e8f0',
+                    background: grupoSelec !== 'general' ? '#eff6ff' : 'white',
+                    color:      grupoSelec !== 'general' ? '#2563eb' : '#4b5563',
+                  }}>
+                  ▼ {labelGrupo()}
                 </button>
                 {filtroAbierto === 'grupo' && (
-                  <FilterDropdown opciones={GRUPOS} seleccionado={grupoSelec} onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
+                  <FilterDropdown opciones={GRUPOS} seleccionado={grupoSelec}
+                    onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
+
+              {/* Filtro Parcial — solo en Calificaciones */}
+              {vistaGrafica === 'calificaciones' && (
+                <div className="relative">
+                  <button onClick={() => setFiltroAbierto(filtroAbierto === 'parcial' ? null : 'parcial')}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
+                    style={{ background: parcialSelec !== 'general' ? '#2563eb' : '#1e3a5f' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+                    onMouseLeave={e => (e.currentTarget.style.background = parcialSelec !== 'general' ? '#2563eb' : '#1e3a5f')}>
+                    ▼ {labelParcial()}
+                  </button>
+                  {filtroAbierto === 'parcial' && (
+                    <FilterDropdown
+                      opciones={PARCIALES}
+                      seleccionado={parcialSelec}
+                      onSeleccionar={setParcialSelec}
+                      onCerrar={() => setFiltroAbierto(null)} />
+                  )}
+                </div>
+              )}
+
+              {/* Filtro Semana — solo en Asistencias */}
+              {vistaGrafica === 'asistencias' && (
+                <div className="relative">
+                  <button onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
+                    style={{ background: semanaSelec !== 'general' ? '#2563eb' : '#1e3a5f' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+                    onMouseLeave={e => (e.currentTarget.style.background = semanaSelec !== 'general' ? '#2563eb' : '#1e3a5f')}>
+                    ▼ {labelSemana()}
+                  </button>
+                  {filtroAbierto === 'semana' && (
+                    <FilterDropdown
+                      opciones={SEMANAS}
+                      seleccionado={semanaSelec}
+                      onSeleccionar={setSemanaSelec}
+                      onCerrar={() => setFiltroAbierto(null)} />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -467,7 +505,7 @@ export default function DashboardPage() {
             <span className="text-blue-500">ℹ️</span>
             <h3 className="font-semibold text-gray-700">Información Institucional</h3>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-5 flex-1">
             {stats.map(s => (
               <div key={s.label} className="border-b border-gray-100 pb-4">
                 <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{s.label}</p>
@@ -477,7 +515,7 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-2">
+          <div className="mt-auto pt-3 flex justify-end">
             <p className="text-xs text-gray-400">
               Sincronizado: <span className="text-green-500 font-medium">Justo ahora</span>
             </p>

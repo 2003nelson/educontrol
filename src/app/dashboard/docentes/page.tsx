@@ -98,8 +98,9 @@ function ModalEliminarMaterias({
         <div onClick={e => e.stopPropagation()} style={{
           background: 'white', borderRadius: '1rem',
           boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          width: '420px', padding: '2rem',
+          width: '420px', maxHeight: '88vh', padding: '2rem',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
+          overflowY: 'auto',
         }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
             <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
@@ -115,7 +116,7 @@ function ModalEliminarMaterias({
           <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', margin: '0 0 1rem', textAlign: 'center' }}>
             {docente.nombre}
           </p>
-          <div style={{ width: '100%', background: '#fef2f2', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          <div style={{ width: '100%', background: '#fef2f2', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: '220px', overflowY: 'auto' }}>
             {selec.map((a, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '0.25rem', background: '#fee2e2', color: '#dc2626', fontFamily: 'Outfit, sans-serif' }}>
