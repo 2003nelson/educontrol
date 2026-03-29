@@ -289,6 +289,8 @@ export default function DocentesPage() {
   const [docenteLimpiarMaterias, setDocenteLimpiarMaterias] = useState<Docente | null>(null)
   const [docenteAEliminar, setDocenteAEliminar] = useState<Docente | null>(null)
 
+  const [docenteAgregado, setDocenteAgregado] = useState(false)
+
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     d.asignaciones.some(a =>
@@ -302,6 +304,8 @@ export default function DocentesPage() {
       setDocentes(prev => prev.map(d => d.id === docenteEditando.id ? { ...data, id: d.id } : d))
     } else {
       setDocentes(prev => [...prev, { ...data, id: Date.now().toString() }])
+      setDocenteAgregado(true)
+      setTimeout(() => setDocenteAgregado(false), 2500)
     }
     setModalAbierto(false)
     setDocenteEditando(null)
@@ -335,14 +339,51 @@ export default function DocentesPage() {
               value={busqueda} onChange={e => setBusqueda(e.target.value)}
               className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
-          <button
-            onClick={() => { setDocenteEditando(null); setModalAbierto(true) }}
-            className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
-            style={{ background: '#1e3a5f' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-            <span className="text-lg leading-none">+</span> Agregar Docente
-          </button>
+
+          {/* Leyenda + botón */}
+          <div className="flex items-center gap-4">
+            {/* Leyenda de acciones */}
+            <div className="flex items-center gap-3">
+              {[
+                { letra: 'E', label: 'Editar',          bg: '#eff6ff', color: '#2563eb' },
+                { letra: 'M', label: 'Materias',        bg: '#fffbeb', color: '#d97706' },
+                { letra: 'X', label: 'Eliminar docente',bg: '#fef2f2', color: '#dc2626' },
+              ].map(l => (
+                <div key={l.letra} className="flex items-center gap-1.5">
+                  <div style={{
+                    width: '22px', height: '22px', borderRadius: '50%',
+                    background: l.bg, color: l.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
+                    fontFamily: 'Outfit, sans-serif',
+                  }}>
+                    {l.letra}
+                  </div>
+                  <span className="text-xs" style={{ color: '#64748b' }}>{l.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Separador */}
+            <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
+
+            {/* Botón agregar */}
+            <button
+              onClick={() => { setDocenteEditando(null); setModalAbierto(true) }}
+              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+              style={{
+                background: docenteAgregado ? '#16a34a' : '#1e3a5f',
+                minWidth: '110px', justifyContent: 'center',
+                transition: 'background 0.3s',
+              }}
+              onMouseEnter={e => { if (!docenteAgregado) e.currentTarget.style.background = '#2563eb' }}
+              onMouseLeave={e => { if (!docenteAgregado) e.currentTarget.style.background = '#1e3a5f' }}>
+              {docenteAgregado
+                ? <><svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg> Docente agregado</>
+                : <><span className="text-lg leading-none">+</span> Agregar</>
+              }
+            </button>
+          </div>
         </div>
 
         {/* Tabla rediseñada */}
