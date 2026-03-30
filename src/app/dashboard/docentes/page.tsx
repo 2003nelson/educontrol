@@ -367,20 +367,45 @@ export default function DocentesPage() {
             {/* Separador */}
             <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
 
-            {/* Botón agregar */}
+            {/* Botón agregar — círculo que se expande al hover */}
             <button
               onClick={() => { setDocenteEditando(null); setModalAbierto(true) }}
-              className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+              className="flex items-center justify-center text-white font-semibold rounded-full transition-all overflow-hidden"
               style={{
                 background: docenteAgregado ? '#16a34a' : '#1e3a5f',
-                minWidth: '110px', justifyContent: 'center',
-                transition: 'background 0.3s',
+                width: docenteAgregado ? 'auto' : '40px',
+                height: '40px',
+                padding: docenteAgregado ? '0 1.25rem' : '0',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.25s ease',
+                flexShrink: 0,
               }}
-              onMouseEnter={e => { if (!docenteAgregado) e.currentTarget.style.background = '#2563eb' }}
-              onMouseLeave={e => { if (!docenteAgregado) e.currentTarget.style.background = '#1e3a5f' }}>
+              onMouseEnter={e => {
+                if (!docenteAgregado) {
+                  e.currentTarget.style.background = '#2563eb'
+                  e.currentTarget.style.width = 'auto'
+                  e.currentTarget.style.borderRadius = '0.75rem'
+                  e.currentTarget.style.padding = '0 1.25rem'
+                  e.currentTarget.querySelector('span.label')!.textContent = 'Agregar'
+                  ;(e.currentTarget.querySelector('span.label') as HTMLElement).style.display = 'inline'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!docenteAgregado) {
+                  e.currentTarget.style.background = '#1e3a5f'
+                  e.currentTarget.style.width = '40px'
+                  e.currentTarget.style.borderRadius = '9999px'
+                  e.currentTarget.style.padding = '0'
+                  ;(e.currentTarget.querySelector('span.label') as HTMLElement).style.display = 'none'
+                }
+              }}>
               {docenteAgregado
                 ? <><svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg> Docente agregado</>
-                : <><span className="text-lg leading-none">+</span> Agregar</>
+                : <>
+                    <span style={{ fontSize: '1.25rem', lineHeight: 1, fontWeight: 300 }}>+</span>
+                    <span className="label" style={{ display: 'none', fontSize: '0.875rem' }}>Agregar</span>
+                  </>
               }
             </button>
           </div>

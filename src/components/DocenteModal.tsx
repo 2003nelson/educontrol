@@ -52,8 +52,10 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   const [error, setError]                     = useState('')
   const [agregado, setAgregado]               = useState(false)
 
+  const materiasDelGrupo = new Set(materias.filter(a => a.grupo === grupoSelec).map(a => a.materia))
   const gruposFiltrados   = GRUPOS_DISPONIBLES.filter(g => g.includes(busquedaGrupo.trim()))
   const materiasFiltradas = MATERIAS_DISPONIBLES.filter(m =>
+    !materiasDelGrupo.has(m) &&
     m.toLowerCase().includes(busquedaMateria.toLowerCase())
   )
 
@@ -63,14 +65,12 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
       return
     }
     setMaterias(prev => [...prev, { grupo: grupoSelec, materia: materiaSelec }])
-    // Solo limpia la selección — la tabla queda abierta para seguir agregando
     setGrupoSelec('')
     setMateriaSelec('')
     setBusquedaGrupo('')
     setBusquedaMateria('')
     setError('')
     setMostrarMaterias(false)
-    // Feedback visual breve
     setAgregado(true)
     setTimeout(() => setAgregado(false), 1200)
   }
@@ -96,18 +96,11 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
         maxHeight: '92vh', display: 'flex', flexDirection: 'column',
       }}>
 
-        {/* Header — fijo */}
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 2rem 1rem', flexShrink: 0 }}>
-          <div>
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>
-              {docente ? 'Editar Docente' : 'Nuevo Docente'}
-            </h2>
-            {mostrarTabla && (
-              <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>
-                Selecciona materia y grupo · las materias ya guardadas aparecen arriba
-              </p>
-            )}
-          </div>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>
+            {docente ? 'Editar Docente' : 'Nuevo Docente'}
+          </h2>
           <button onClick={onCerrar}
             style={{ color: '#94a3b8', fontSize: '1.25rem', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
             onMouseEnter={e => (e.currentTarget.style.color = '#475569')}
@@ -116,41 +109,41 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
           </button>
         </div>
 
-        {/* Contenido — NO scrollable, todo fijo */}
+        {/* Contenido */}
         <div style={{ padding: '0 2rem', display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
-          {/* Nombre y Email — se ocultan cuando la tabla está abierta */}
+          {/* Nombre y Email — ocultos cuando la tabla está abierta */}
           {!mostrarTabla && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', flexShrink: 0 }}>
-            <div>
-              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
-                Nombre completo
-              </label>
-              <input type="text" placeholder="Prof. Nombre Apellido"
-                value={form.nombre}
-                onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
-                style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
-                onBlur={e => (e.currentTarget.style.boxShadow = 'none')} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', flexShrink: 0 }}>
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
+                  Nombre completo
+                </label>
+                <input type="text" placeholder="Prof. Nombre Apellido"
+                  value={form.nombre}
+                  onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
+                  onBlur={e => (e.currentTarget.style.boxShadow = 'none')} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
+                  Correo electrónico
+                </label>
+                <input type="email" placeholder="correo@escuela.edu.mx"
+                  value={form.email}
+                  onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
+                  onBlur={e => (e.currentTarget.style.boxShadow = 'none')} />
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
-                Correo electrónico
-              </label>
-              <input type="email" placeholder="correo@escuela.edu.mx"
-                value={form.email}
-                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
-                onBlur={e => (e.currentTarget.style.boxShadow = 'none')} />
-            </div>
-          </div>
           )}
 
           {/* Materias asignadas */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
-            {/* Label + botón — fijo */}
+            {/* Label + botón toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569' }}>
                 Materias asignadas
@@ -164,8 +157,8 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               </button>
             </div>
 
-            {/* Tags — compacto cuando la tabla está abierta, completo cuando está cerrada */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', overflowY: 'auto', flexShrink: 0, ...(mostrarTabla ? { maxHeight: '3rem' } : {}) }}>
+            {/* Tags */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', overflowY: 'auto', flexShrink: 0, ...(mostrarTabla ? { maxHeight: '5.5rem' } : { maxHeight: '7rem' }) }}>
               {materias.length === 0 && !mostrarTabla && (
                 <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Sin materias asignadas</p>
               )}
@@ -184,33 +177,36 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               ))}
             </div>
 
-            {/* Panel agregar — ocupa el espacio restante con estructura fija */}
+            {/* Panel agregar — ocupa todo el espacio restante */}
             {mostrarTabla && (
               <div style={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
-                {/* Selectores — fijo */}
+                {/* Selectores */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: '1px solid #f1f5f9', background: '#fafafa', flexShrink: 0 }}>
 
                   {/* Selector materia */}
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setMostrarMaterias(prev => !prev)}
+                    <button onClick={() => { if (grupoSelec) setMostrarMaterias(prev => !prev) }}
                       style={{
                         width: '100%', border: `1px solid ${materiaSelec ? '#3b82f6' : '#e2e8f0'}`,
                         borderRadius: '0.5rem', padding: '0.5rem 0.75rem',
-                        fontSize: '0.875rem', outline: 'none', cursor: 'pointer', textAlign: 'left',
-                        background: materiaSelec ? '#eff6ff' : 'white',
-                        color: materiaSelec ? '#1e3a5f' : '#94a3b8',
+                        fontSize: '0.875rem', outline: 'none',
+                        cursor: grupoSelec ? 'pointer' : 'not-allowed',
+                        textAlign: 'left',
+                        background: !grupoSelec ? '#f8fafc' : materiaSelec ? '#eff6ff' : 'white',
+                        color: !grupoSelec ? '#cbd5e1' : materiaSelec ? '#1e3a5f' : '#94a3b8',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         fontWeight: materiaSelec ? 600 : 400,
+                        opacity: grupoSelec ? 1 : 0.6,
                       }}>
-                      <span>{materiaSelec || 'Seleccionar materia'}</span>
+                      <span>{!grupoSelec ? 'Selecciona un grupo primero' : materiaSelec || 'Seleccionar materia'}</span>
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
                         style={{ transform: mostrarMaterias ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0, color: '#94a3b8' }}>
                         <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
                     {mostrarMaterias && (
-                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', maxHeight: '200px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', maxHeight: '180px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
                           <div style={{ position: 'relative' }}>
                             <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
@@ -250,7 +246,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                   </div>
                 </div>
 
-                {/* Tabla — scroll y ocupa el espacio restante */}
+                {/* Tabla grupos — scroll, ocupa espacio restante */}
                 <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
@@ -262,13 +258,19 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                     </thead>
                     <tbody>
                       {gruposFiltrados.map(grupo => {
-                        const semestre = parseInt(grupo.charAt(0))
+                        const semestre     = parseInt(grupo.charAt(0))
                         const seleccionado = grupoSelec === grupo
                         return (
-                          <tr key={grupo} onClick={() => setGrupoSelec(seleccionado ? '' : grupo)}
+                          <tr key={grupo}
                             style={{ borderBottom: '1px solid #f8fafc', background: seleccionado ? '#eff6ff' : 'white', cursor: 'pointer' }}
                             onMouseEnter={e => { if (!seleccionado) e.currentTarget.style.background = '#f8fafc' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = seleccionado ? '#eff6ff' : 'white' }}>
+                            onMouseLeave={e => { e.currentTarget.style.background = seleccionado ? '#eff6ff' : 'white' }}
+                            onClick={() => {
+                              setGrupoSelec(seleccionado ? '' : grupo)
+                              setMateriaSelec('')
+                              setMostrarMaterias(false)
+                              setBusquedaMateria('')
+                            }}>
                             <td style={{ padding: '0.625rem 1.25rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '0.5rem', background: seleccionado ? '#2563eb' : '#1e3a5f', color: 'white', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -288,7 +290,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                   </table>
                 </div>
 
-                {/* Footer confirmar — SIEMPRE visible, fuera del scroll */}
+                {/* Footer confirmar — siempre visible */}
                 <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexShrink: 0 }}>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
                     {error
@@ -314,21 +316,23 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
           </div>
         </div>
 
-        {/* Acciones — fijas al fondo del modal */}
-        <div style={{ display: 'flex', gap: '0.75rem', padding: '1rem 2rem 1.5rem', flexShrink: 0, borderTop: '1px solid #f1f5f9' }}>
-          <button onClick={onCerrar}
-            style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 500, borderRadius: '0.75rem', border: '1px solid #e2e8f0', color: '#64748b', background: 'white', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-            Cancelar
-          </button>
-          <button onClick={handleSubmit}
-            style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: '0.75rem', border: 'none', background: '#1e3a5f', color: 'white', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-            {docente ? 'Guardar cambios' : 'Agregar docente'}
-          </button>
-        </div>
+        {/* Acciones — solo visibles cuando la tabla está cerrada */}
+        {!mostrarTabla && (
+          <div style={{ display: 'flex', gap: '0.75rem', padding: '1rem 2rem 1.5rem', flexShrink: 0, borderTop: '1px solid #f1f5f9' }}>
+            <button onClick={onCerrar}
+              style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 500, borderRadius: '0.75rem', border: '1px solid #e2e8f0', color: '#64748b', background: 'white', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+              Cancelar
+            </button>
+            <button onClick={handleSubmit}
+              style={{ flex: 1, padding: '0.625rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: '0.75rem', border: 'none', background: '#1e3a5f', color: 'white', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
+              {docente ? 'Guardar cambios' : 'Agregar docente'}
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body

@@ -12,7 +12,7 @@ type Notificacion = {
 }
 
 type DiaAsistencia = {
-  fecha: string   // 'YYYY-MM-DD'
+  fecha: string
   estado: 'P' | 'A' | 'J' | 'noClase'
 }
 
@@ -29,7 +29,6 @@ type Alumno = {
   historialDias: DiaAsistencia[]
 }
 
-// ─── Generar días de clase mock ───────────────────────────────────────────────
 function generarDias(faltas: number): DiaAsistencia[] {
   const dias: DiaAsistencia[] = []
   const inicio = new Date('2026-02-02')
@@ -40,13 +39,11 @@ function generarDias(faltas: number): DiaAsistencia[] {
     const dow = cur.getDay()
     if (dow !== 0 && dow !== 6) {
       const iso = cur.toISOString().split('T')[0]
-      // semana santa: 6-10 abril
       if (iso >= '2026-04-06' && iso <= '2026-04-10') {
         dias.push({ fecha: iso, estado: 'noClase' })
       } else {
         let estado: 'P' | 'A' | 'J' = 'P'
         if (faltasUsadas < faltas) {
-          // distribuir faltas uniformemente
           const totalDias = dias.filter(d => d.estado !== 'noClase').length + 1
           if (totalDias % Math.max(1, Math.floor(90 / faltas)) === 0) {
             estado = faltasUsadas % 4 === 3 ? 'J' : 'A'
@@ -61,50 +58,13 @@ function generarDias(faltas: number): DiaAsistencia[] {
   return dias
 }
 
-// ─── Mock alumnos ─────────────────────────────────────────────────────────────
 const alumnosMock: Alumno[] = [
-  {
-    id: '1', nombre: 'GARCÍA LÓPEZ ANA', grupo: '101', semestre: 1,
-    calificaciones: [{ parcial: 1, valor: 92 }, { parcial: 2, valor: 88 }, { parcial: 3, valor: 94 }],
-    promedioFinal: 91,
-    asistencia: [{ parcial: 1, porcentaje: 95 }, { parcial: 2, porcentaje: 90 }, { parcial: 3, porcentaje: 98 }],
-    asistenciaFinal: 94, faltas: 3, historialDias: generarDias(3),
-  },
-  {
-    id: '2', nombre: 'MARTÍNEZ RUIZ CARLOS', grupo: '101', semestre: 1,
-    calificaciones: [{ parcial: 1, valor: 78 }, { parcial: 2, valor: 75 }, { parcial: 3, valor: 80 }],
-    promedioFinal: 77,
-    asistencia: [{ parcial: 1, porcentaje: 72 }, { parcial: 2, porcentaje: 70 }, { parcial: 3, porcentaje: 75 }],
-    asistenciaFinal: 72, faltas: 12, historialDias: generarDias(12),
-  },
-  {
-    id: '3', nombre: 'PÉREZ TORRES DIANA', grupo: '301', semestre: 3,
-    calificaciones: [{ parcial: 1, valor: 85 }, { parcial: 2, valor: 82 }, { parcial: 3, valor: 87 }],
-    promedioFinal: 85,
-    asistencia: [{ parcial: 1, porcentaje: 88 }, { parcial: 2, porcentaje: 85 }, { parcial: 3, porcentaje: 92 }],
-    asistenciaFinal: 88, faltas: 6, historialDias: generarDias(6),
-  },
-  {
-    id: '4', nombre: 'LÓPEZ SÁNCHEZ EDUARDO', grupo: '301', semestre: 3,
-    calificaciones: [{ parcial: 1, valor: 96 }, { parcial: 2, valor: 94 }, { parcial: 3, valor: 97 }],
-    promedioFinal: 96,
-    asistencia: [{ parcial: 1, porcentaje: 100 }, { parcial: 2, porcentaje: 98 }, { parcial: 3, porcentaje: 100 }],
-    asistenciaFinal: 99, faltas: 0, historialDias: generarDias(0),
-  },
-  {
-    id: '5', nombre: 'HERNÁNDEZ CRUZ FERNANDA', grupo: '501', semestre: 5,
-    calificaciones: [{ parcial: 1, valor: 71 }, { parcial: 2, valor: 68 }, { parcial: 3, valor: 73 }],
-    promedioFinal: 71,
-    asistencia: [{ parcial: 1, porcentaje: 80 }, { parcial: 2, porcentaje: 75 }, { parcial: 3, porcentaje: 82 }],
-    asistenciaFinal: 79, faltas: 9, historialDias: generarDias(9),
-  },
-  {
-    id: '6', nombre: 'RAMÍREZ VEGA GABRIEL', grupo: '501', semestre: 5,
-    calificaciones: [{ parcial: 1, valor: 60 }, { parcial: 2, valor: 58 }, { parcial: 3, valor: 62 }],
-    promedioFinal: 60,
-    asistencia: [{ parcial: 1, porcentaje: 65 }, { parcial: 2, porcentaje: 62 }, { parcial: 3, porcentaje: 68 }],
-    asistenciaFinal: 65, faltas: 18, historialDias: generarDias(18),
-  },
+  { id: '1', nombre: 'GARCÍA LÓPEZ ANA',          grupo: '101', semestre: 1, calificaciones: [{ parcial: 1, valor: 92 }, { parcial: 2, valor: 88 }, { parcial: 3, valor: 94 }], promedioFinal: 91, asistencia: [{ parcial: 1, porcentaje: 95 }, { parcial: 2, porcentaje: 90 }, { parcial: 3, porcentaje: 98 }], asistenciaFinal: 94, faltas: 3,  historialDias: generarDias(3)  },
+  { id: '2', nombre: 'MARTÍNEZ RUIZ CARLOS',       grupo: '101', semestre: 1, calificaciones: [{ parcial: 1, valor: 78 }, { parcial: 2, valor: 75 }, { parcial: 3, valor: 80 }], promedioFinal: 77, asistencia: [{ parcial: 1, porcentaje: 72 }, { parcial: 2, porcentaje: 70 }, { parcial: 3, porcentaje: 75 }], asistenciaFinal: 72, faltas: 12, historialDias: generarDias(12) },
+  { id: '3', nombre: 'PÉREZ TORRES DIANA',         grupo: '301', semestre: 3, calificaciones: [{ parcial: 1, valor: 85 }, { parcial: 2, valor: 82 }, { parcial: 3, valor: 87 }], promedioFinal: 85, asistencia: [{ parcial: 1, porcentaje: 88 }, { parcial: 2, porcentaje: 85 }, { parcial: 3, porcentaje: 92 }], asistenciaFinal: 88, faltas: 6,  historialDias: generarDias(6)  },
+  { id: '4', nombre: 'LÓPEZ SÁNCHEZ EDUARDO',      grupo: '301', semestre: 3, calificaciones: [{ parcial: 1, valor: 96 }, { parcial: 2, valor: 94 }, { parcial: 3, valor: 97 }], promedioFinal: 96, asistencia: [{ parcial: 1, porcentaje: 100}, { parcial: 2, porcentaje: 98 }, { parcial: 3, porcentaje: 100}], asistenciaFinal: 99, faltas: 0,  historialDias: generarDias(0)  },
+  { id: '5', nombre: 'HERNÁNDEZ CRUZ FERNANDA',    grupo: '501', semestre: 5, calificaciones: [{ parcial: 1, valor: 71 }, { parcial: 2, valor: 68 }, { parcial: 3, valor: 73 }], promedioFinal: 71, asistencia: [{ parcial: 1, porcentaje: 80 }, { parcial: 2, porcentaje: 75 }, { parcial: 3, porcentaje: 82 }], asistenciaFinal: 79, faltas: 9,  historialDias: generarDias(9)  },
+  { id: '6', nombre: 'RAMÍREZ VEGA GABRIEL',       grupo: '501', semestre: 5, calificaciones: [{ parcial: 1, valor: 60 }, { parcial: 2, valor: 58 }, { parcial: 3, valor: 62 }], promedioFinal: 60, asistencia: [{ parcial: 1, porcentaje: 65 }, { parcial: 2, porcentaje: 62 }, { parcial: 3, porcentaje: 68 }], asistenciaFinal: 65, faltas: 18, historialDias: generarDias(18) },
 ]
 
 const notificacionesMock: Notificacion[] = [
@@ -119,74 +79,57 @@ const iconoTipo = {
   aviso:         { bg: '#fffbeb', color: '#d97706', svg: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 }
 
-function colorNota(v: number)  { return v >= 70 ? '#16a34a' : '#dc2626' }
-function colorAsist(v: number) { return v >= 80 ? '#16a34a' : '#dc2626' }
-function bgNota(v: number)     { return v >= 70 ? '#f0fdf4' : '#fef2f2' }
-function bgAsist(v: number)    { return v >= 80 ? '#f0fdf4' : '#fef2f2' }
-
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_SEM = ['L','M','X','J','V','S','D']
+
+function colorNota(v: number) { return v >= 70 ? '#16a34a' : '#dc2626' }
+function bgNota(v: number)    { return v >= 70 ? '#f0fdf4' : '#fef2f2' }
 
 // ─── Calendario de asistencia ─────────────────────────────────────────────────
 function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: () => void }) {
   const mesesDisponibles = [...new Set(alumno.historialDias.map(d => d.fecha.slice(0, 7)))].sort()
   const [mesActual, setMesActual] = useState(mesesDisponibles[0] ?? '2026-02')
 
-  const idxMes   = mesesDisponibles.indexOf(mesActual)
+  const idxMes = mesesDisponibles.indexOf(mesActual)
   const [anio, mes] = mesActual.split('-').map(Number)
   const primerDia   = new Date(anio, mes - 1, 1)
   const diasEnMes   = new Date(anio, mes, 0).getDate()
-  const offset      = (primerDia.getDay() + 6) % 7  // lunes=0
+  const offset      = (primerDia.getDay() + 6) % 7
 
   const diasDelMes = alumno.historialDias.filter(d => d.fecha.startsWith(mesActual))
   const mapaEstado: Record<string, DiaAsistencia['estado']> = {}
   diasDelMes.forEach(d => { mapaEstado[d.fecha] = d.estado })
 
-  const totalClase  = alumno.historialDias.filter(d => d.estado !== 'noClase').length
-  const presentes   = alumno.historialDias.filter(d => d.estado === 'P').length
-  const ausentes    = alumno.historialDias.filter(d => d.estado === 'A').length
+  const totalClase   = alumno.historialDias.filter(d => d.estado !== 'noClase').length
+  const presentes    = alumno.historialDias.filter(d => d.estado === 'P').length
+  const ausentes     = alumno.historialDias.filter(d => d.estado === 'A').length
   const justificados = alumno.historialDias.filter(d => d.estado === 'J').length
 
   const coloresDia: Record<DiaAsistencia['estado'], { bg: string; color: string; border: string }> = {
-    P:        { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
-    A:        { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
-    J:        { bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
-    noClase:  { bg: '#f8fafc', color: '#cbd5e1', border: '#f1f5f9' },
+    P:       { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+    A:       { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+    J:       { bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
+    noClase: { bg: '#f8fafc', color: '#cbd5e1', border: '#f1f5f9' },
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-      {/* Header calendario */}
       <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: '1.25rem 1.25rem 0 0', padding: '1.25rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-          <button onClick={onVolver} style={{
-            background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer',
-            width: '32px', height: '32px', borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', flexShrink: 0,
-          }}>
-            <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <button onClick={onVolver} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+            <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div>
-            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'white', margin: 0 }}>
-              Historial de asistencia
-            </p>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)', margin: '0.125rem 0 0' }}>
-              {alumno.nombre}
-            </p>
+            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'white', margin: 0 }}>Historial de asistencia</p>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)', margin: '0.125rem 0 0' }}>{alumno.nombre}</p>
           </div>
         </div>
-
-        {/* Stats resumen */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.5rem' }}>
           {[
-            { label: 'Días clase', value: totalClase, color: 'rgba(255,255,255,0.9)' },
-            { label: 'Presentes',  value: presentes,  color: '#86efac' },
-            { label: 'Ausentes',   value: ausentes,   color: '#fca5a5' },
-            { label: 'Justific.',  value: justificados, color: '#fde68a' },
+            { label: 'Días clase', value: totalClase,    color: 'rgba(255,255,255,0.9)' },
+            { label: 'Presentes',  value: presentes,     color: '#86efac' },
+            { label: 'Ausentes',   value: ausentes,      color: '#fca5a5' },
+            { label: 'Justific.',  value: justificados,  color: '#fde68a' },
           ].map(s => (
             <div key={s.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '0.625rem', padding: '0.5rem', textAlign: 'center' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: 700, color: s.color, margin: 0, fontFamily: 'Outfit, sans-serif' }}>{s.value}</p>
@@ -197,34 +140,20 @@ function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: 
       </div>
 
       <div style={{ overflowY: 'auto', flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-        {/* Nav mes */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => idxMes > 0 && setMesActual(mesesDisponibles[idxMes - 1])}
-            disabled={idxMes === 0}
-            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === 0 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === 0 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            ‹
-          </button>
-          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>
-            {MESES_ES[mes - 1]} {anio}
-          </p>
-          <button onClick={() => idxMes < mesesDisponibles.length - 1 && setMesActual(mesesDisponibles[idxMes + 1])}
-            disabled={idxMes === mesesDisponibles.length - 1}
-            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === mesesDisponibles.length - 1 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === mesesDisponibles.length - 1 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            ›
-          </button>
+          <button onClick={() => idxMes > 0 && setMesActual(mesesDisponibles[idxMes - 1])} disabled={idxMes === 0}
+            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === 0 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === 0 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>{MESES_ES[mes - 1]} {anio}</p>
+          <button onClick={() => idxMes < mesesDisponibles.length - 1 && setMesActual(mesesDisponibles[idxMes + 1])} disabled={idxMes === mesesDisponibles.length - 1}
+            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === mesesDisponibles.length - 1 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === mesesDisponibles.length - 1 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
         </div>
 
-        {/* Cabecera días semana */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
           {DIAS_SEM.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', padding: '2px 0', textTransform: 'uppercase' }}>
-              {d}
-            </div>
+            <div key={d} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', padding: '2px 0', textTransform: 'uppercase' }}>{d}</div>
           ))}
         </div>
 
-        {/* Grid días */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
           {Array.from({ length: offset }).map((_, i) => <div key={`e-${i}`} />)}
           {Array.from({ length: diasEnMes }, (_, i) => {
@@ -233,39 +162,17 @@ function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: 
             const est = mapaEstado[iso]
             const col = est ? coloresDia[est] : null
             const esFinSemana = [0, 6].includes(new Date(iso).getDay())
-
             return (
-              <div key={day} style={{
-                aspectRatio: '1',
-                borderRadius: '0.5rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.75rem', fontWeight: col ? 700 : 400,
-                background: col ? col.bg : esFinSemana ? 'transparent' : '#f8fafc',
-                color:      col ? col.color : esFinSemana ? '#e2e8f0' : '#94a3b8',
-                border:     col ? `1px solid ${col.border}` : '1px solid transparent',
-                position: 'relative',
-              }}>
+              <div key={day} style={{ aspectRatio: '1', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: col ? 700 : 400, background: col ? col.bg : esFinSemana ? 'transparent' : '#f8fafc', color: col ? col.color : esFinSemana ? '#e2e8f0' : '#94a3b8', border: col ? `1px solid ${col.border}` : '1px solid transparent', position: 'relative' }}>
                 {day}
-                {est && est !== 'noClase' && (
-                  <span style={{
-                    position: 'absolute', bottom: '2px', right: '2px',
-                    width: '5px', height: '5px', borderRadius: '50%',
-                    background: col!.color,
-                  }} />
-                )}
+                {est && est !== 'noClase' && <span style={{ position: 'absolute', bottom: '2px', right: '2px', width: '5px', height: '5px', borderRadius: '50%', background: col!.color }} />}
               </div>
             )
           })}
         </div>
 
-        {/* Leyenda */}
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {[
-            { color: '#16a34a', bg: '#f0fdf4', label: 'Presente' },
-            { color: '#dc2626', bg: '#fef2f2', label: 'Ausente' },
-            { color: '#d97706', bg: '#fffbeb', label: 'Justificado' },
-            { color: '#cbd5e1', bg: '#f8fafc', label: 'No hubo clase' },
-          ].map(l => (
+          {[{ color: '#16a34a', bg: '#f0fdf4', label: 'Presente' }, { color: '#dc2626', bg: '#fef2f2', label: 'Ausente' }, { color: '#d97706', bg: '#fffbeb', label: 'Justificado' }, { color: '#cbd5e1', bg: '#f8fafc', label: 'No hubo clase' }].map(l => (
             <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: l.bg, border: `1px solid ${l.color}20` }} />
               <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{l.label}</span>
@@ -278,159 +185,194 @@ function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: 
 }
 
 // ─── Card boleta alumno ───────────────────────────────────────────────────────
+type ParcialKey = 1 | 2 | 3 | 'final'
+
 function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void }) {
   const [vistaCalendario, setVistaCalendario] = useState(false)
+  const [parcialActivo, setParcialActivo]     = useState<ParcialKey>(1)
+  const [btnExpandido, setBtnExpandido]       = useState(false)
+
+  const tabs: { key: ParcialKey; label: string }[] = [
+    { key: 1,       label: '1er Parcial' },
+    { key: 2,       label: '2do Parcial' },
+    { key: 3,       label: '3er Parcial' },
+    { key: 'final', label: 'Final'       },
+  ]
+
+  // Datos del parcial activo
+  const calActiva = parcialActivo === 'final'
+    ? alumno.promedioFinal
+    : alumno.calificaciones.find(c => c.parcial === parcialActivo)?.valor ?? 0
+
+  const asistActiva = parcialActivo === 'final'
+    ? alumno.asistenciaFinal
+    : alumno.asistencia.find(a => a.parcial === parcialActivo)?.porcentaje ?? 0
+
+  // Faltas aproximadas por parcial (30 días de clase por parcial aprox)
+  const diasPorParcial = 30
+  const faltasParcial = parcialActivo === 'final'
+    ? alumno.faltas
+    : Math.round((1 - asistActiva / 100) * diasPorParcial)
+
+  const [descargando, setDescargando] = useState(false)
+  const [descargado,  setDescargado]  = useState(false)
+
+  function handleDescargar() {
+    if (descargando || descargado) return
+    setDescargando(true)
+    setTimeout(() => {
+      setDescargando(false)
+      setDescargado(true)
+      setTimeout(() => setDescargado(false), 2500)
+    }, 1800)
+  }
 
   if (typeof window === 'undefined') return null
+
   return createPortal(
-    <div
-      onClick={onCerrar}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: 'white', borderRadius: '1.25rem',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          width: '640px', maxHeight: '88vh',
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
+    <div onClick={onCerrar} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '520px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
         {vistaCalendario
           ? <CalendarioAsistencia alumno={alumno} onVolver={() => setVistaCalendario(false)} />
           : (
             <>
-              {/* Header boleta */}
-              <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: '1.25rem 1.25rem 0 0', padding: '1.5rem', position: 'relative' }}>
-                <button onClick={onCerrar} style={{
-                  position: 'absolute', top: '1rem', right: '1rem',
-                  background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer',
-                  width: '28px', height: '28px', borderRadius: '50%',
-                  color: 'white', fontSize: '1rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: '1.25rem 1.25rem 0 0', padding: '1.25rem 1.5rem', position: 'relative' }}>
+                <button onClick={onCerrar} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '50%', color: 'white', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
                     {alumno.nombre.charAt(0)}
                   </div>
                   <div>
-                    <p style={{ fontSize: '1rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{alumno.nombre}</p>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.375rem' }}>
-                      <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontWeight: 600 }}>Grupo {alumno.grupo}</span>
-                      <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontWeight: 600 }}>{alumno.semestre}° Semestre</span>
+                    <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{alumno.nombre}</p>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
+                      <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>Grupo {alumno.grupo}</span>
+                      <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>{alumno.semestre}° Semestre</span>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.25rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '0.75rem', padding: '0.75rem 1rem', textAlign: 'center' }}>
-                    <p style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{alumno.promedioFinal}</p>
-                    <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', margin: '0.125rem 0 0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Promedio Final</p>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '0.75rem', padding: '0.75rem 1rem', textAlign: 'center' }}>
-                    <p style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{alumno.asistenciaFinal}%</p>
-                    <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', margin: '0.125rem 0 0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Asistencia Final · {alumno.faltas} faltas</p>
-                  </div>
+                {/* Tabs parciales */}
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                  {tabs.map(t => (
+                    <button key={t.key} onClick={() => setParcialActivo(t.key)}
+                      style={{ flex: 1, padding: '0.375rem 0', fontSize: '0.7rem', fontWeight: 600, borderRadius: '0.5rem', border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: parcialActivo === t.key ? 'white' : 'rgba(255,255,255,0.15)', color: parcialActivo === t.key ? '#1e3a5f' : 'rgba(255,255,255,0.8)' }}>
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Cuerpo boleta */}
-              <div style={{ overflowY: 'auto', padding: '1.25rem 1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Cuerpo */}
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-                {/* Calificaciones */}
-                <div>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.75rem' }}>
-                    Calificaciones por parcial
+                {/* Calificación */}
+                <div style={{ background: bgNota(calActiva), borderRadius: '1rem', padding: '1.25rem', textAlign: 'center', border: `1px solid ${calActiva >= 70 ? '#bbf7d0' : '#fecaca'}` }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' }}>
+                    Calificación — {tabs.find(t => t.key === parcialActivo)?.label}
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' }}>
-                    {alumno.calificaciones.map(c => (
-                      <div key={c.parcial} style={{ background: bgNota(c.valor), borderRadius: '0.875rem', padding: '0.875rem', textAlign: 'center', border: `1px solid ${c.valor >= 70 ? '#bbf7d0' : '#fecaca'}` }}>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>{c.parcial}° Parcial</p>
-                        <p style={{ fontSize: '1.75rem', fontWeight: 700, color: colorNota(c.valor), margin: 0, fontFamily: 'Outfit, sans-serif' }}>{c.valor}</p>
-                        <p style={{ fontSize: '0.65rem', color: colorNota(c.valor), margin: '0.25rem 0 0', fontWeight: 600 }}>
-                          {c.valor >= 90 ? 'Excelente' : c.valor >= 70 ? 'Regular' : 'Reprobado'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  <p style={{ fontSize: '3.5rem', fontWeight: 700, color: colorNota(calActiva), margin: 0, fontFamily: 'Outfit, sans-serif', lineHeight: 1 }}>
+                    {calActiva}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: colorNota(calActiva), margin: '0.5rem 0 0', fontWeight: 600 }}>
+                    {calActiva >= 90 ? 'Excelente' : calActiva >= 70 ? 'Aprobado' : 'Reprobado'}
+                  </p>
                 </div>
 
-                {/* Asistencia por parcial + botón calendario */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
-                      Asistencia por parcial
+                {/* Faltas + botón historial */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'stretch' }}>
+                  <div style={{ background: faltasParcial === 0 ? '#f0fdf4' : faltasParcial <= 3 ? '#fffbeb' : '#fef2f2', borderRadius: '1rem', padding: '1rem 1.25rem', border: `1px solid ${faltasParcial === 0 ? '#bbf7d0' : faltasParcial <= 3 ? '#fde68a' : '#fecaca'}` }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.375rem' }}>
+                      Faltas en este período
                     </p>
-                    {/* Botón circular calendario */}
-                    <button
-                      onClick={() => setVistaCalendario(true)}
-                      title="Ver calendario de asistencia"
-                      style={{
-                        width: '32px', height: '32px', borderRadius: '50%',
-                        background: '#1e3a5f', border: 'none', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(30,58,95,0.3)',
-                        transition: 'all 0.15s',
-                        flexShrink: 0,
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.transform = 'scale(1.1)' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = '#1e3a5f'; e.currentTarget.style.transform = 'scale(1)' }}
-                    >
-                      <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                      </svg>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
+                      <p style={{ fontSize: '2.25rem', fontWeight: 700, margin: 0, fontFamily: 'Outfit, sans-serif', color: faltasParcial === 0 ? '#16a34a' : faltasParcial <= 3 ? '#d97706' : '#dc2626', lineHeight: 1 }}>
+                        {faltasParcial}
+                      </p>
+                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>faltas</p>
+                    </div>
+                    <p style={{ fontSize: '0.7rem', margin: '0.375rem 0 0', fontWeight: 600, color: faltasParcial === 0 ? '#16a34a' : faltasParcial <= 3 ? '#d97706' : '#dc2626' }}>
+                      {asistActiva}% de asistencia
+                    </p>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' }}>
-                    {alumno.asistencia.map(a => (
-                      <div key={a.parcial} style={{ background: bgAsist(a.porcentaje), borderRadius: '0.875rem', padding: '0.875rem', textAlign: 'center', border: `1px solid ${a.porcentaje >= 80 ? '#bbf7d0' : '#fecaca'}` }}>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>{a.parcial}° Parcial</p>
-                        <p style={{ fontSize: '1.75rem', fontWeight: 700, color: colorAsist(a.porcentaje), margin: 0, fontFamily: 'Outfit, sans-serif' }}>{a.porcentaje}%</p>
-                        <div style={{ marginTop: '0.375rem', height: '4px', borderRadius: '9999px', background: 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', borderRadius: '9999px', width: `${a.porcentaje}%`, background: colorAsist(a.porcentaje) }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Estado general */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.875rem 1rem', borderRadius: '0.875rem',
-                  background: alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80 ? '#f0fdf4' : '#fef2f2',
-                  border: `1px solid ${alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80 ? '#bbf7d0' : '#fecaca'}`,
-                }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0, background: alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80 ? '#16a34a' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-                      {alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80
-                        ? <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                        : <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
-                      }
+                  {/* Botón ver historial — círculo que se expande */}
+                  <button
+                    onClick={() => setVistaCalendario(true)}
+                    onMouseEnter={() => setBtnExpandido(true)}
+                    onMouseLeave={() => setBtnExpandido(false)}
+                    style={{
+                      background: '#1e3a5f', border: 'none', cursor: 'pointer',
+                      borderRadius: btnExpandido ? '0.875rem' : '50%',
+                      width:   btnExpandido ? 'auto' : '48px',
+                      height:  '48px',
+                      minWidth: btnExpandido ? '180px' : '48px',
+                      alignSelf: 'center',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: '0.5rem', padding: btnExpandido ? '0 1.25rem' : '0',
+                      transition: 'all 0.25s ease',
+                      boxShadow: '0 2px 8px rgba(30,58,95,0.25)',
+                      overflow: 'hidden', whiteSpace: 'nowrap',
+                    }}>
+                    <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0, color: alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80 ? '#15803d' : '#dc2626' }}>
-                      {alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80 ? 'Alumno sin riesgo académico' : 'Alumno en riesgo académico'}
-                    </p>
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.125rem 0 0' }}>
-                      {alumno.promedioFinal >= 70 && alumno.asistenciaFinal >= 80
-                        ? 'Promedio y asistencia dentro del rango aceptable'
-                        : `${alumno.promedioFinal < 70 ? 'Promedio reprobatorio. ' : ''}${alumno.asistenciaFinal < 80 ? 'Asistencia insuficiente.' : ''}`
-                      }
-                    </p>
-                  </div>
+                    {btnExpandido && (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'white' }}>
+                        Ver historial
+                      </span>
+                    )}
+                  </button>
                 </div>
+                {/* Botón descargar PDF */}
+                <button onClick={handleDescargar}
+                  style={{
+                    width: '100%', padding: '0.75rem', borderRadius: '0.875rem',
+                    cursor: descargando || descargado ? 'default' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem',
+                    fontSize: '0.875rem', fontWeight: 600,
+                    background: descargado ? '#16a34a' : descargando ? '#f1f5f9' : '#fef2f2',
+                    color:      descargado ? 'white'   : descargando ? '#94a3b8' : '#dc2626',
+                    border:     descargado ? 'none' : `1px solid ${descargando ? '#e2e8f0' : '#fecaca'}`,
+                    transition: 'all 0.3s',
+                  }}
+                  onMouseEnter={e => { if (!descargando && !descargado) { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; e.currentTarget.style.border = 'none' } }}
+                  onMouseLeave={e => { if (!descargando && !descargado) { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.border = '1px solid #fecaca' } }}>
+
+                  {descargando ? (
+                    <>
+                      {/* Spinner */}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
+                        style={{ animation: 'spin 0.8s linear infinite' }}>
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round"/>
+                      </svg>
+                      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+                      Generando PDF...
+                    </>
+                  ) : descargado ? (
+                    <>
+                      <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      ¡PDF descargado!
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <polyline points="9 15 12 18 15 15"/>
+                      </svg>
+                      Descargar boleta PDF — {tabs.find(t => t.key === parcialActivo)?.label}
+                    </>
+                  )}
+                </button>
               </div>
             </>
           )
@@ -441,7 +383,7 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   )
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+
 export default function Header({ titulo }: { titulo: string }) {
   const [notifs, setNotifs]                   = useState<Notificacion[]>(notificacionesMock)
   const [panelAbierto, setPanelAbierto]       = useState(false)
