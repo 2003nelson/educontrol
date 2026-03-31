@@ -191,6 +191,15 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   const [vistaCalendario, setVistaCalendario] = useState(false)
   const [parcialActivo, setParcialActivo]     = useState<ParcialKey>(1)
   const [btnExpandido, setBtnExpandido]       = useState(false)
+  const btnTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleBtnEnter() {
+    if (btnTimer.current) clearTimeout(btnTimer.current)
+    setBtnExpandido(true)
+  }
+  function handleBtnLeave() {
+    btnTimer.current = setTimeout(() => setBtnExpandido(false), 120)
+  }
 
   const tabs: { key: ParcialKey; label: string }[] = [
     { key: 1,       label: '1er Parcial' },
@@ -301,8 +310,8 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
                   {/* Botón ver historial — círculo que se expande */}
                   <button
                     onClick={() => setVistaCalendario(true)}
-                    onMouseEnter={() => setBtnExpandido(true)}
-                    onMouseLeave={() => setBtnExpandido(false)}
+                    onMouseEnter={handleBtnEnter}
+                    onMouseLeave={handleBtnLeave}
                     style={{
                       background: '#1e3a5f', border: 'none', cursor: 'pointer',
                       borderRadius: btnExpandido ? '0.875rem' : '50%',
@@ -391,7 +400,9 @@ export default function Header({ titulo }: { titulo: string }) {
   const [sugerencias, setSugerencias]         = useState<Alumno[]>([])
   const [alumnoSelec, setAlumnoSelec]         = useState<Alumno | null>(null)
   const [dropdownAbierto, setDropdownAbierto] = useState(false)
-  const busquedaRef = useRef<HTMLDivElement>(null)
+  const [searchExpanded, setSearchExpanded]   = useState(false)
+  const busquedaRef    = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const noLeidas = notifs.filter(n => !n.leida).length
 
@@ -430,17 +441,46 @@ export default function Header({ titulo }: { titulo: string }) {
 
         <div className="flex items-center gap-3">
 
-          {/* Buscador */}
+          {/* Buscador — colapsable estilo Apple */}
           <div ref={busquedaRef} className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-            </span>
-            <input type="text" value={busqueda} onChange={e => handleBusqueda(e.target.value)}
-              placeholder="Buscar alumnos, grupos o reportes..."
-              className="pl-9 pr-4 py-2 text-sm rounded-xl w-72 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(180,200,230,0.5)', color: '#334155', fontFamily: 'DM Sans, sans-serif' }} />
+            <div
+              onMouseEnter={() => { setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
+              onMouseLeave={() => { if (!busqueda) setSearchExpanded(false) }}
+              style={{
+                display:'flex', alignItems:'center',
+                height:'38px',
+                width: searchExpanded ? '300px' : '38px',
+                borderRadius:'0.875rem',
+                border:'1px solid rgba(180,200,230,0.5)',
+                background:'rgba(255,255,255,0.6)',
+                backdropFilter:'blur(8px)',
+                WebkitBackdropFilter:'blur(8px)',
+                transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s',
+                overflow:'hidden',
+                cursor: searchExpanded ? 'text' : 'pointer',
+                boxShadow: searchExpanded ? '0 0 0 2px #bfdbfe' : 'none',
+                flexShrink: 0,
+              }}>
+              <div style={{ width:'38px', height:'38px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+              </div>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={busqueda}
+                onChange={e => handleBusqueda(e.target.value)}
+                onFocus={() => setSearchExpanded(true)}
+                onBlur={() => { if (!busqueda) setSearchExpanded(false) }}
+                placeholder="Buscar alumnos, grupos o reportes..."
+                style={{ border:'none', outline:'none', fontSize:'0.8125rem', color:'#334155', background:'transparent', width:'calc(100% - 38px)', paddingRight:'0.75rem', opacity: searchExpanded ? 1 : 0, transition:'opacity 0.2s', fontFamily:'DM Sans, sans-serif' }}
+              />
+              {busqueda && searchExpanded && (
+                <button onClick={() => { handleBusqueda('') }}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', paddingRight:'0.5rem', fontSize:'1rem', lineHeight:1, flexShrink:0 }}>✕</button>
+              )}
+            </div>
 
             {dropdownAbierto && sugerencias.length > 0 && (
               <div className="absolute left-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl overflow-hidden"

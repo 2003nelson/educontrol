@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 import DocenteModal, { type Docente, type Asignacion } from '@/components/DocenteModal'
@@ -290,6 +290,8 @@ export default function DocentesPage() {
   const [docenteAEliminar, setDocenteAEliminar] = useState<Docente | null>(null)
 
   const [docenteAgregado, setDocenteAgregado] = useState(false)
+  const [searchExpanded, setSearchExpanded]   = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -329,15 +331,42 @@ export default function DocentesPage() {
       <div className="p-6 flex flex-col" style={{ flex: 1, minHeight: 0, gap: '1rem' }}>
         {/* Barra de acciones */}
         <div className="flex items-center justify-between">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+          {/* Buscador — colapsable estilo Apple */}
+          <div
+            onMouseEnter={() => { setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
+            onMouseLeave={() => { if (!busqueda) setSearchExpanded(false) }}
+            style={{
+              display:'flex', alignItems:'center',
+              height:'38px',
+              width: searchExpanded ? '300px' : '38px',
+              borderRadius:'0.875rem',
+              border:'1px solid #e2e8f0',
+              background:'white',
+              transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s',
+              overflow:'hidden',
+              cursor: searchExpanded ? 'text' : 'pointer',
+              boxShadow: searchExpanded ? '0 0 0 2px #bfdbfe' : 'none',
+              flexShrink: 0,
+            }}>
+            <div style={{ width:'38px', height:'38px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
-            </span>
-            <input type="text" placeholder="Buscar por nombre, materia o grupo..."
-              value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              className="pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Buscar por nombre, materia o grupo..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              onFocus={() => setSearchExpanded(true)}
+              onBlur={() => { if (!busqueda) setSearchExpanded(false) }}
+              style={{ border:'none', outline:'none', fontSize:'0.8125rem', color:'#334155', background:'transparent', width:'calc(100% - 38px)', paddingRight:'0.75rem', opacity: searchExpanded ? 1 : 0, transition:'opacity 0.2s' }}
+            />
+            {busqueda && searchExpanded && (
+              <button onClick={() => setBusqueda('')}
+                style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', paddingRight:'0.5rem', fontSize:'1rem', lineHeight:1, flexShrink:0 }}>✕</button>
+            )}
           </div>
 
           {/* Leyenda + botón */}

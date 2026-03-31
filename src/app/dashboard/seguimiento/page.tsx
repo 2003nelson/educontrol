@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Image from 'next/image'
 import Header from '@/components/Header'
 
@@ -108,11 +108,21 @@ function ArrowButton() {
 // ─── Botón historial expandible ───────────────────────────────────────────────
 function HistorialBtn({ onClick }: { onClick: () => void }) {
   const [hov, setHov] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setHov(true)
+  }
+  function handleLeave() {
+    timerRef.current = setTimeout(() => setHov(false), 120)
+  }
+
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: hov ? '0.5rem' : '0',
@@ -122,7 +132,7 @@ function HistorialBtn({ onClick }: { onClick: () => void }) {
         padding: hov ? '0 1rem' : '0',
         borderRadius: hov ? '0.75rem' : '50%',
         background: '#1e3a5f', border: 'none', cursor: 'pointer',
-        transition: 'all 0.25s ease',
+        transition: 'all 0.3s ease',
         overflow: 'hidden', whiteSpace: 'nowrap',
         boxShadow: '0 2px 8px rgba(30,58,95,0.2)',
       }}>
@@ -227,7 +237,7 @@ export default function SeguimientoPage() {
                   <div style={{ position:'absolute', top:'1rem', right:'1rem', zIndex:2 }}>
                     <ArrowButton/>
                   </div>
-                  <div className="relative flex flex-col p-5">
+                  <div className="relative flex flex-col p-5" style={{ minHeight: '200px' }}>
                     <div className="flex items-center gap-4 mb-4">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold shrink-0"
                         style={{ background:'#eff6ff', color:'#2563eb', fontFamily:'Outfit, sans-serif' }}>
@@ -393,40 +403,71 @@ export default function SeguimientoPage() {
                   Grupo {grupoActivo} — {semestreActivo}° Semestre
                 </p>
               </div>
-              <div className="flex gap-1.5 bg-white rounded-xl p-1 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                {([{key:'semana',label:'Semana'},{key:'bimestre',label:'Bimestre'},{key:'semestre',label:'Semestre'}] as {key:FiltroPeriodo;label:string}[]).map(({key,label})=>(
-                  <button key={key} onClick={()=>cambiarFiltro(key)}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                    style={{ background:filtroPeriodo===key?'#1e3a5f':'transparent', color:filtroPeriodo===key?'#fff':'#64748b' }}>
-                    {label}
-                  </button>
-                ))}
+              {/* Filtro período — Apple slide con más espacio */}
+              <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px', minWidth:'280px' }}>
+                {(() => {
+                  const opts = [{key:'semana',label:'Semana'},{key:'bimestre',label:'Parcial'},{key:'semestre',label:'Semestre'}]
+                  const idx  = opts.findIndex(o => o.key === filtroPeriodo)
+                  const total = opts.length
+                  return (
+                    <>
+                      <div style={{ position:'absolute', top:'4px', bottom:'4px', width:`calc(${100/total}% - 2px)`, left:`calc(${idx*(100/total)}% + 4px)`, background:'white', borderRadius:'0.75rem', boxShadow:'0 1px 6px rgba(0,0,0,0.13)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+                      {opts.map(({key,label}) => (
+                        <button key={key} onClick={() => cambiarFiltro(key as FiltroPeriodo)}
+                          style={{ position:'relative', zIndex:1, flex:1, padding:'0.5rem 1rem', fontSize:'0.8rem', fontWeight: filtroPeriodo===key ? 600 : 500, color: filtroPeriodo===key ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.75rem', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
+                          {label}
+                        </button>
+                      ))}
+                    </>
+                  )
+                })()}
               </div>
             </div>
 
+            {/* Sub-filtro Parcial */}
             {filtroPeriodo==='bimestre' && (
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-medium" style={{ color:'#64748b' }}>Bimestre:</span>
-                <div className="flex gap-1.5">
-                  {([1,2,3] as const).map(b=>(
-                    <button key={b} onClick={()=>setBimestreSelec(b)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                      style={{ background:bimestreSelec===b?'#3b82f6':'#f1f5f9', color:bimestreSelec===b?'#fff':'#64748b' }}>
-                      Bimestre {b}
-                    </button>
-                  ))}
+              <div className="flex items-center gap-3 shrink-0">
+                <span style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8', whiteSpace:'nowrap' }}>Parcial</span>
+                <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'0.875rem', padding:'3px', minWidth:'180px' }}>
+                  {(() => {
+                    const opts = [1,2]
+                    const idx  = opts.indexOf(bimestreSelec)
+                    return (
+                      <>
+                        <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 2px)`, left:`calc(${idx*50}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 6px rgba(0,0,0,0.13)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+                        {opts.map(b => (
+                          <button key={b} onClick={() => setBimestreSelec(b as 1|2|3)}
+                            style={{ position:'relative', zIndex:1, flex:1, padding:'0.375rem 0.875rem', fontSize:'0.775rem', fontWeight: bimestreSelec===b ? 600 : 500, color: bimestreSelec===b ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
+                            Parcial {b}
+                          </button>
+                        ))}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             )}
 
+            {/* Sub-filtro Semana — grid de píldoras */}
             {filtroPeriodo==='semana' && (
-              <div className="flex items-center gap-2 flex-wrap shrink-0">
-                <span className="text-xs font-medium" style={{ color:'#64748b' }}>Semana:</span>
-                <div className="flex gap-1.5 flex-wrap">
-                  {Array.from({length:16},(_,i)=>i+1).map(s=>(
+              <div className="flex items-center gap-3 shrink-0">
+                <span style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8', whiteSpace:'nowrap' }}>Semana</span>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem' }}>
+                  {Array.from({length:16},(_,i)=>i+1).map(s => (
                     <button key={s} onClick={()=>setSemanaSelec(s)}
-                      className="w-8 h-8 text-xs font-semibold rounded-lg transition"
-                      style={{ background:semanaSelec===s?'#3b82f6':'#f1f5f9', color:semanaSelec===s?'#fff':'#64748b' }}>
+                      style={{
+                        width:'34px', height:'34px', borderRadius:'0.625rem', fontSize:'0.75rem',
+                        fontWeight: semanaSelec===s ? 700 : 500,
+                        background: semanaSelec===s ? '#1e3a5f' : 'white',
+                        color:      semanaSelec===s ? 'white'   : '#64748b',
+                        border:     semanaSelec===s ? '1.5px solid #1e3a5f' : '1px solid #e2e8f0',
+                        cursor:'pointer',
+                        transition:'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+                        boxShadow: semanaSelec===s ? '0 2px 8px rgba(30,58,95,0.25)' : 'none',
+                        transform: semanaSelec===s ? 'translateY(-1px)' : 'none',
+                      }}
+                      onMouseEnter={e => { if(semanaSelec!==s){ e.currentTarget.style.borderColor='#1e3a5f'; e.currentTarget.style.color='#1e3a5f' }}}
+                      onMouseLeave={e => { if(semanaSelec!==s){ e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#64748b' }}}>
                       {s}
                     </button>
                   ))}
@@ -434,35 +475,54 @@ export default function SeguimientoPage() {
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-sm p-4 shrink-0" style={{ border:'1px solid #f1f5f9' }}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color:'#94a3b8' }}>Filtrar por materia</p>
+            {/* Filtro materias — estilo Apple creativo */}
+            <div className="shrink-0">
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.625rem' }}>
+                <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+                <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>Asignatura</span>
                 {materiaSelec && (
-                  <button onClick={()=>setMateriaSelec(null)} className="text-xs font-medium transition" style={{ color:'#64748b' }}
-                    onMouseEnter={e=>(e.currentTarget.style.color='#1e3a5f')}
-                    onMouseLeave={e=>(e.currentTarget.style.color='#64748b')}>
-                    Ver todas
-                  </button>
+                  <>
+                    <span style={{ fontSize:'0.7rem', color:'#cbd5e1' }}>·</span>
+                    <button onClick={()=>setMateriaSelec(null)}
+                      style={{ fontSize:'0.7rem', fontWeight:600, color:'#3b82f6', background:'none', border:'none', cursor:'pointer', padding:0 }}>
+                      Todas
+                    </button>
+                  </>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {MATERIAS.map(m=>{
-                  const activa=materiaSelec===m
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
+                {MATERIAS.map(m => {
+                  const activa = materiaSelec === m
                   return (
-                    <button key={m} onClick={()=>toggleMateria(m)} className="text-xs font-semibold rounded-xl"
-                      style={{ padding:'0.5rem 1rem', background:activa?'#1e3a5f':'white', color:activa?'white':'#475569', border:activa?'1px solid #1e3a5f':'1px solid #e2e8f0', boxShadow:activa?'0 6px 16px rgba(30,58,95,0.25)':'0 1px 3px rgba(0,0,0,0.06)', transform:activa?'translateY(-4px)':'translateY(0)', opacity:materiaSelec&&!activa?0.5:1, transition:'all 0.2s ease' }}
-                      onMouseEnter={e=>{ if(!activa){e.currentTarget.style.borderColor='#1e3a5f';e.currentTarget.style.color='#1e3a5f';e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 10px rgba(30,58,95,0.12)'}}}
-                      onMouseLeave={e=>{ if(!activa){e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.color='#475569';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)'}}}>
+                    <button key={m} onClick={() => toggleMateria(m)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:'0.375rem',
+                        padding:'0.375rem 0.875rem',
+                        borderRadius:'9999px',
+                        fontSize:'0.75rem', fontWeight: activa ? 600 : 400,
+                        background: activa ? '#1e3a5f' : 'white',
+                        color:      activa ? 'white'   : '#475569',
+                        border:     activa ? '1.5px solid #1e3a5f' : '1px solid #e2e8f0',
+                        cursor:'pointer',
+                        opacity: materiaSelec && !activa ? 0.4 : 1,
+                        transform: activa ? 'scale(1.05)' : 'scale(1)',
+                        boxShadow: activa ? '0 3px 10px rgba(30,58,95,0.22)' : '0 1px 2px rgba(0,0,0,0.04)',
+                        transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+                      }}
+                      onMouseEnter={e => { if(!activa){ e.currentTarget.style.borderColor='#1e3a5f'; e.currentTarget.style.color='#1e3a5f'; e.currentTarget.style.transform='scale(1.03)' }}}
+                      onMouseLeave={e => { if(!activa){ e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; e.currentTarget.style.transform='scale(1)' }}}>
+                      {activa && (
+                        <svg width="9" height="9" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
                       {m}
                     </button>
                   )
                 })}
               </div>
-              {materiaSelec && (
-                <p className="text-xs mt-3 pt-2.5" style={{ color:'#64748b', borderTop:'1px solid #f1f5f9' }}>
-                  Mostrando datos de <span className="font-semibold" style={{ color:'#1e3a5f' }}>{materiaSelec}</span>
-                </p>
-              )}
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm p-5 shrink-0" style={{ border:'1px solid #f1f5f9' }}>
@@ -474,14 +534,23 @@ export default function SeguimientoPage() {
                   {filtroPeriodo==='semestre'&&' — Semestre completo'}
                   {materiaSelec&&` · ${materiaSelec}`}
                 </p>
-                <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1">
-                  {([{key:'calificaciones',label:'Calificaciones'},{key:'asistencia',label:'Asistencia'}] as {key:GraficaTipo;label:string}[]).map(({key,label})=>(
-                    <button key={key} onClick={()=>setGraficaTipo(key)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                      style={{ background:graficaTipo===key?'#1e3a5f':'transparent', color:graficaTipo===key?'#fff':'#64748b' }}>
-                      {label}
-                    </button>
-                  ))}
+                {/* Toggle Calificaciones/Asistencia — Apple slide */}
+                <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px' }}>
+                  {(() => {
+                    const opts = [{key:'calificaciones',label:'Calificaciones'},{key:'asistencia',label:'Asistencia'}]
+                    const idx  = opts.findIndex(o => o.key === graficaTipo)
+                    return (
+                      <>
+                        <div style={{ position:'absolute', top:'4px', bottom:'4px', width:'50%', left:`calc(${idx*50}% + 4px)`, background:'white', borderRadius:'0.75rem', boxShadow:'0 1px 6px rgba(0,0,0,0.13)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+                        {opts.map(({key,label}) => (
+                          <button key={key} onClick={()=>setGraficaTipo(key as GraficaTipo)}
+                            style={{ position:'relative', zIndex:1, flex:1, padding:'0.5rem 1rem', fontSize:'0.75rem', fontWeight: graficaTipo===key ? 600 : 500, color: graficaTipo===key ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.75rem', transition:'color 0.2s', whiteSpace:'nowrap' }}>
+                            {label}
+                          </button>
+                        ))}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
               <div className="flex items-center gap-8">
