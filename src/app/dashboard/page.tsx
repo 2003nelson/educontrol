@@ -88,6 +88,10 @@ function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
           from { opacity:0; transform:scale(0.94) translateY(-6px); }
           to   { opacity:1; transform:scale(1) translateY(0); }
         }
+        @keyframes informeSpringOut {
+          from { opacity:1; transform:scale(1) translateY(0); }
+          to   { opacity:0; transform:scale(0.92) translateY(12px); }
+        }
       `}</style>
       <div ref={ref}
         style={{
@@ -133,6 +137,12 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
   const [parcial,  setParcial]  = useState('')
   const [formato,  setFormato]  = useState<TipoFormato>(null)
   const [contenido, setContenido] = useState({ calificaciones: true, asistencia: true })
+  const [cerrando, setCerrando] = useState(false)
+
+  function handleCerrar() {
+    setCerrando(true)
+    setTimeout(() => onCerrar(), 480)
+  }
 
   const listo = grupo && parcial && formato && (contenido.calificaciones || contenido.asistencia)
 
@@ -140,24 +150,29 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 
   return createPortal(
     <div
-      onClick={onCerrar}
+      onClick={handleCerrar}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
-        animation: 'informeBackdrop 0.3s ease',
+        animation: cerrando ? 'informeBackdropOut 0.48s ease forwards' : 'informeBackdrop 0.3s ease',
       }}>
       <style>{`
         @keyframes informeBackdrop { from { opacity:0 } to { opacity:1 } }
+        @keyframes informeBackdropOut { from { opacity:1 } to { opacity:0 } }
         @keyframes informeSpring {
           from { opacity:0; transform:scale(0.92) translateY(12px); }
           to   { opacity:1; transform:scale(1) translateY(0); }
         }
+        @keyframes informeSpringOut {
+          from { opacity:1; transform:scale(1) translateY(0); }
+          to   { opacity:0; transform:scale(0.92) translateY(12px); }
+        }
       `}</style>
       <div onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-xl w-full flex flex-col"
-        style={{ maxWidth: '560px', maxHeight: '88vh', animation: 'informeSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        style={{ maxWidth: '560px', maxHeight: '88vh', animation: cerrando ? 'informeSpringOut 0.48s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'informeSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b shrink-0"
@@ -168,7 +183,7 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
               Selecciona el grupo, parcial y formato de descarga
             </p>
           </div>
-          <button onClick={onCerrar}
+          <button onClick={handleCerrar}
             className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
         </div>
 
@@ -318,7 +333,7 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 
           {/* Botones */}
           <div className="flex gap-3 pt-1">
-            <button onClick={onCerrar}
+            <button onClick={handleCerrar}
               className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
               style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
               Cancelar
