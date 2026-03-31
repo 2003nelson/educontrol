@@ -21,8 +21,52 @@ const stats = [
   { label: 'ASISTENCIA MEDIA', value: '89.7', suffix: '%',       color: 'text-green-500' },
 ]
 
-// ─── Filter Dropdown ──────────────────────────────────────────────────────────
-function FilterDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
+// ─── Botón descargar expandible ───────────────────────────────────────────────
+function DescargaBtn({ onClick }: { onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    enterTimer.current = setTimeout(() => setHov(true), 120)
+  }
+  function handleLeave() {
+    if (enterTimer.current) clearTimeout(enterTimer.current)
+    leaveTimer.current = setTimeout(() => setHov(false), 200)
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: hov ? '0.5rem' : '0',
+        height: '34px',
+        width: hov ? 'auto' : '34px',
+        minWidth: hov ? '160px' : '34px',
+        padding: hov ? '0 1rem' : '0',
+        borderRadius: hov ? '0.75rem' : '50%',
+        background: 'transparent',
+        border: '1.5px solid #2563eb',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        overflow: 'hidden', whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}>
+      {/* Ícono flecha descargar */}
+      <svg width="14" height="14" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+        <path d="M12 5v14M5 12l7 7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {hov && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb' }}>Descargar informe</span>}
+    </button>
+  )
+}
+
+// ─── Spring Dropdown (sin fondo difuminado, con spring) ───────────────────────
+function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
   opciones: { key: string; label: string }[]
   seleccionado: string
   onSeleccionar: (key: string) => void
@@ -38,34 +82,48 @@ function FilterDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
   }, [onCerrar])
 
   return (
-    <div ref={ref}
-      className="absolute right-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl z-50 overflow-hidden"
-      style={{ border: '1px solid #e2e8f0', minWidth: '220px', maxHeight: '280px', overflowY: 'auto' }}>
-      {[OPCION_GENERAL, ...opciones].map(op => {
-        const activo = seleccionado === op.key
-        return (
-          <button key={op.key}
-            onClick={() => { onSeleccionar(op.key); onCerrar() }}
-            className="w-full text-left px-4 py-2.5 text-sm transition flex items-center gap-2"
-            style={{
-              background:   activo ? '#eff6ff' : 'white',
-              color:        activo ? '#2563eb' : '#475569',
-              fontWeight:   activo ? 600 : 400,
-              borderBottom: '1px solid #f8fafc',
-            }}
-            onMouseEnter={e => { if (!activo) e.currentTarget.style.background = '#f8fafc' }}
-            onMouseLeave={e => { if (!activo) e.currentTarget.style.background = 'white' }}
-          >
-            {activo && (
-              <svg width="12" height="12" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-            <span className={activo ? '' : 'ml-5'}>{op.label}</span>
-          </button>
-        )
-      })}
-    </div>
+    <>
+      <style>{`
+        @keyframes springDrop {
+          from { opacity:0; transform:scale(0.94) translateY(-6px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
+      `}</style>
+      <div ref={ref}
+        style={{
+          position:'absolute', right:0, bottom:'calc(100% + 8px)',
+          background:'white', borderRadius:'1rem',
+          boxShadow:'0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
+          border:'1px solid #f1f5f9',
+          minWidth:'200px', maxHeight:'280px', overflowY:'auto', zIndex:50,
+          animation:'springDrop 0.38s cubic-bezier(0.34,1.56,0.64,1)',
+        }}>
+        {[OPCION_GENERAL, ...opciones].map(op => {
+          const activo = seleccionado === op.key
+          return (
+            <button key={op.key}
+              onClick={() => { onSeleccionar(op.key); onCerrar() }}
+              style={{
+                width:'100%', textAlign:'left', padding:'0.625rem 1rem',
+                fontSize:'0.8rem', display:'flex', alignItems:'center', gap:'0.5rem',
+                background: activo ? '#eff6ff' : 'white',
+                color:      activo ? '#2563eb' : '#475569',
+                fontWeight: activo ? 600 : 400,
+                border:'none', borderBottom:'1px solid #f8fafc', cursor:'pointer',
+                transition:'background 0.1s',
+              }}
+              onMouseEnter={e => { if (!activo) e.currentTarget.style.background = '#f8fafc' }}
+              onMouseLeave={e => { if (!activo) e.currentTarget.style.background = 'white' }}>
+              {activo
+                ? <svg width="11" height="11" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                : <span style={{ width:'11px', display:'inline-block' }}/>
+              }
+              {op.label}
+            </button>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -88,11 +146,18 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
-      }}
-    >
+        animation: 'informeBackdrop 0.3s ease',
+      }}>
+      <style>{`
+        @keyframes informeBackdrop { from { opacity:0 } to { opacity:1 } }
+        @keyframes informeSpring {
+          from { opacity:0; transform:scale(0.92) translateY(12px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
+      `}</style>
       <div onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-xl w-full flex flex-col"
-        style={{ maxWidth: '560px', maxHeight: '88vh' }}>
+        style={{ maxWidth: '560px', maxHeight: '88vh', animation: 'informeSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b shrink-0"
@@ -109,7 +174,7 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 
         <div className="overflow-y-auto px-7 py-5 space-y-5 flex-1">
 
-          {/* Paso 1 — Grupo y Parcial */}
+          {/* Paso 1 */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
               1 · Selecciona grupo y parcial
@@ -139,7 +204,7 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             </div>
           </div>
 
-          {/* Paso 2 — Contenido */}
+          {/* Paso 2 */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
               2 · Contenido a incluir
@@ -147,20 +212,10 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { key: 'calificaciones', label: 'Calificaciones', desc: 'Promedio por parcial y final',
-                  icon: (
-                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                    </svg>
-                  )
+                  icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                 },
                 { key: 'asistencia', label: 'Asistencia', desc: 'Porcentaje y faltas por alumno',
-                  icon: (
-                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                  )
+                  icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 },
               ].map(op => {
                 const activo = contenido[op.key as keyof typeof contenido]
@@ -168,18 +223,13 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
                   <button key={op.key}
                     onClick={() => setContenido(prev => ({ ...prev, [op.key]: !prev[op.key as keyof typeof prev] }))}
                     className="flex items-center gap-3 rounded-xl p-3.5 text-left transition-all"
-                    style={{
-                      border:     activo ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                      background: activo ? '#eff6ff' : 'white',
-                    }}>
+                    style={{ border: activo ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: activo ? '#eff6ff' : 'white' }}>
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: activo ? '#2563eb' : '#f1f5f9', color: activo ? 'white' : '#94a3b8' }}>
                       {op.icon}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>
-                        {op.label}
-                      </p>
+                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>{op.label}</p>
                       <p className="text-xs" style={{ color: '#94a3b8' }}>{op.desc}</p>
                     </div>
                   </button>
@@ -188,37 +238,27 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
             </div>
           </div>
 
-          {/* Paso 3 — Formato */}
+          {/* Paso 3 */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
               3 · Formato de descarga
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {/* PDF */}
               <button onClick={() => setFormato(formato === 'pdf' ? null : 'pdf')}
                 className="rounded-xl p-4 text-left transition-all"
-                style={{
-                  border:     formato === 'pdf' ? '2px solid #dc2626' : '1px solid #e2e8f0',
-                  background: formato === 'pdf' ? '#fef2f2' : 'white',
-                }}>
+                style={{ border: formato === 'pdf' ? '2px solid #dc2626' : '1px solid #e2e8f0', background: formato === 'pdf' ? '#fef2f2' : 'white' }}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: formato === 'pdf' ? '#dc2626' : '#f1f5f9' }}>
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <polyline points="14 2 14 8 20 8"
-                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="9" y1="13" x2="15" y2="13"
-                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="9" y1="17" x2="15" y2="17"
-                        stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <polyline points="14 2 14 8 20 8" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="9" y1="13" x2="15" y2="13" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="9" y1="17" x2="15" y2="17" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-bold" style={{ color: formato === 'pdf' ? '#dc2626' : '#1e3a5f' }}>
-                      PDF
-                    </p>
+                    <p className="text-sm font-bold" style={{ color: formato === 'pdf' ? '#dc2626' : '#1e3a5f' }}>PDF</p>
                     <p className="text-xs" style={{ color: '#94a3b8' }}>Para imprimir o compartir</p>
                   </div>
                 </div>
@@ -232,33 +272,22 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
                 </div>
               </button>
 
-              {/* Excel */}
               <button onClick={() => setFormato(formato === 'excel' ? null : 'excel')}
                 className="rounded-xl p-4 text-left transition-all"
-                style={{
-                  border:     formato === 'excel' ? '2px solid #16a34a' : '1px solid #e2e8f0',
-                  background: formato === 'excel' ? '#f0fdf4' : 'white',
-                }}>
+                style={{ border: formato === 'excel' ? '2px solid #16a34a' : '1px solid #e2e8f0', background: formato === 'excel' ? '#f0fdf4' : 'white' }}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: formato === 'excel' ? '#16a34a' : '#f1f5f9' }}>
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <polyline points="14 2 14 8 20 8"
-                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="8" y1="13" x2="16" y2="13"
-                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="8" y1="17" x2="16" y2="17"
-                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="10" y1="9" x2="14" y2="9"
-                        stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <polyline points="14 2 14 8 20 8" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="8" y1="13" x2="16" y2="13" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="8" y1="17" x2="16" y2="17" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+                      <line x1="10" y1="9" x2="14" y2="9" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-bold" style={{ color: formato === 'excel' ? '#16a34a' : '#1e3a5f' }}>
-                      Excel
-                    </p>
+                    <p className="text-sm font-bold" style={{ color: formato === 'excel' ? '#16a34a' : '#1e3a5f' }}>Excel</p>
                     <p className="text-xs" style={{ color: '#94a3b8' }}>Para analizar o editar</p>
                   </div>
                 </div>
@@ -277,26 +306,12 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
           {/* Resumen */}
           {listo && (
             <div className="rounded-xl p-4" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
-                Resumen
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>Resumen</p>
               <div className="space-y-1">
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Grupo: </span>
-                  {grupo}
-                </p>
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Parcial: </span>
-                  {parcial === 'final' ? 'Calificación Final' : `${parcial}° Parcial`}
-                </p>
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Incluye: </span>
-                  {[contenido.calificaciones && 'Calificaciones', contenido.asistencia && 'Asistencia'].filter(Boolean).join(' + ')}
-                </p>
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  <span className="font-semibold" style={{ color: '#1e3a5f' }}>Formato: </span>
-                  {formato === 'pdf' ? 'PDF' : 'Excel (.xlsx)'}
-                </p>
+                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Grupo: </span>{grupo}</p>
+                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Parcial: </span>{parcial === 'final' ? 'Calificación Final' : `${parcial}° Parcial`}</p>
+                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Incluye: </span>{[contenido.calificaciones && 'Calificaciones', contenido.asistencia && 'Asistencia'].filter(Boolean).join(' + ')}</p>
+                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Formato: </span>{formato === 'pdf' ? 'PDF' : 'Excel (.xlsx)'}</p>
               </div>
             </div>
           )}
@@ -308,20 +323,12 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
               style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
               Cancelar
             </button>
-            <button
-              disabled={!listo}
+            <button disabled={!listo}
               className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition flex items-center justify-center gap-2"
-              style={{
-                background: !listo ? '#e2e8f0' : formato === 'pdf' ? '#dc2626' : '#16a34a',
-                cursor:     !listo ? 'not-allowed' : 'pointer',
-                color:      !listo ? '#94a3b8' : 'white',
-              }}
+              style={{ background: !listo ? '#e2e8f0' : formato === 'pdf' ? '#dc2626' : '#16a34a', cursor: !listo ? 'not-allowed' : 'pointer', color: !listo ? '#94a3b8' : 'white' }}
               onMouseEnter={e => { if (listo) e.currentTarget.style.opacity = '0.88' }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}>
-              {!listo
-                ? 'Completa los campos'
-                : `↓ Descargar ${formato === 'pdf' ? 'PDF' : 'Excel'}`
-              }
+              {!listo ? 'Completa los campos' : `↓ Descargar ${formato === 'pdf' ? 'PDF' : 'Excel'}`}
             </button>
           </div>
         </div>
@@ -341,10 +348,10 @@ export default function DashboardPage() {
   const [modalInforme, setModalInforme]   = useState(false)
 
   const PARCIALES = [
-    { key: '1',     label: '1er Parcial'       },
-    { key: '2',     label: '2do Parcial'       },
-    { key: '3',     label: '3er Parcial'       },
-    { key: 'final', label: 'Calificación Final'},
+    { key: '1',     label: '1er Parcial'        },
+    { key: '2',     label: '2do Parcial'        },
+    { key: '3',     label: '3er Parcial'        },
+    { key: 'final', label: 'Calificación Final' },
   ]
 
   function labelGrupo()   { return grupoSelec  === 'general' ? 'Grupo'   : `Grupo ${grupoSelec}` }
@@ -382,28 +389,32 @@ export default function DashboardPage() {
               </h2>
               <p className="text-sm text-gray-400 mt-1">{subtitulo()}</p>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => cambiarVista('asistencias')}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                style={{ background: vistaGrafica === 'asistencias' ? '#eff6ff' : 'white', color: vistaGrafica === 'asistencias' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
-                Asistencias
-              </button>
-              <button onClick={() => cambiarVista('calificaciones')}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                style={{ background: vistaGrafica === 'calificaciones' ? '#eff6ff' : 'white', color: vistaGrafica === 'calificaciones' ? '#2563eb' : '#6b7280', border: '1px solid #e2e8f0' }}>
-                Calificaciones
-              </button>
-              <button onClick={() => setModalInforme(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition"
-                style={{ background: '#1e3a5f' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-                ↓ Descargar Informe
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Toggle Asistencias / Calificaciones — Apple slide */}
+              <div style={{ position:'relative', display:'flex', background:'rgba(148,163,184,0.15)', backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)', borderRadius:'0.875rem', padding:'3px', border:'1px solid rgba(148,163,184,0.2)' }}>
+                {(() => {
+                  const opts = [{key:'asistencias',label:'Asistencias'},{key:'calificaciones',label:'Calificaciones'}]
+                  const idx  = opts.findIndex(o => o.key === vistaGrafica)
+                  return (
+                    <>
+                      <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 3px)`, left:`calc(${idx*50}% + 3px)`, background:'rgba(255,255,255,0.92)', borderRadius:'0.625rem', boxShadow:'0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(148,163,184,0.3)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+                      {opts.map(({key,label}) => (
+                        <button key={key} onClick={() => cambiarVista(key as 'calificaciones' | 'asistencias')}
+                          style={{ position:'relative', zIndex:1, padding:'0.375rem 0.875rem', fontSize:'0.75rem', fontWeight: vistaGrafica===key ? 600 : 500, color: vistaGrafica===key ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', whiteSpace:'nowrap' }}>
+                          {label}
+                        </button>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
+
+              {/* Botón descargar — aro azul expandible */}
+              <DescargaBtn onClick={() => setModalInforme(true)} />
             </div>
           </div>
 
-          {/* Gráfica SVG — flex-1 para que crezca y llene el espacio */}
+          {/* Gráfica SVG */}
           <div className="relative mb-6" style={{ flex: '1 1 0', minHeight: 0 }}>
             <svg viewBox="0 0 600 180" className="w-full h-full">
               <defs>
@@ -438,60 +449,61 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex gap-2">
-              {/* Filtro Grupo — aparece en ambas vistas */}
+            <div className="flex items-center gap-0">
+              {/* Filtro Grupo */}
               <div className="relative">
                 <button onClick={() => setFiltroAbierto(filtroAbierto === 'grupo' ? null : 'grupo')}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition"
-                  style={{
-                    border:     '1px solid #e2e8f0',
-                    background: grupoSelec !== 'general' ? '#eff6ff' : 'white',
-                    color:      grupoSelec !== 'general' ? '#2563eb' : '#4b5563',
-                  }}>
-                  ▼ {labelGrupo()}
+                  style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: grupoSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: grupoSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
+                  onMouseEnter={e => { if (grupoSelec === 'general') e.currentTarget.style.color = '#334155' }}
+                  onMouseLeave={e => { if (grupoSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
+                  {labelGrupo()}
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ transform: filtroAbierto === 'grupo' ? 'rotate(180deg)' : 'rotate(0)', transition:'transform 0.2s' }}>
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </button>
                 {filtroAbierto === 'grupo' && (
-                  <FilterDropdown opciones={GRUPOS} seleccionado={grupoSelec}
+                  <SpringDropdown opciones={GRUPOS} seleccionado={grupoSelec}
                     onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
 
-              {/* Filtro Parcial — solo en Calificaciones */}
+              {/* Separador vertical */}
+              <div style={{ width:'1px', height:'16px', background:'#e2e8f0' }}/>
+
+              {/* Filtro Parcial */}
               {vistaGrafica === 'calificaciones' && (
                 <div className="relative">
                   <button onClick={() => setFiltroAbierto(filtroAbierto === 'parcial' ? null : 'parcial')}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
-                    style={{ background: parcialSelec !== 'general' ? '#2563eb' : '#1e3a5f' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                    onMouseLeave={e => (e.currentTarget.style.background = parcialSelec !== 'general' ? '#2563eb' : '#1e3a5f')}>
-                    ▼ {labelParcial()}
+                    style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: parcialSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: parcialSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
+                    onMouseEnter={e => { if (parcialSelec === 'general') e.currentTarget.style.color = '#334155' }}
+                    onMouseLeave={e => { if (parcialSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
+                    {labelParcial()}
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ transform: filtroAbierto === 'parcial' ? 'rotate(180deg)' : 'rotate(0)', transition:'transform 0.2s' }}>
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                   {filtroAbierto === 'parcial' && (
-                    <FilterDropdown
-                      opciones={PARCIALES}
-                      seleccionado={parcialSelec}
-                      onSeleccionar={setParcialSelec}
-                      onCerrar={() => setFiltroAbierto(null)} />
+                    <SpringDropdown opciones={PARCIALES} seleccionado={parcialSelec}
+                      onSeleccionar={setParcialSelec} onCerrar={() => setFiltroAbierto(null)} />
                   )}
                 </div>
               )}
 
-              {/* Filtro Semana — solo en Asistencias */}
+              {/* Filtro Semana */}
               {vistaGrafica === 'asistencias' && (
                 <div className="relative">
                   <button onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg transition text-white"
-                    style={{ background: semanaSelec !== 'general' ? '#2563eb' : '#1e3a5f' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                    onMouseLeave={e => (e.currentTarget.style.background = semanaSelec !== 'general' ? '#2563eb' : '#1e3a5f')}>
-                    ▼ {labelSemana()}
+                    style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: semanaSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: semanaSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
+                    onMouseEnter={e => { if (semanaSelec === 'general') e.currentTarget.style.color = '#334155' }}
+                    onMouseLeave={e => { if (semanaSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
+                    {labelSemana()}
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ transform: filtroAbierto === 'semana' ? 'rotate(180deg)' : 'rotate(0)', transition:'transform 0.2s' }}>
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                   {filtroAbierto === 'semana' && (
-                    <FilterDropdown
-                      opciones={SEMANAS}
-                      seleccionado={semanaSelec}
-                      onSeleccionar={setSemanaSelec}
-                      onCerrar={() => setFiltroAbierto(null)} />
+                    <SpringDropdown opciones={SEMANAS} seleccionado={semanaSelec}
+                      onSeleccionar={setSemanaSelec} onCerrar={() => setFiltroAbierto(null)} />
                   )}
                 </div>
               )}

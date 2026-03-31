@@ -191,14 +191,16 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   const [vistaCalendario, setVistaCalendario] = useState(false)
   const [parcialActivo, setParcialActivo]     = useState<ParcialKey>(1)
   const [btnExpandido, setBtnExpandido]       = useState(false)
-  const btnTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const btnLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const btnEnterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleBtnEnter() {
-    if (btnTimer.current) clearTimeout(btnTimer.current)
-    setBtnExpandido(true)
+    if (btnLeaveTimer.current) clearTimeout(btnLeaveTimer.current)
+    btnEnterTimer.current = setTimeout(() => setBtnExpandido(true), 120)
   }
   function handleBtnLeave() {
-    btnTimer.current = setTimeout(() => setBtnExpandido(false), 120)
+    if (btnEnterTimer.current) clearTimeout(btnEnterTimer.current)
+    btnLeaveTimer.current = setTimeout(() => setBtnExpandido(false), 200)
   }
 
   const tabs: { key: ParcialKey; label: string }[] = [
@@ -413,6 +415,12 @@ export default function Header({ titulo }: { titulo: string }) {
 
   const noLeidas = notifs.filter(n => !n.leida).length
 
+  const [notifCerrando, setNotifCerrando] = useState(false)
+
+  function cerrarNotifs() {
+    setNotifCerrando(true)
+    setTimeout(() => { setPanelAbierto(false); setNotifCerrando(false) }, 320)
+  }
   function marcarLeida(id: string)  { setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n)) }
   function marcarTodasLeidas()      { setNotifs(prev => prev.map(n => ({ ...n, leida: true }))) }
 
@@ -540,52 +548,6 @@ export default function Header({ titulo }: { titulo: string }) {
                 </span>
               )}
             </button>
-
-            {panelAbierto && (
-              <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl z-50 overflow-hidden"
-                style={{ width: '340px', border: '1px solid #e2e8f0' }}>
-                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#f1f5f9' }}>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold" style={{ color: '#1e3a5f' }}>Notificaciones</p>
-                    {noLeidas > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" style={{ background: '#dc2626' }}>{noLeidas}</span>}
-                  </div>
-                  {noLeidas > 0 && (
-                    <button onClick={marcarTodasLeidas} className="text-xs font-medium transition" style={{ color: '#3b82f6' }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#1d4ed8')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#3b82f6')}>
-                      Marcar todas como leídas
-                    </button>
-                  )}
-                </div>
-                <div className="divide-y" style={{ maxHeight: '360px', overflowY: 'auto' }}>
-                  {notifs.map(n => {
-                    const icono = iconoTipo[n.tipo]
-                    return (
-                      <div key={n.id} onClick={() => marcarLeida(n.id)}
-                        className="flex gap-3 px-4 py-3 cursor-pointer transition-colors"
-                        style={{ background: n.leida ? 'white' : '#f8faff' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseLeave={e => (e.currentTarget.style.background = n.leida ? 'white' : '#f8faff')}>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: icono.bg }}>
-                          <svg width="16" height="16" fill="none" stroke={icono.color} strokeWidth="1.8" viewBox="0 0 24 24">{icono.svg}</svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs font-bold" style={{ color: '#1e3a5f' }}>{n.titulo}</p>
-                            {!n.leida && <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: '#3b82f6' }} />}
-                          </div>
-                          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#64748b' }}>{n.mensaje}</p>
-                          <p className="text-xs mt-1" style={{ color: '#cbd5e1' }}>{n.fecha}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="px-4 py-2.5 border-t text-center" style={{ borderColor: '#f1f5f9' }}>
-                  <p className="text-xs" style={{ color: '#94a3b8' }}>Notificaciones enviadas por Dinoti Platforms</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Avatar */}
@@ -597,6 +559,107 @@ export default function Header({ titulo }: { titulo: string }) {
       </header>
 
       {alumnoSelec && <CardAlumno alumno={alumnoSelec} onCerrar={() => setAlumnoSelec(null)} />}
+
+      {/* Modal notificaciones — centrado con spring */}
+      {panelAbierto && typeof window !== 'undefined' && createPortal(
+        <>
+          <style>{`
+            @keyframes notifBackdropIn  { from { opacity:0 } to { opacity:1 } }
+            @keyframes notifBackdropOut { from { opacity:1 } to { opacity:0 } }
+            @keyframes notifSpringIn  { from { opacity:0; transform:scale(0.88) translateY(16px) } to { opacity:1; transform:scale(1) translateY(0) } }
+            @keyframes notifSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.88) translateY(16px) } }
+          `}</style>
+          {/* Backdrop — NO cierra al hacer clic */}
+          <div style={{
+            position:'fixed', inset:0, zIndex:9990,
+            background:'rgba(0,0,0,0.45)',
+            backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)',
+            animation: notifCerrando ? 'notifBackdropOut 0.32s ease forwards' : 'notifBackdropIn 0.25s ease',
+          }}/>
+          {/* Card centrada */}
+          <div style={{
+            position:'fixed', inset:0, zIndex:9991,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            pointerEvents:'none',
+          }}>
+            <div style={{
+              background:'white', borderRadius:'1.25rem',
+              boxShadow:'0 24px 64px rgba(0,0,0,0.18)',
+              width:'400px', maxHeight:'80vh',
+              display:'flex', flexDirection:'column',
+              overflow:'hidden', pointerEvents:'all',
+              animation: notifCerrando ? 'notifSpringOut 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'notifSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)',
+            }}>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.5rem 1rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+                  <div style={{ width:'32px', height:'32px', borderRadius:'0.625rem', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <svg width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                  </div>
+                  <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Notificaciones</p>
+                  {noLeidas > 0 && (
+                    <span style={{ fontSize:'0.7rem', fontWeight:700, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:'#dc2626', color:'white' }}>
+                      {noLeidas}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                  {noLeidas > 0 && (
+                    <button onClick={marcarTodasLeidas}
+                      style={{ fontSize:'0.75rem', fontWeight:500, color:'#3b82f6', background:'none', border:'none', cursor:'pointer', padding:0 }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#1d4ed8')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#3b82f6')}>
+                      Marcar todas
+                    </button>
+                  )}
+                  <button onClick={cerrarNotifs}
+                    style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.9rem', fontWeight:700, transition:'background 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista */}
+              <div style={{ overflowY:'auto', flex:1 }}>
+                {notifs.map(n => {
+                  const icono = iconoTipo[n.tipo]
+                  return (
+                    <div key={n.id} onClick={() => marcarLeida(n.id)}
+                      style={{ display:'flex', gap:'0.875rem', padding:'1rem 1.5rem', cursor:'pointer', background: n.leida ? 'white' : '#f8faff', borderBottom:'1px solid #f8fafc', transition:'background 0.12s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = n.leida ? 'white' : '#f8faff')}>
+                      <div style={{ width:'38px', height:'38px', borderRadius:'0.75rem', background:icono.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'2px' }}>
+                        <svg width="16" height="16" fill="none" stroke={icono.color} strokeWidth="1.8" viewBox="0 0 24 24">{icono.svg}</svg>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'0.5rem' }}>
+                          <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>{n.titulo}</p>
+                          <div style={{ display:'flex', alignItems:'center', gap:'0.375rem', flexShrink:0 }}>
+                            <p style={{ fontSize:'0.7rem', color:'#cbd5e1', margin:0 }}>{n.fecha}</p>
+                            {!n.leida && <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#3b82f6', flexShrink:0, display:'inline-block' }}/>}
+                          </div>
+                        </div>
+                        <p style={{ fontSize:'0.75rem', color:'#64748b', margin:'0.25rem 0 0', lineHeight:1.5 }}>{n.mensaje}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding:'0.875rem 1.5rem', borderTop:'1px solid #f1f5f9', textAlign:'center', flexShrink:0 }}>
+                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>Notificaciones enviadas por Dinoti Platforms</p>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   )
 }
