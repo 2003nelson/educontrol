@@ -50,15 +50,6 @@ function getColor(nombre: string) {
   return PALETA[nombre.charCodeAt(0) % PALETA.length]
 }
 
-// Agrupa asignaciones por materia para mostrarlas de forma compacta
-function agruparPorMateria(asignaciones: Asignacion[]) {
-  const mapa: Record<string, string[]> = {}
-  asignaciones.forEach(a => {
-    if (!mapa[a.materia]) mapa[a.materia] = []
-    mapa[a.materia].push(a.grupo)
-  })
-  return Object.entries(mapa)
-}
 
 // ─── Modal eliminar materias ──────────────────────────────────────────────────
 function ModalEliminarMaterias({
@@ -154,12 +145,18 @@ function ModalEliminarMaterias({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.5)',
       backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      animation: 'mSpringBackdrop 0.3s ease',
     }}>
+      <style>{`
+        @keyframes mSpringBackdrop { from { opacity:0 } to { opacity:1 } }
+        @keyframes mSpringModal { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+      `}</style>
       <div onClick={e => e.stopPropagation()} style={{
         background: 'white', borderRadius: '1rem',
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
         width: '480px', maxHeight: '88vh',
         display: 'flex', flexDirection: 'column',
+        animation: 'mSpringModal 0.42s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
         {/* Header */}
         <div style={{ padding: '1.5rem 1.75rem 1rem', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -292,6 +289,8 @@ export default function DocentesPage() {
   const [docenteAgregado, setDocenteAgregado] = useState(false)
   const [searchExpanded, setSearchExpanded]   = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [docenteCredencial, setDocenteCredencial] = useState<Docente | null>(null)
+  const [verPassword, setVerPassword]             = useState(false)
 
   const docentesFiltrados = docentes.filter(d =>
     d.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -447,7 +446,7 @@ export default function DocentesPage() {
             gridTemplateColumns: '2.5fr 2fr 2fr 1fr',
             borderBottom: '1px solid #f1f5f9',
           }}>
-            {['Docente', 'Asignaciones', 'Correo', 'Acciones'].map(col => (
+            {['Docente', 'Asignaturas', 'Correo', 'Acciones'].map(col => (
               <span key={col} className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
                 {col}
               </span>
@@ -462,9 +461,7 @@ export default function DocentesPage() {
             </div>
           ) : (
             docentesFiltrados.map((docente, idx) => {
-              const col    = getColor(docente.nombre)
-              const grupos = agruparPorMateria(docente.asignaciones)
-              const ini    = docente.nombre
+              const ini = docente.nombre
                 .split(' ')
                 .filter(w => w.length > 0)
                 .slice(0, 2)
@@ -482,7 +479,7 @@ export default function DocentesPage() {
                   {/* Columna docente */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${col.from}, ${col.to})`, fontFamily: 'Outfit, sans-serif' }}>
+                      style={{ background: `linear-gradient(135deg, ${getColor(docente.nombre).from}, ${getColor(docente.nombre).to})`, fontFamily: 'Outfit, sans-serif' }}>
                       {ini}
                     </div>
                     <div>
@@ -493,40 +490,55 @@ export default function DocentesPage() {
                     </div>
                   </div>
 
-                  {/* Columna asignaciones — por materia con grupos */}
-                  <div className="flex flex-col gap-1.5 pr-4">
-                    {grupos.map(([materia, gruposMateria]) => (
-                      <div key={materia} className="flex items-center gap-2 flex-wrap">
-                        {/* Badge materia */}
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md shrink-0"
-                          style={{ background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' }}>
-                          {materia}
-                        </span>
-                        {/* Grupos de esa materia */}
-                        <div className="flex gap-1 flex-wrap">
-                          {gruposMateria.map(g => (
-                            <span key={g}
-                              className="text-xs font-bold px-1.5 py-0.5 rounded-md"
-                              style={{
-                                background: `linear-gradient(135deg, ${col.from}18, ${col.to}18)`,
-                                color: col.from,
-                                border: `1px solid ${col.from}30`,
-                                fontFamily: 'Outfit, sans-serif',
-                              }}>
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                  {/* Columna asignaturas — pills con scroll */}
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem', maxHeight:'7rem', overflowY:'auto', paddingRight:'1rem', marginRight:'0.5rem', alignContent:'flex-start' }}>
+                    {docente.asignaciones.map((a, i) => (
+                      <span key={i}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center',
+                          fontSize: '0.72rem', fontWeight: 600,
+                          padding: '0.25rem 0.625rem',
+                          borderRadius: '9999px',
+                          background: '#f1f5f9',
+                          color: '#1e3a5f',
+                          border: '1px solid #e2e8f0',
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '0.01em',
+                          cursor: 'default',
+                          transition: 'all 0.18s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = '#d1fae5'
+                          e.currentTarget.style.borderColor = '#6ee7b7'
+                          e.currentTarget.style.color = '#065f46'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = '#f1f5f9'
+                          e.currentTarget.style.borderColor = '#e2e8f0'
+                          e.currentTarget.style.color = '#1e3a5f'
+                        }}>
+                        {a.materia}<span style={{ color:'#94a3b8', margin:'0 0.15rem' }}>·</span>{a.grupo}
+                      </span>
                     ))}
                   </div>
 
                   {/* Columna correo */}
-                  <div className="flex items-center gap-2">
-                    <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24" className="shrink-0">
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                       <polyline points="22,6 12,13 2,6"/>
                     </svg>
+                    <button
+                      onClick={() => { setDocenteCredencial(docente); setVerPassword(false) }}
+                      title="Ver credenciales"
+                      style={{ background:'none', border:'none', cursor:'pointer', padding:'3px', display:'flex', alignItems:'center', flexShrink:0, color:'#cbd5e1', transition:'color 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
                     <span className="text-xs" style={{ color: '#64748b' }}>{docente.email}</span>
                   </div>
 
@@ -595,11 +607,102 @@ export default function DocentesPage() {
         />
       )}
 
-      {/* Modal confirmar eliminar */}
+      {/* Modal credenciales */}
+      {docenteCredencial && typeof window !== 'undefined' && createPortal(
+        <div onClick={() => setDocenteCredencial(null)}
+          style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:'credBackdropIn 0.3s ease' }}>
+          <style>{`
+            @keyframes credBackdropIn { from { opacity:0 } to { opacity:1 } }
+            @keyframes credModalIn {
+              from { opacity:0; transform:scale(0.92) translateY(12px); }
+              to   { opacity:1; transform:scale(1) translateY(0); }
+            }
+          `}</style>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:'white', borderRadius:'1rem', width:'380px', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', overflow:'hidden', animation:'credModalIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+
+            {/* Header */}
+            <div style={{ background:'linear-gradient(135deg,#1e3a5f,#2563eb)', padding:'1.25rem 1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                <div style={{ width:'38px', height:'38px', borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, color:'white', flexShrink:0, fontFamily:'Outfit, sans-serif' }}>
+                  {docenteCredencial.nombre.split(' ').filter(w=>w.length>0).slice(0,2).map(w=>w[0]).join('')}
+                </div>
+                <div>
+                  <p style={{ fontSize:'0.875rem', fontWeight:700, color:'white', margin:0 }}>{docenteCredencial.nombre}</p>
+                  <p style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.7)', margin:'0.125rem 0 0' }}>Credenciales de acceso</p>
+                </div>
+              </div>
+              <button onClick={() => setDocenteCredencial(null)}
+                style={{ background:'rgba(255,255,255,0.2)', border:'none', cursor:'pointer', width:'28px', height:'28px', borderRadius:'50%', color:'white', fontSize:'1rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+            </div>
+
+            {/* Cuerpo */}
+            <div style={{ padding:'1.5rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
+
+              {/* Correo */}
+              <div style={{ background:'#f8fafc', borderRadius:'0.75rem', padding:'0.875rem 1rem', border:'1px solid #f1f5f9' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.375rem' }}>Correo electrónico</p>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                  <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="1.8" viewBox="0 0 24 24">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <span style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f' }}>{docenteCredencial.email}</span>
+                </div>
+              </div>
+
+              {/* Contraseña */}
+              <div style={{ background:'#f8fafc', borderRadius:'0.75rem', padding:'0.875rem 1rem', border:'1px solid #f1f5f9' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.375rem' }}>Contraseña</p>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <span style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', letterSpacing: verPassword ? '0.01em' : '0.15em', fontFamily: verPassword ? 'inherit' : 'monospace' }}>
+                      {verPassword ? 'Educontrol123' : '••••••••••••'}
+                    </span>
+                  </div>
+                  <button onClick={() => setVerPassword(p => !p)}
+                    title={verPassword ? 'Ocultar' : 'Mostrar'}
+                    style={{ background:'none', border:'none', cursor:'pointer', color: verPassword ? '#2563eb' : '#94a3b8', display:'flex', alignItems:'center', padding:'4px', borderRadius:'0.375rem', transition:'all 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                    {verPassword ? (
+                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={() => setDocenteCredencial(null)}
+                style={{ width:'100%', padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
       {docenteAEliminar && typeof window !== 'undefined' && createPortal(
         <div onClick={() => setDocenteAEliminar(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-          <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation:'xBackdrop 0.3s ease' }}>
+          <style>{`
+            @keyframes xBackdrop { from { opacity:0 } to { opacity:1 } }
+            @keyframes xSpring  { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+          `}</style>
+          <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8" style={{ animation:'xSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
             <div className="flex justify-center mb-5">
               <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: '#fef2f2' }}>
                 <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">

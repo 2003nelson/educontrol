@@ -239,8 +239,15 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   if (typeof window === 'undefined') return null
 
   return createPortal(
-    <div onClick={onCerrar} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '520px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={onCerrar} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'backdropAlumnoIn 0.3s ease' }}>
+      <style>{`
+        @keyframes cardAlumnoIn {
+          from { opacity: 0; transform: scale(0.92) translateY(12px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0);    }
+        }
+        @keyframes backdropAlumnoIn { from { opacity:0 } to { opacity:1 } }
+      `}</style>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '520px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'cardAlumnoIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
 
         {vistaCalendario
           ? <CalendarioAsistencia alumno={alumno} onVolver={() => setVistaCalendario(false)} />

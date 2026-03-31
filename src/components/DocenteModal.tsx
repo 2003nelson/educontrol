@@ -88,13 +88,22 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.5)',
       backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      animation: 'backdropIn 0.3s ease',
     }}>
+    <style>{`@keyframes backdropIn { from { opacity:0 } to { opacity:1 } }`}</style>
       <div onClick={e => e.stopPropagation()} style={{
         background: 'white', borderRadius: '1rem',
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
         width: '60vw', minWidth: '560px', maxWidth: '860px',
         maxHeight: '92vh', display: 'flex', flexDirection: 'column',
+        animation: 'modalIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)',
       }}>
+      <style>{`
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.92) translateY(12px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0);    }
+        }
+      `}</style>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 2rem 1rem', flexShrink: 0 }}>
