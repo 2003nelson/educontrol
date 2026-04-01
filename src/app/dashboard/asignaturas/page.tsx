@@ -39,14 +39,16 @@ const asignaturasIniciales: Asignatura[] = [
 // ─── Botón + expandible ───────────────────────────────────────────────────────
 function AgregarBtn({ onClick }: { onClick: () => void }) {
   const [hov, setHov] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleEnter() {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    setHov(true)
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+    enterTimer.current = setTimeout(() => setHov(true), 120)
   }
   function handleLeave() {
-    timerRef.current = setTimeout(() => setHov(false), 120)
+    if (enterTimer.current) clearTimeout(enterTimer.current)
+    leaveTimer.current = setTimeout(() => setHov(false), 200)
   }
 
   return (
@@ -79,17 +81,33 @@ function AsignaturaModal({
   onGuardar: (data: Omit<Asignatura, 'id'>) => void
   onCerrar: () => void
 }) {
-  const [nombre, setNombre]       = useState('')
-  const [semestre, setSemestre]   = useState(1)
+  const [nombre, setNombre]           = useState('')
+  const [semestre, setSemestre]       = useState(1)
   const [confirmando, setConfirmando] = useState(false)
+  const [cerrando, setCerrando]       = useState(false)
+
+  function cerrar() {
+    setCerrando(true)
+    setTimeout(() => onCerrar(), 380)
+  }
 
   if (typeof window === 'undefined') return null
+
+  const backdropAnim  = cerrando ? 'asigBackdropOut 0.38s ease forwards'  : 'asigBackdropIn 0.25s ease'
+  const modalAnim     = cerrando ? 'asigSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'asigSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)'
+  const styles = `
+    @keyframes asigBackdropIn  { from { opacity:0 } to { opacity:1 } }
+    @keyframes asigBackdropOut { from { opacity:1 } to { opacity:0 } }
+    @keyframes asigSpringIn  { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+    @keyframes asigSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.92) translateY(12px) } }
+  `
 
   // Vista de confirmación
   if (confirmando) {
     return createPortal(
-      <div onClick={onCerrar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}>
-        <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'400px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div onClick={cerrar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:backdropAnim }}>
+        <style>{styles}</style>
+        <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'400px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', animation:modalAnim }}>
           <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
             <svg width="24" height="24" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -129,13 +147,14 @@ function AsignaturaModal({
 
   // Vista de formulario
   return createPortal(
-    <div onClick={onCerrar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'420px', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', overflow:'hidden' }}>
+    <div onClick={cerrar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:backdropAnim }}>
+      <style>{styles}</style>
+      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'420px', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', overflow:'hidden', animation:modalAnim }}>
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.5rem 1.75rem 1.25rem' }}>
           <h2 style={{ fontSize:'1.125rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Nueva Asignatura</h2>
-          <button onClick={onCerrar} style={{ color:'#94a3b8', fontSize:'1.25rem', fontWeight:700, background:'none', border:'none', cursor:'pointer' }}
+          <button onClick={cerrar} style={{ color:'#94a3b8', fontSize:'1.25rem', fontWeight:700, background:'none', border:'none', cursor:'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#475569')}
             onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>✕</button>
         </div>
@@ -183,7 +202,7 @@ function AsignaturaModal({
 
           {/* Botones */}
           <div style={{ display:'flex', gap:'0.75rem', paddingTop:'0.25rem' }}>
-            <button onClick={onCerrar}
+            <button onClick={cerrar}
               style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
               onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
@@ -209,10 +228,25 @@ export default function AsignaturasPage() {
   const [asignaturas, setAsignaturas]       = useState<Asignatura[]>(asignaturasIniciales)
   const [modalAbierto, setModalAbierto]     = useState(false)
   const [eliminando, setEliminando]         = useState<Asignatura | null>(null)
+  const [elimCerrando, setElimCerrando]     = useState(false)
+
+  function cerrarEliminar() {
+    setElimCerrando(true)
+    setTimeout(() => { setEliminando(null); setElimCerrando(false) }, 360)
+  }
   const [semestreFiltro, setSemestreFiltro] = useState<number | 'todos'>('todos')
   const [busqueda, setBusqueda]             = useState('')
   const [agregada, setAgregada]             = useState(false)
+  const [semestresContraidos, setSemestresContraidos] = useState<Set<number>>(new Set())
   const [searchExpanded, setSearchExpanded] = useState(false)
+
+  function toggleSemestre(s: number) {
+    setSemestresContraidos(prev => {
+      const next = new Set(prev)
+      if (next.has(s)) { next.delete(s) } else { next.add(s) }
+      return next
+    })
+  }
   const [localBusqueda, setLocalBusqueda]   = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -237,7 +271,7 @@ export default function AsignaturasPage() {
   function confirmarEliminar() {
     if (!eliminando) return
     setAsignaturas(prev => prev.filter(a => a.id !== eliminando.id))
-    setEliminando(null)
+    cerrarEliminar()
   }
 
   return (
@@ -346,10 +380,12 @@ export default function AsignaturasPage() {
             <div className="bg-white rounded-2xl p-10 text-center shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
               <p style={{ color:'#94a3b8', fontSize:'0.875rem' }}>No se encontraron asignaturas</p>
             </div>
-          ) : porSemestre.map(({ semestre, items }) => (
+          ) : porSemestre.map(({ semestre, items }) => {
+            const contraido = semestresContraidos.has(semestre)
+            return (
             <div key={semestre}>
               {/* Header semestre */}
-              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.75rem' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom: contraido ? '0' : '0.75rem' }}>
                 <div style={{ width:'28px', height:'28px', borderRadius:'0.5rem', background:'#1e3a5f', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.8rem', fontWeight:700, fontFamily:'Outfit, sans-serif', flexShrink:0 }}>
                   {semestre}
                 </div>
@@ -358,10 +394,28 @@ export default function AsignaturasPage() {
                   {items.length} asignatura{items.length !== 1 ? 's' : ''}
                 </p>
                 <div style={{ flex:1, height:'1px', background:'#f1f5f9' }}/>
+                {/* Botón contraer */}
+                <button onClick={() => toggleSemestre(semestre)}
+                  style={{ display:'flex', alignItems:'center', gap:'0.3rem', background:'none', border:'none', cursor:'pointer', padding:'0.2rem 0.5rem', borderRadius:'0.5rem', color:'#94a3b8', fontSize:'0.7rem', fontWeight:600, transition:'all 0.15s', flexShrink:0 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#1e3a5f'; e.currentTarget.style.background = '#f1f5f9' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>
+                  {contraido ? 'Expandir' : 'Contraer'}
+                  <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                    style={{ transform: contraido ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.28s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}>
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
               </div>
 
-              {/* Grid de asignaturas */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:'0.625rem' }}>
+              {/* Grid de asignaturas — con transición */}
+              <div style={{
+                display: 'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:'0.625rem',
+                overflow:'hidden',
+                maxHeight: contraido ? '0' : '1000px',
+                opacity: contraido ? 0 : 1,
+                transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+                marginBottom: contraido ? '0' : undefined,
+              }}>
                 {items.map(a => (
                   <div key={a.id}
                     style={{ background:'white', borderRadius:'0.875rem', padding:'0.875rem 1rem', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.5rem', transition:'all 0.15s' }}
@@ -378,7 +432,8 @@ export default function AsignaturasPage() {
                 ))}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -392,8 +447,14 @@ export default function AsignaturasPage() {
 
       {/* Modal confirmar eliminar */}
       {eliminando && typeof window !== 'undefined' && createPortal(
-        <div onClick={() => setEliminando(null)} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'380px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={cerrarEliminar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: elimCerrando ? 'elimBackdropOut 0.36s ease forwards' : 'elimBackdropIn 0.25s ease' }}>
+          <style>{`
+            @keyframes elimBackdropIn  { from { opacity:0 } to { opacity:1 } }
+            @keyframes elimBackdropOut { from { opacity:1 } to { opacity:0 } }
+            @keyframes elimSpringIn  { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+            @keyframes elimSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.92) translateY(12px) } }
+          `}</style>
+          <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'380px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', animation: elimCerrando ? 'elimSpringOut 0.36s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'elimSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
             <div style={{ width:'48px', height:'48px', borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
               <svg width="22" height="22" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
@@ -403,7 +464,7 @@ export default function AsignaturasPage() {
             <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem', textAlign:'center' }}>&ldquo;{eliminando.nombre}&rdquo;</p>
             <p style={{ fontSize:'0.8rem', color:'#94a3b8', margin:'0 0 1.5rem', textAlign:'center' }}>del {eliminando.semestre}° Semestre</p>
             <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
-              <button onClick={() => setEliminando(null)}
+              <button onClick={cerrarEliminar}
                 style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}>
