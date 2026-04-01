@@ -65,17 +65,31 @@ function DescargaBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-// ─── Spring Dropdown (sin fondo difuminado, con spring) ───────────────────────
-function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
+// ─── Spring Dropdown con animación de cierre ─────────────────────────────────
+function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar, forceCerrando = false }: {
   opciones: { key: string; label: string }[]
   seleccionado: string
   onSeleccionar: (key: string) => void
   onCerrar: () => void
+  forceCerrando?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [cerrando, setCerrando] = useState(false)
+
+  const efectivamenteCerrando = cerrando || forceCerrando
+
+  function cerrar() {
+    setCerrando(true)
+    setTimeout(() => onCerrar(), 280)
+  }
+
   useEffect(() => {
+    function cerrarExterno() {
+      setCerrando(true)
+      setTimeout(() => onCerrar(), 280)
+    }
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onCerrar()
+      if (ref.current && !ref.current.contains(e.target as Node)) cerrarExterno()
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -84,14 +98,8 @@ function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
   return (
     <>
       <style>{`
-        @keyframes springDrop {
-          from { opacity:0; transform:scale(0.94) translateY(-6px); }
-          to   { opacity:1; transform:scale(1) translateY(0); }
-        }
-        @keyframes informeSpringOut {
-          from { opacity:1; transform:scale(1) translateY(0); }
-          to   { opacity:0; transform:scale(0.92) translateY(12px); }
-        }
+        @keyframes springDropIn  { from { opacity:0; transform:scale(0.94) translateY(-8px) } to { opacity:1; transform:scale(1) translateY(0) } }
+        @keyframes springDropOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.94) translateY(-8px) } }
       `}</style>
       <div ref={ref}
         style={{
@@ -100,13 +108,15 @@ function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar }: {
           boxShadow:'0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
           border:'1px solid #f1f5f9',
           minWidth:'200px', maxHeight:'280px', overflowY:'auto', zIndex:50,
-          animation:'springDrop 0.38s cubic-bezier(0.34,1.56,0.64,1)',
+          animation: efectivamenteCerrando
+            ? 'springDropOut 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards'
+            : 'springDropIn 0.38s cubic-bezier(0.34,1.56,0.64,1)',
         }}>
         {[OPCION_GENERAL, ...opciones].map(op => {
           const activo = seleccionado === op.key
           return (
             <button key={op.key}
-              onClick={() => { onSeleccionar(op.key); onCerrar() }}
+              onClick={() => { onSeleccionar(op.key); cerrar() }}
               style={{
                 width:'100%', textAlign:'left', padding:'0.625rem 1rem',
                 fontSize:'0.8rem', display:'flex', alignItems:'center', gap:'0.5rem',
@@ -357,10 +367,21 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
 export default function DashboardPage() {
   const [vistaGrafica, setVistaGrafica]   = useState<'calificaciones' | 'asistencias'>('calificaciones')
   const [filtroAbierto, setFiltroAbierto] = useState<TipoFiltro>(null)
+  const [filtroSaliendo, setFiltroSaliendo] = useState<TipoFiltro>(null)
   const [grupoSelec, setGrupoSelec]       = useState('general')
   const [parcialSelec, setParcialSelec]   = useState('general')
   const [semanaSelec, setSemanaSelec]     = useState('general')
   const [modalInforme, setModalInforme]   = useState(false)
+
+  function toggleFiltro(tipo: TipoFiltro) {
+    if (filtroAbierto === tipo) {
+      setFiltroSaliendo(tipo)
+      setTimeout(() => { setFiltroAbierto(null); setFiltroSaliendo(null) }, 280)
+    } else {
+      setFiltroSaliendo(null)
+      setFiltroAbierto(tipo)
+    }
+  }
 
   const PARCIALES = [
     { key: '1',     label: '1er Parcial'        },
@@ -412,7 +433,7 @@ export default function DashboardPage() {
                   const idx  = opts.findIndex(o => o.key === vistaGrafica)
                   return (
                     <>
-                      <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 3px)`, left:`calc(${idx*50}% + 3px)`, background:'rgba(255,255,255,0.92)', borderRadius:'0.625rem', boxShadow:'0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(148,163,184,0.3)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+                      <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 3px)`, left:`calc(${idx*50}% + 3px)`, background:'rgba(255,255,255,0.92)', borderRadius:'0.625rem', boxShadow:'0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(148,163,184,0.3)', transition:'left 0.35s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
                       {opts.map(({key,label}) => (
                         <button key={key} onClick={() => cambiarVista(key as 'calificaciones' | 'asistencias')}
                           style={{ position:'relative', zIndex:1, padding:'0.375rem 0.875rem', fontSize:'0.75rem', fontWeight: vistaGrafica===key ? 600 : 500, color: vistaGrafica===key ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', whiteSpace:'nowrap' }}>
@@ -467,7 +488,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-0">
               {/* Filtro Grupo */}
               <div className="relative">
-                <button onClick={() => setFiltroAbierto(filtroAbierto === 'grupo' ? null : 'grupo')}
+                <button onClick={() => toggleFiltro('grupo')}
                   style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: grupoSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: grupoSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
                   onMouseEnter={e => { if (grupoSelec === 'general') e.currentTarget.style.color = '#334155' }}
                   onMouseLeave={e => { if (grupoSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
@@ -476,8 +497,10 @@ export default function DashboardPage() {
                     <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
-                {filtroAbierto === 'grupo' && (
-                  <SpringDropdown opciones={GRUPOS} seleccionado={grupoSelec}
+                {(filtroAbierto === 'grupo' || filtroSaliendo === 'grupo') && (
+                  <SpringDropdown
+                    opciones={GRUPOS} seleccionado={grupoSelec}
+                    forceCerrando={filtroSaliendo === 'grupo'}
                     onSeleccionar={setGrupoSelec} onCerrar={() => setFiltroAbierto(null)} />
                 )}
               </div>
@@ -488,7 +511,7 @@ export default function DashboardPage() {
               {/* Filtro Parcial */}
               {vistaGrafica === 'calificaciones' && (
                 <div className="relative">
-                  <button onClick={() => setFiltroAbierto(filtroAbierto === 'parcial' ? null : 'parcial')}
+                  <button onClick={() => toggleFiltro('parcial')}
                     style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: parcialSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: parcialSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
                     onMouseEnter={e => { if (parcialSelec === 'general') e.currentTarget.style.color = '#334155' }}
                     onMouseLeave={e => { if (parcialSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
@@ -497,8 +520,10 @@ export default function DashboardPage() {
                       <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
-                  {filtroAbierto === 'parcial' && (
-                    <SpringDropdown opciones={PARCIALES} seleccionado={parcialSelec}
+                  {(filtroAbierto === 'parcial' || filtroSaliendo === 'parcial') && (
+                    <SpringDropdown
+                      opciones={PARCIALES} seleccionado={parcialSelec}
+                      forceCerrando={filtroSaliendo === 'parcial'}
                       onSeleccionar={setParcialSelec} onCerrar={() => setFiltroAbierto(null)} />
                   )}
                 </div>
@@ -507,7 +532,7 @@ export default function DashboardPage() {
               {/* Filtro Semana */}
               {vistaGrafica === 'asistencias' && (
                 <div className="relative">
-                  <button onClick={() => setFiltroAbierto(filtroAbierto === 'semana' ? null : 'semana')}
+                  <button onClick={() => toggleFiltro('semana')}
                     style={{ display:'flex', alignItems:'center', gap:'0.25rem', background:'none', border:'none', cursor:'pointer', padding:'0.375rem 0.625rem', color: semanaSelec !== 'general' ? '#2563eb' : '#64748b', fontWeight: semanaSelec !== 'general' ? 600 : 500, fontSize:'0.8rem', transition:'color 0.15s' }}
                     onMouseEnter={e => { if (semanaSelec === 'general') e.currentTarget.style.color = '#334155' }}
                     onMouseLeave={e => { if (semanaSelec === 'general') e.currentTarget.style.color = '#64748b' }}>
@@ -516,8 +541,10 @@ export default function DashboardPage() {
                       <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
-                  {filtroAbierto === 'semana' && (
-                    <SpringDropdown opciones={SEMANAS} seleccionado={semanaSelec}
+                  {(filtroAbierto === 'semana' || filtroSaliendo === 'semana') && (
+                    <SpringDropdown
+                      opciones={SEMANAS} seleccionado={semanaSelec}
+                      forceCerrando={filtroSaliendo === 'semana'}
                       onSeleccionar={setSemanaSelec} onCerrar={() => setFiltroAbierto(null)} />
                   )}
                 </div>
