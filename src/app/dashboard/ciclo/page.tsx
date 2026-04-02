@@ -522,11 +522,25 @@ export default function CicloPage() {
   const [modalEliminar, setModalEliminar] = useState(false)
   const [borrando, setBorrando]           = useState(false)
   const [borrado, setBorrado]             = useState(false)
+  const [exitoVisible, setExitoVisible]   = useState(false)
+  const [exitoSaliendo, setExitoSaliendo] = useState(false)
   const [periodo, setPeriodo] = useState<{ inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] } | null>(null)
 
   function crearCiclo(data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) {
-    setPeriodo(data)
     setWizardAbierto(false)
+    // Pequeño delay para que el modal cierre primero con spring
+    setTimeout(() => {
+      setExitoVisible(true)
+      // Después de 2s inicia salida
+      setTimeout(() => {
+        setExitoSaliendo(true)
+        setTimeout(() => {
+          setExitoVisible(false)
+          setExitoSaliendo(false)
+          setPeriodo(data)
+        }, 420)
+      }, 2000)
+    }, 420)
   }
 
   function eliminarCiclo() {
@@ -548,7 +562,7 @@ export default function CicloPage() {
       <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', gap:'1.25rem' }}>
 
         {/* ── Sin periodo activo ── */}
-        {!periodo && (
+        {!periodo && !exitoVisible && (
           <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.25rem' }}>
             <div style={{ textAlign:'center' }}>
               <div style={{ width:'56px', height:'56px', borderRadius:'1rem', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
@@ -560,6 +574,37 @@ export default function CicloPage() {
               <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>Crea un nuevo ciclo para comenzar a gestionar fechas</p>
             </div>
             <CrearCicloBtn onClick={() => setWizardAbierto(true)} />
+          </div>
+        )}
+
+        {/* ── Mensaje éxito ── */}
+        {exitoVisible && !periodo && (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+            <style>{`
+              @keyframes exitoIn  { from { opacity:0; transform:scale(0.88) translateY(20px) } to { opacity:1; transform:scale(1) translateY(0) } }
+              @keyframes exitoOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.92) translateY(-16px) } }
+            `}</style>
+            <div style={{
+              display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem',
+              animation: exitoSaliendo
+                ? 'exitoOut 0.42s cubic-bezier(0.34,1.56,0.64,1) forwards'
+                : 'exitoIn 0.46s cubic-bezier(0.34,1.56,0.64,1)',
+            }}>
+              {/* Ícono check animado */}
+              <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:'#f0fdf4', border:'2.5px solid #22c55e', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 20px rgba(34,197,94,0.2)' }}>
+                <svg width="32" height="32" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div style={{ textAlign:'center' }}>
+                <p style={{ fontSize:'1.125rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem', fontFamily:'Outfit, sans-serif' }}>
+                  ¡Ciclo creado con éxito!
+                </p>
+                <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>
+                  El período escolar ha sido configurado correctamente
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
