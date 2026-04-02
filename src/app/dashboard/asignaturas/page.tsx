@@ -278,7 +278,13 @@ export default function AsignaturasPage() {
     <div className="flex flex-col h-full">
       <Header titulo="Asignaturas" />
 
-      <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', gap:'1rem' }}>
+      <style>{`
+        @keyframes asigPageIn {
+          from { opacity:0; transform:translateX(18px) scale(0.985); }
+          to   { opacity:1; transform:translateX(0) scale(1); }
+        }
+      `}</style>
+      <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', gap:'1rem', animation:'asigPageIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
         {/* Barra superior */}
         <div className="flex items-center justify-between shrink-0">

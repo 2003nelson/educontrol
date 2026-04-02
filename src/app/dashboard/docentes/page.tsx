@@ -50,6 +50,7 @@ function getColor(nombre: string) {
   return PALETA[nombre.charCodeAt(0) % PALETA.length]
 }
 
+
 // ─── Modal eliminar materias ──────────────────────────────────────────────────
 function ModalEliminarMaterias({
   docente,
@@ -370,8 +371,13 @@ export default function DocentesPage() {
   return (
     <div className="flex flex-col h-full">
       <Header titulo="Directorio de Docentes" />
-
-      <div className="p-6 flex flex-col" style={{ flex: 1, minHeight: 0, gap: '1rem' }}>
+      <style>{`
+        @keyframes docentesPageIn {
+          from { opacity:0; transform:translateX(18px) scale(0.985); }
+          to   { opacity:1; transform:translateX(0) scale(1); }
+        }
+      `}</style>
+      <div className="p-6 flex flex-col" style={{ flex: 1, minHeight: 0, gap: '1rem', animation:'docentesPageIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
         {/* Barra de acciones */}
         <div className="flex items-center justify-between">
           {/* Buscador — colapsable estilo Apple */}

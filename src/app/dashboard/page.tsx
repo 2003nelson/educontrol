@@ -414,7 +414,13 @@ export default function DashboardPage() {
     <div className="flex flex-col h-full">
       <Header titulo="Centro Estadístico" />
 
-      <div className="flex gap-4 px-4 pb-4 pt-3" style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden' }}>
+      <style>{`
+        @keyframes dashPageIn {
+          from { opacity:0; transform:translateX(18px) scale(0.985); }
+          to   { opacity:1; transform:translateX(0) scale(1); }
+        }
+      `}</style>
+      <div className="flex gap-4 px-4 pb-4 pt-3" style={{ flex: '1 1 0', minHeight: 0, overflow: 'hidden', animation:'dashPageIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
         {/* Panel principal */}
         <div className="flex-1 bg-white rounded-2xl shadow-sm p-6 flex flex-col" style={{ minHeight: 0, overflowY: 'auto' }}>

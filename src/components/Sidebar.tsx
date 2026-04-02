@@ -10,6 +10,7 @@ const navPrincipal = [
   { nombre: 'Docentes',    href: '/dashboard/docentes' },
   { nombre: 'Seguimiento', href: '/dashboard/seguimiento' },
   { nombre: 'Asignaturas', href: '/dashboard/asignaturas' },
+  { nombre: 'Grupos',      href: '/dashboard/grupos' },
 ]
 
 const navAvanzado = [

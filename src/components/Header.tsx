@@ -187,6 +187,49 @@ function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: 
 // ─── Card boleta alumno ───────────────────────────────────────────────────────
 type ParcialKey = 1 | 2 | 3 | 'final'
 
+// ─── Botón ayuda expandible ───────────────────────────────────────────────────
+function AyudaBtn() {
+  const [hov, setHov] = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (leaveT.current) clearTimeout(leaveT.current)
+    enterT.current = setTimeout(() => setHov(true), 120)
+  }
+  function handleLeave() {
+    if (enterT.current) clearTimeout(enterT.current)
+    leaveT.current = setTimeout(() => setHov(false), 200)
+  }
+
+  return (
+    <button
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        gap: hov ? '0.4rem' : '0',
+        height:'36px',
+        width: hov ? 'auto' : '36px',
+        minWidth: hov ? '148px' : '36px',
+        padding: hov ? '0 0.875rem' : '0',
+        borderRadius: hov ? '0.875rem' : '0.875rem',
+        background: hov ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.18)',
+        border: hov ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(180,200,230,0.4)',
+        cursor:'pointer',
+        transition:'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+        overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
+      }}>
+      <svg width="15" height="15" fill="none" stroke="#f59e0b" strokeWidth="1.8" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="rgba(251,191,36,0.15)" strokeLinejoin="round"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      {hov && <span style={{ fontSize:'0.775rem', fontWeight:600, color:'#b45309' }}>Obtener ayuda</span>}
+    </button>
+  )
+}
+
 function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void }) {
   const [vistaCalendario, setVistaCalendario] = useState(false)
   const [parcialActivo, setParcialActivo]     = useState<ParcialKey>(1)
@@ -466,18 +509,18 @@ export default function Header({ titulo }: { titulo: string }) {
                 height:'38px',
                 width: searchExpanded ? '300px' : '38px',
                 borderRadius:'0.875rem',
-                border:'1px solid rgba(180,200,230,0.5)',
-                background:'rgba(255,255,255,0.6)',
+                border:'1px solid rgba(180,200,230,0.4)',
+                background: searchExpanded ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)',
                 backdropFilter:'blur(8px)',
                 WebkitBackdropFilter:'blur(8px)',
-                transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s',
+                transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s, background 0.2s',
                 overflow:'hidden',
                 cursor: searchExpanded ? 'text' : 'pointer',
                 boxShadow: searchExpanded ? '0 0 0 2px #bfdbfe' : 'none',
                 flexShrink: 0,
               }}>
               <div style={{ width:'38px', height:'38px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+                <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
               </div>
@@ -529,6 +572,9 @@ export default function Header({ titulo }: { titulo: string }) {
               </div>
             )}
           </div>
+
+          {/* Ayuda — expandible */}
+          <AyudaBtn />
 
           {/* Notificaciones */}
           <div className="relative">
