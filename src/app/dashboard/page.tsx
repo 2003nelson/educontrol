@@ -13,7 +13,7 @@ const GRUPOS  = [
   '501','502','503','601','602','603',
 ].map(g => ({ key: g, label: `Grupo ${g}` }))
 
-const OPCION_GENERAL = { key: 'general', label: 'General — Toda la institución' }
+const OPCION_GENERAL = { key: 'general', label: 'Quitar selección' }
 
 const stats = [
   { label: 'POBLACIÓN',        value: '840',  suffix: 'alumnos', color: 'text-gray-800'  },
@@ -456,28 +456,70 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Gráfica SVG */}
+          {/* Gráfica SVG — con spring al mostrar/ocultar */}
           <div className="relative mb-6" style={{ flex: '1 1 0', minHeight: 0 }}>
-            <svg viewBox="0 0 600 180" className="w-full h-full">
-              <defs>
-                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {[0,1,2,3,4].map(i => (
-                <line key={i} x1="40" y1={20 + i * 32} x2="580" y2={20 + i * 32} stroke="#F3F4F6" strokeWidth="1" />
-              ))}
-              <path d="M80,140 L160,120 L240,100 L320,60 L400,55 L480,70 L560,80 L560,160 L80,160 Z" fill="url(#grad)" />
-              <polyline points="80,140 160,120 240,100 320,60 400,55 480,70 560,80"
-                fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              {([[80,140],[160,120],[240,100],[320,60],[400,55],[480,70],[560,80]] as [number,number][]).map(([x,y], i) => (
-                <circle key={i} cx={x} cy={y} r="4" fill="white" stroke="#3B82F6" strokeWidth="2.5" />
-              ))}
-              {['Ene','Feb','Mar','Abr','May','Jun','Jul'].map((m, i) => (
-                <text key={m} x={80 + i * 80} y="175" textAnchor="middle" fill="#9CA3AF" fontSize="11">{m}</text>
-              ))}
-            </svg>
+            <style>{`
+              @keyframes chartIn  { from { opacity:0; transform:translateY(14px) scale(0.97) } to { opacity:1; transform:translateY(0) scale(1) } }
+              @keyframes chartOut { from { opacity:1; transform:translateY(0) scale(1) } to { opacity:0; transform:translateY(14px) scale(0.97) } }
+            `}</style>
+            {(() => {
+              const tieneGrupo   = grupoSelec !== 'general'
+              const tienePeriodo = vistaGrafica === 'calificaciones' ? parcialSelec !== 'general' : semanaSelec !== 'general'
+              const mostrar      = tieneGrupo && tienePeriodo
+
+              if (!mostrar) {
+                const msg = !tieneGrupo && !tienePeriodo
+                  ? 'Selecciona un grupo y un período'
+                  : !tieneGrupo
+                  ? 'Ahora selecciona un grupo'
+                  : 'Ahora selecciona un período'
+
+                const sub = !tieneGrupo && !tienePeriodo
+                  ? 'Usa los filtros de abajo para configurar la consulta'
+                  : !tieneGrupo
+                  ? 'El período está listo, solo falta elegir el grupo'
+                  : 'El grupo está listo, solo falta elegir el período'
+
+                return (
+                  <div key="placeholder" style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.875rem', animation:'chartIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                    <div style={{ width:'48px', height:'48px', borderRadius:'1rem', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                      </svg>
+                    </div>
+                    <div style={{ textAlign:'center' }}>
+                      <p style={{ fontSize:'0.9rem', fontWeight:600, color:'#64748b', margin:'0 0 0.25rem' }}>{msg}</p>
+                      <p style={{ fontSize:'0.775rem', color:'#94a3b8', margin:0 }}>{sub}</p>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <svg key={`${grupoSelec}-${vistaGrafica}-${parcialSelec}-${semanaSelec}`}
+                  viewBox="0 0 600 180" className="w-full h-full"
+                  style={{ animation:'chartIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                  <defs>
+                    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={vistaGrafica === 'calificaciones' ? '#3B82F6' : '#10B981'} stopOpacity="0.2" />
+                      <stop offset="100%" stopColor={vistaGrafica === 'calificaciones' ? '#3B82F6' : '#10B981'} stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {[0,1,2,3,4].map(i => (
+                    <line key={i} x1="40" y1={20 + i * 32} x2="580" y2={20 + i * 32} stroke="#F3F4F6" strokeWidth="1" />
+                  ))}
+                  <path d="M80,140 L160,120 L240,100 L320,60 L400,55 L480,70 L560,80 L560,160 L80,160 Z" fill="url(#grad)" />
+                  <polyline points="80,140 160,120 240,100 320,60 400,55 480,70 560,80"
+                    fill="none" stroke={vistaGrafica === 'calificaciones' ? '#3B82F6' : '#10B981'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  {([[80,140],[160,120],[240,100],[320,60],[400,55],[480,70],[560,80]] as [number,number][]).map(([x,y], i) => (
+                    <circle key={i} cx={x} cy={y} r="4" fill="white" stroke={vistaGrafica === 'calificaciones' ? '#3B82F6' : '#10B981'} strokeWidth="2.5" />
+                  ))}
+                  {['Ene','Feb','Mar','Abr','May','Jun','Jul'].map((m, i) => (
+                    <text key={m} x={80 + i * 80} y="175" textAnchor="middle" fill="#9CA3AF" fontSize="11">{m}</text>
+                  ))}
+                </svg>
+              )
+            })()}
           </div>
 
           {/* Métricas + filtros */}
@@ -487,7 +529,7 @@ export default function DashboardPage() {
                 {vistaGrafica === 'calificaciones' ? 'Promedio Actual' : 'Asistencia Media'}
               </p>
               <p className="text-3xl font-bold text-gray-800 mt-1">
-                {vistaGrafica === 'calificaciones' ? '8.7' : '89.7%'}
+                {(grupoSelec !== 'general' && (vistaGrafica === 'calificaciones' ? parcialSelec !== 'general' : semanaSelec !== 'general')) ? (vistaGrafica === 'calificaciones' ? '8.7' : '89.7%') : '—'}
               </p>
             </div>
 
