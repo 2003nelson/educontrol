@@ -1,22 +1,19 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
 const MESES       = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const DIAS_SEMANA = ['L','M','X','J','V','S','D']
 
-type Paso = 0 | 1 | 2 | 3 | 4 | 5  // 0=tipo periodo 1=inicio 2=vacaciones 3=cierre 4=festivos 5=resumen
-type TipoPeriodo = 'bimestre' | 'semestre' | 'trimestre' | 'cuatrimestre' | 'anual' | 'otro' | null
-type Vista = 'wizard' | 'activo'
+type Paso = 0 | 1 | 2 | 3 | 4 | 5  // 0=inicio 1=vac_ini 2=vac_fin 3=cierre 4=festivos 5=resumen
+type Dir  = 'adelante' | 'atras'
 
 function formatFecha(iso: string) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-')
-  return `${d} ${MESES_CORTO[parseInt(m) - 1]} ${y}`
+  return `${d} ${MESES[parseInt(m) - 1].slice(0,3)} ${y}`
 }
-
 function diasEntre(a: string, b: string) {
   if (!a || !b) return 0
   return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000) + 1)
@@ -24,25 +21,10 @@ function diasEntre(a: string, b: string) {
 
 // ─── Mini calendario ──────────────────────────────────────────────────────────
 function MiniCalendario({
-  seleccionado,
-  inicio,
-  vacIni,
-  vacFin,
-  cierre,
-  festivos,
-  onChange,
-  rangoInicio,
-  rangoFin,
+  seleccionado, inicio, vacIni, vacFin, cierre, festivos, onChange, soloEntre,
 }: {
-  seleccionado: string
-  inicio: string
-  vacIni: string
-  vacFin: string
-  cierre: string
-  festivos: string[]
-  onChange: (iso: string) => void
-  rangoInicio?: string
-  rangoFin?: string
+  seleccionado: string; inicio: string; vacIni: string; vacFin: string
+  cierre: string; festivos: string[]; onChange: (iso: string) => void; soloEntre?: boolean
 }) {
   const hoy = new Date()
   const ref = seleccionado ? new Date(seleccionado + 'T12:00:00') : hoy
@@ -65,101 +47,359 @@ function MiniCalendario({
     return 'normal'
   }
 
-  const cols: Record<string, {bg:string;color:string}> = {
-    inicio:     { bg: '#1e3a5f', color: 'white'   },
-    cierre:     { bg: '#dc2626', color: 'white'   },
-    vacaciones: { bg: '#fef9c3', color: '#854d0e' },
-    festivo:    { bg: '#fee2e2', color: '#dc2626' },
-    activo:     { bg: '#dbeafe', color: '#1d4ed8' },
-    normal:     { bg: 'transparent', color: '#334155' },
-  }
-
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      {/* Nav mes */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.875rem' }}>
         <button onClick={() => setVista(v => ({ month: v.month===0?11:v.month-1, year: v.month===0?v.year-1:v.year }))}
-          style={{ width:'32px', height:'32px', borderRadius:'50%', border:'none', background:'#f1f5f9', cursor:'pointer', color:'#475569', fontSize:'1.1rem', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>
-        <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', fontFamily:'Outfit, sans-serif' }}>
+          style={{ width:'30px', height:'30px', borderRadius:'50%', border:'none', background:'#f1f5f9', cursor:'pointer', color:'#475569', fontSize:'1rem', display:'flex', alignItems:'center', justifyContent:'center' }}>‹</button>
+        <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', fontFamily:'Outfit, sans-serif', margin:0 }}>
           {MESES[vista.month]} {vista.year}
         </p>
         <button onClick={() => setVista(v => ({ month: v.month===11?0:v.month+1, year: v.month===11?v.year+1:v.year }))}
-          style={{ width:'32px', height:'32px', borderRadius:'50%', border:'none', background:'#f1f5f9', cursor:'pointer', color:'#475569', fontSize:'1.1rem', display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>
+          style={{ width:'30px', height:'30px', borderRadius:'50%', border:'none', background:'#f1f5f9', cursor:'pointer', color:'#475569', fontSize:'1rem', display:'flex', alignItems:'center', justifyContent:'center' }}>›</button>
       </div>
+      {/* Días semana */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'2px', marginBottom:'4px' }}>
-        {DIAS_SEMANA.map(d => (
-          <div key={d} style={{ textAlign:'center', fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', padding:'2px 0' }}>{d}</div>
-        ))}
+        {DIAS_SEMANA.map(d => <div key={d} style={{ textAlign:'center', fontSize:'0.6rem', fontWeight:600, color:'#94a3b8', padding:'2px 0' }}>{d}</div>)}
       </div>
+      {/* Días */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:'3px' }}>
-        {Array.from({length:offset}).map((_,i)=><div key={`e-${i}`}/>)}
-        {Array.from({length:diasMes},(_,i)=>i+1).map(day => {
+        {Array.from({length:offset}).map((_,i) => <div key={`e-${i}`}/>)}
+        {Array.from({length:diasMes},(_,i) => i+1).map(day => {
           const iso    = toIso(day)
           const estado = estadoDia(iso)
-          const col    = cols[estado]
           const esSel  = iso === seleccionado
-          const enRango = rangoInicio && rangoFin && iso >= rangoInicio && iso <= rangoFin
+          const fuera  = soloEntre && inicio && cierre && (iso < inicio || iso > cierre)
+          const cols: Record<string, {bg:string;color:string}> = {
+            inicio:     { bg:'#1e3a5f',  color:'white'   },
+            cierre:     { bg:'#dc2626',  color:'white'   },
+            vacaciones: { bg:'#fef9c3',  color:'#854d0e' },
+            festivo:    { bg:'#fce7f3',  color:'#be185d' },
+            activo:     { bg:'#dbeafe',  color:'#1d4ed8' },
+            normal:     { bg:'transparent', color:'#334155' },
+          }
+          const col = cols[estado]
           return (
-            <button key={day} onClick={() => onChange(iso)}
-              style={{
-                width:'100%', aspectRatio:'1', borderRadius:'50%',
-                border: esSel ? '2px solid #3b82f6' : enRango ? '1.5px solid #93c5fd' : 'none',
-                cursor:'pointer', fontSize:'0.72rem',
-                fontWeight: estado !== 'normal' ? 700 : 400,
-                background: col.bg, color: col.color,
-                transition:'all 0.1s',
-              }}
-              onMouseEnter={e => { if (estado==='normal') e.currentTarget.style.background='#f1f5f9' }}
-              onMouseLeave={e => { if (estado==='normal') e.currentTarget.style.background='transparent' }}>
+            <button key={day} onClick={() => !fuera && onChange(iso)}
+              style={{ width:'100%', aspectRatio:'1', borderRadius:'50%', border: esSel ? '2px solid #3b82f6' : 'none', cursor: fuera ? 'default' : 'pointer', fontSize:'0.72rem', fontWeight: estado !== 'normal' ? 700 : 400, background: col.bg, color: fuera ? '#d1d5db' : col.color, transition:'all 0.1s', opacity: fuera ? 0.35 : 1 }}
+              onMouseEnter={e => { if (!fuera && estado==='normal') e.currentTarget.style.background='#f1f5f9' }}
+              onMouseLeave={e => { if (!fuera && estado==='normal') e.currentTarget.style.background='transparent' }}>
               {day}
             </button>
           )
         })}
       </div>
+      {/* Leyenda */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', marginTop:'0.875rem', paddingTop:'0.75rem', borderTop:'1px solid #f1f5f9' }}>
+        {[
+          { color:'#1e3a5f', label:'Inicio' },
+          { color:'#dbeafe', label:'Activos' },
+          { color:'#fef9c3', label:'Vacaciones' },
+          { color:'#f9a8d4', label:'Festivos' },
+          { color:'#dc2626', label:'Cierre' },
+        ].map(l => (
+          <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
+            <div style={{ width:'9px', height:'9px', borderRadius:'50%', background:l.color }}/>
+            <span style={{ fontSize:'0.6rem', color:'#94a3b8' }}>{l.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-// ─── Modal confirmar activar ──────────────────────────────────────────────────
-function ModalConfirmar({ onAceptar, onCancelar }: { onAceptar: () => void; onCancelar: () => void }) {
-  if (typeof window === 'undefined') return null
-  return createPortal(
-    <div onClick={onCancelar} style={{
-      position:'fixed', inset:0, zIndex:9999,
-      display:'flex', alignItems:'center', justifyContent:'center',
-      background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background:'white', borderRadius:'1rem', width:'420px',
-        boxShadow:'0 20px 60px rgba(0,0,0,0.2)', padding:'2rem',
-        display:'flex', flexDirection:'column', alignItems:'center',
+// ─── Botón crear ciclo expandible ─────────────────────────────────────────────
+function CrearCicloBtn({ onClick }: { onClick: () => void }) {
+  const [hov, setHov]   = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  return (
+    <button onClick={onClick}
+      onMouseEnter={() => { if (leaveT.current) clearTimeout(leaveT.current); enterT.current = setTimeout(() => setHov(true), 120) }}
+      onMouseLeave={() => { if (enterT.current) clearTimeout(enterT.current); leaveT.current = setTimeout(() => setHov(false), 200) }}
+      style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        gap: hov ? '0.5rem' : '0',
+        height:'44px', width: hov ? 'auto' : '44px', minWidth: hov ? '170px' : '44px',
+        padding: hov ? '0 1.25rem' : '0',
+        borderRadius: hov ? '1rem' : '50%',
+        background:'transparent', border:'1.5px solid #2563eb',
+        cursor:'pointer', transition:'all 0.32s cubic-bezier(0.4,0,0.2,1)',
+        overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
       }}>
-        <div style={{ width:'56px', height:'56px', borderRadius:'50%', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
-          <svg width="26" height="26" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>
-          ¿Habilitar este período?
-        </h3>
-        <p style={{ fontSize:'0.875rem', color:'#475569', margin:'0 0 1.5rem', textAlign:'center', lineHeight:'1.5' }}>
-          Al habilitar, los docentes y alumnos tendrán acceso al sistema con estas fechas. ¿Deseas continuar?
-        </p>
-        <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
-          <button onClick={onCancelar}
-            style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}>
-            Cancelar
-          </button>
-          <button onClick={onAceptar}
-            style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-            Sí, habilitar
-          </button>
+      <svg width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      {hov && <>
+        <span style={{ fontSize:'0.8rem', fontWeight:600, color:'#2563eb' }}>Crear ciclo</span>
+        <svg width="13" height="13" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
+          <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </>}
+    </button>
+  )
+}
+
+// ─── Círculo stat ─────────────────────────────────────────────────────────────
+function CircleStat({ value, label, color, bg }: { value: number|string; label: string; color: string; bg: string }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.625rem' }}>
+      <div style={{ width:'80px', height:'80px', borderRadius:'50%', background:bg, border:`3px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        <span style={{ fontSize:'1.375rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif' }}>{value}</span>
+      </div>
+      <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#64748b', textAlign:'center', maxWidth:'80px', lineHeight:1.3 }}>{label}</span>
+    </div>
+  )
+}
+
+// ─── Wizard Modal ─────────────────────────────────────────────────────────────
+function WizardModal({
+  onCrear,
+  onCerrar,
+}: {
+  onCrear: (data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) => void
+  onCerrar: () => void
+}) {
+  const [paso, setPaso]         = useState<Paso>(0)
+  const [dir, setDir]           = useState<Dir>('adelante')
+  const [animating, setAnimating] = useState(false)
+  const [cerrando, setCerrando] = useState(false)
+
+  const [inicio,   setInicio]   = useState('')
+  const [vacIni,   setVacIni]   = useState('')
+  const [vacFin,   setVacFin]   = useState('')
+  const [cierre,   setCierre]   = useState('')
+  const [festivos, setFestivos] = useState<string[]>([])
+
+  function cerrar() {
+    setCerrando(true)
+    setTimeout(() => onCerrar(), 380)
+  }
+
+  function irPaso(nuevo: Paso, d: Dir) {
+    setDir(d)
+    setAnimating(true)
+    setTimeout(() => { setPaso(nuevo); setAnimating(false) }, 220)
+  }
+
+  function toggleFestivo(iso: string) {
+    if (!inicio || !cierre || iso < inicio || iso > cierre) return
+    setFestivos(prev => prev.includes(iso) ? prev.filter(f => f !== iso) : [...prev, iso])
+  }
+
+  const diasTotales = diasEntre(inicio, cierre)
+  const diasVac     = vacIni && vacFin ? diasEntre(vacIni, vacFin) : 0
+  const diasFest    = festivos.filter(f => inicio && cierre && f >= inicio && f <= cierre).length
+  const diasEfect   = Math.max(0, diasTotales - diasVac - diasFest)
+
+  const pasos: { titulo: string; sub: string }[] = [
+    { titulo:'¿Cuándo inicia el ciclo?', sub:'Selecciona la fecha de inicio en el calendario' },
+    { titulo:'¿Inicio de vacaciones?',   sub:'Selecciona el primer día de vacaciones' },
+    { titulo:'¿Fin de vacaciones?',      sub:'Selecciona el último día de vacaciones' },
+    { titulo:'¿Cuándo cierra el ciclo?', sub:'Selecciona la fecha de cierre del semestre' },
+    { titulo:'Días festivos o inhábiles', sub:'Selecciona los días no laborables dentro del ciclo' },
+    { titulo:'Resumen del ciclo',        sub:'Todo listo para activar el período escolar' },
+  ]
+
+  const valorActual = [inicio, vacIni, vacFin, cierre, '', ''][paso]
+  const calendarioActivo = paso < 5
+
+  function onCalChange(iso: string) {
+    if (paso === 0) setInicio(iso)
+    else if (paso === 1) setVacIni(iso)
+    else if (paso === 2) setVacFin(iso)
+    else if (paso === 3) setCierre(iso)
+    else if (paso === 4) toggleFestivo(iso)
+  }
+
+  const puedeAvanzar = [
+    !!inicio, !!vacIni, !!vacFin, !!cierre, true, true
+  ][paso]
+
+  const slideIn  = dir === 'adelante' ? 'translateX(20px)' : 'translateX(-20px)'
+  const contentStyle: React.CSSProperties = {
+    opacity: animating ? 0 : 1,
+    transform: animating ? `${slideIn} scale(0.97)` : 'translateX(0) scale(1)',
+    transition: animating
+      ? 'opacity 0.18s ease, transform 0.18s ease'
+      : 'opacity 0.32s cubic-bezier(0.34,1.56,0.64,1), transform 0.32s cubic-bezier(0.34,1.56,0.64,1)',
+  }
+
+  if (typeof window === 'undefined') return null
+
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes wizBackdrop { from { opacity:0 } to { opacity:1 } }
+        @keyframes wizBackOut  { from { opacity:1 } to { opacity:0 } }
+        @keyframes wizSpringIn  { from { opacity:0; transform:scale(0.9) translateY(16px) } to { opacity:1; transform:scale(1) translateY(0) } }
+        @keyframes wizSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.9) translateY(16px) } }
+      `}</style>
+      {/* Backdrop */}
+      <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation: cerrando ? 'wizBackOut 0.38s ease forwards' : 'wizBackdrop 0.28s ease' }}/>
+
+      {/* Modal */}
+      <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+        <div style={{
+          background:'white', borderRadius:'1.5rem',
+          boxShadow:'0 32px 80px rgba(0,0,0,0.22)',
+          width:'820px', maxWidth:'calc(100vw - 2rem)',
+          maxHeight:'90vh', display:'flex', flexDirection:'column',
+          overflow:'hidden', pointerEvents:'all',
+          animation: cerrando ? 'wizSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'wizSpringIn 0.46s cubic-bezier(0.34,1.56,0.64,1)',
+        }}>
+
+          {/* Header modal */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.75rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+              {/* Steps */}
+              <div style={{ display:'flex', gap:'0.375rem' }}>
+                {[0,1,2,3,4,5].map(n => (
+                  <div key={n} style={{ height:'6px', borderRadius:'9999px', background: paso > n ? '#16a34a' : paso === n ? '#2563eb' : '#e2e8f0', width: paso === n ? '24px' : '8px', transition:'all 0.3s ease' }}/>
+                ))}
+              </div>
+              <p style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8', margin:0 }}>
+                {paso < 5 ? `Paso ${paso + 1} de 5` : 'Listo para activar'}
+              </p>
+            </div>
+            <button onClick={cerrar}
+              style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:700, fontSize:'0.9rem', transition:'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>✕</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ display:'grid', gridTemplateColumns: calendarioActivo ? '1fr 1fr' : '1fr', flex:1, overflow:'hidden' }}>
+
+            {/* Izquierda — preguntas */}
+            <div style={{ padding:'2rem', display:'flex', flexDirection:'column', justifyContent:'space-between', borderRight: calendarioActivo ? '1px solid #f1f5f9' : 'none' }}>
+              <div style={contentStyle}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>
+                  {paso < 5 ? `Paso ${paso + 1}` : 'Resumen'}
+                </p>
+                <h2 style={{ fontSize:'1.25rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem', fontFamily:'Outfit, sans-serif' }}>
+                  {pasos[paso].titulo}
+                </h2>
+                <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:'0 0 1.5rem' }}>{pasos[paso].sub}</p>
+
+                {/* Fecha seleccionada para pasos 0-3 */}
+                {paso < 4 && valorActual && (
+                  <div style={{ padding:'1rem', borderRadius:'1rem', background:'#eff6ff', border:'1px solid #bfdbfe', marginBottom:'1.25rem' }}>
+                    <p style={{ fontSize:'0.65rem', color:'#64748b', margin:'0 0 0.25rem', fontWeight:600, textTransform:'uppercase' }}>Fecha seleccionada</p>
+                    <p style={{ fontSize:'1.25rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{formatFecha(valorActual)}</p>
+                  </div>
+                )}
+
+                {/* Paso 4 — festivos */}
+                {paso === 4 && (
+                  <div style={{ marginBottom:'1.25rem' }}>
+                    {festivos.length === 0 ? (
+                      <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px dashed #e2e8f0', textAlign:'center' }}>
+                        <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>Ningún día marcado aún</p>
+                      </div>
+                    ) : (
+                      <div style={{ maxHeight:'9rem', overflowY:'auto', paddingRight:'0.25rem' }}>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
+                          {festivos.sort().map(f => (
+                            <span key={f} style={{ display:'inline-flex', alignItems:'center', gap:'0.3rem', fontSize:'0.72rem', fontWeight:600, padding:'0.25rem 0.625rem', borderRadius:'0.5rem', background:'#fce7f3', color:'#be185d', border:'1px solid #f9a8d4' }}>
+                              {formatFecha(f)}
+                              <button onClick={() => toggleFestivo(f)} style={{ background:'none', border:'none', cursor:'pointer', color:'#be185d', fontSize:'0.65rem', padding:0, lineHeight:1 }}>✕</button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.75rem 0 0' }}>
+                      Solo puedes marcar días entre {formatFecha(inicio)} y {formatFecha(cierre)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Paso 5 — Resumen círculos */}
+                {paso === 5 && (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+                    <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
+                      <CircleStat value={diasEfect}  label="Días efectivos"  color="#2563eb" bg="#eff6ff" />
+                      <CircleStat value={diasVac}    label="Días vacaciones" color="#d97706" bg="#fffbeb" />
+                      <CircleStat value={diasFest}   label="Días festivos"   color="#be185d" bg="#fce7f3" />
+                      <CircleStat value={formatFecha(cierre)} label="Fin de ciclo" color="#dc2626" bg="#fef2f2" />
+                    </div>
+                    <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px solid #f1f5f9' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem', fontSize:'0.775rem', color:'#475569' }}>
+                        <span style={{ color:'#94a3b8' }}>Inicio:</span>  <span style={{ fontWeight:600, color:'#1e3a5f' }}>{formatFecha(inicio)}</span>
+                        <span style={{ color:'#94a3b8' }}>Vacaciones:</span> <span style={{ fontWeight:600, color:'#d97706' }}>{vacIni ? `${formatFecha(vacIni)} → ${formatFecha(vacFin)}` : 'Sin vacaciones'}</span>
+                        <span style={{ color:'#94a3b8' }}>Cierre:</span>  <span style={{ fontWeight:600, color:'#dc2626' }}>{formatFecha(cierre)}</span>
+                        <span style={{ color:'#94a3b8' }}>Festivos:</span> <span style={{ fontWeight:600, color:'#be185d' }}>{diasFest} día{diasFest !== 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botones navegación */}
+              <div style={{ display:'flex', gap:'0.75rem', paddingTop:'1.5rem', flexShrink:0 }}>
+                {paso > 0 && (
+                  <button onClick={() => irPaso((paso - 1) as Paso, 'atras')}
+                    style={{ padding:'0.625rem 1.25rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', background:'white', color:'#64748b', cursor:'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                    ← Regresar
+                  </button>
+                )}
+                {paso < 4 && (
+                  <button onClick={() => { if (puedeAvanzar) irPaso((paso + 1) as Paso, 'adelante') }}
+                    disabled={!puedeAvanzar}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: puedeAvanzar ? '#1e3a5f' : '#e2e8f0', color: puedeAvanzar ? 'white' : '#94a3b8', cursor: puedeAvanzar ? 'pointer' : 'not-allowed', transition:'background 0.2s' }}
+                    onMouseEnter={e => { if (puedeAvanzar) e.currentTarget.style.background = '#2563eb' }}
+                    onMouseLeave={e => { if (puedeAvanzar) e.currentTarget.style.background = '#1e3a5f' }}>
+                    Continuar →
+                  </button>
+                )}
+                {paso === 4 && (
+                  <button onClick={() => irPaso(5, 'adelante')}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.2s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
+                    Ver resumen →
+                  </button>
+                )}
+                {paso === 5 && (
+                  <button onClick={() => { onCrear({ inicio, vacIni, vacFin, cierre, festivos }) }}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#16a34a', color:'white', cursor:'pointer', transition:'background 0.2s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#15803d')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#16a34a')}>
+                    ✓ Activar ciclo escolar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Derecha — calendario */}
+            {calendarioActivo && (
+              <div style={{ padding:'2rem', background:'#fafbfc', display:'flex', flexDirection:'column' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.25rem' }}>
+                  {paso === 0 ? 'Selecciona la fecha de inicio' :
+                   paso === 1 ? 'Selecciona inicio de vacaciones' :
+                   paso === 2 ? 'Selecciona fin de vacaciones' :
+                   paso === 3 ? 'Selecciona la fecha de cierre' :
+                   'Selecciona días festivos'}
+                </p>
+                <div style={{ transform:'scale(1.05)', transformOrigin:'top center' }}>
+                  <MiniCalendario
+                    seleccionado={valorActual}
+                    inicio={inicio} vacIni={vacIni} vacFin={vacFin} cierre={cierre} festivos={festivos}
+                    onChange={onCalChange}
+                    soloEntre={paso === 4}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>,
+    </>,
     document.body
   )
 }
@@ -168,40 +408,23 @@ function ModalConfirmar({ onAceptar, onCancelar }: { onAceptar: () => void; onCa
 function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCancelar: () => void }) {
   if (typeof window === 'undefined') return null
   return createPortal(
-    <div onClick={onCancelar} style={{
-      position:'fixed', inset:0, zIndex:9999,
-      display:'flex', alignItems:'center', justifyContent:'center',
-      background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background:'white', borderRadius:'1rem', width:'420px',
-        boxShadow:'0 20px 60px rgba(0,0,0,0.2)', padding:'2rem',
-        display:'flex', flexDirection:'column', alignItems:'center',
-      }}>
-        <div style={{ width:'56px', height:'56px', borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
-          <svg width="26" height="26" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <div onClick={onCancelar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:'elimBack 0.25s ease' }}>
+      <style>{`@keyframes elimBack { from { opacity:0 } to { opacity:1 } } @keyframes elimIn { from { opacity:0; transform:scale(0.92) translateY(10px) } to { opacity:1; transform:scale(1) translateY(0) } }`}</style>
+      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'400px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', animation:'elimIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
+          <svg width="24" height="24" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
         </div>
-        <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>
-          ¿Eliminar período actual?
-        </h3>
-        <p style={{ fontSize:'0.875rem', color:'#475569', margin:'0 0 1.5rem', textAlign:'center', lineHeight:'1.5' }}>
-          Se eliminarán todas las fechas configuradas y tendrás que crear un nuevo período desde cero.
+        <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>¿Eliminar ciclo escolar?</h3>
+        <p style={{ fontSize:'0.8125rem', color:'#64748b', margin:'0 0 1.5rem', textAlign:'center', lineHeight:1.6 }}>
+          Se eliminarán todas las fechas configuradas y tendrás que crear un nuevo ciclo desde cero.
         </p>
         <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
-          <button onClick={onCancelar}
-            style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background='#1d4ed8')}
-            onMouseLeave={e => (e.currentTarget.style.background='#2563eb')}>
-            Cancelar
-          </button>
-          <button onClick={onAceptar}
-            style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#dc2626', color:'white', cursor:'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background='#b91c1c')}
-            onMouseLeave={e => (e.currentTarget.style.background='#dc2626')}>
-            Sí, eliminar
-          </button>
+          <button onClick={onCancelar} style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')} onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}>Cancelar</button>
+          <button onClick={onAceptar} style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#dc2626', color:'white', cursor:'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')} onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}>Sí, eliminar</button>
         </div>
       </div>
     </div>,
@@ -211,52 +434,24 @@ function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCan
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CicloPage() {
-  const [vista, setVista]           = useState<Vista>('wizard')
-  const [paso, setPaso]             = useState<Paso>(0)
-  const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>(null)
-  const [inicio, setInicio]     = useState('')
-  const [vacIni, setVacIni]     = useState('')
-  const [vacFin, setVacFin]     = useState('')
-  const [cierre, setCierre]     = useState('')
-  const [festivos, setFestivos] = useState<string[]>([])
-  const [modalHabilitar, setModalHabilitar] = useState(false)
-  const [modalEliminar, setModalEliminar]   = useState(false)
+  const [wizardAbierto, setWizardAbierto] = useState(false)
+  const [modalEliminar, setModalEliminar] = useState(false)
+  const [periodo, setPeriodo] = useState<{ inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] } | null>(null)
 
-  // Datos del período activo (guardados al habilitar)
-  const [periodoActivo, setPeriodoActivo] = useState({
-    inicio: '', vacIni: '', vacFin: '', cierre: '', festivos: [] as string[]
-  })
-
-  function toggleFestivo(iso: string) {
-    setFestivos(prev => prev.includes(iso) ? prev.filter(f => f !== iso) : [...prev, iso])
+  function crearCiclo(data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) {
+    setPeriodo(data)
+    setWizardAbierto(false)
   }
 
-  function habilitar() {
-    setPeriodoActivo({ inicio, vacIni, vacFin, cierre, festivos })
-    setVista('activo')
-    setModalHabilitar(false)
-  }
-
-  function eliminarPeriodo() {
-    setInicio(''); setVacIni(''); setVacFin(''); setCierre(''); setFestivos([])
-    setTipoPeriodo(null)
-    setPaso(0)
-    setVista('wizard')
+  function eliminarCiclo() {
+    setPeriodo(null)
     setModalEliminar(false)
   }
 
-  const diasTotales = diasEntre(inicio, cierre)
-  const diasVac     = vacIni && vacFin ? diasEntre(vacIni, vacFin) : 0
-  const diasFest    = festivos.filter(f => f >= inicio && f <= cierre).length
-  const diasClase   = Math.max(0, diasTotales - diasVac - diasFest)
-
-  const pasosConfig = [
-    { num: 0, label: 'Tipo de período',       valor: tipoPeriodo ? (tipoPeriodo === 'bimestre' ? 'Bimestre' : tipoPeriodo === 'trimestre' ? 'Trimestre' : tipoPeriodo === 'cuatrimestre' ? 'Cuatrimestre' : tipoPeriodo === 'semestre' ? 'Semestre' : tipoPeriodo === 'anual' ? 'Anual' : 'Personalizado') : '', icono: '✦' },
-    { num: 1, label: 'Fecha de inicio',        valor: inicio,                                                                                                  icono: '📅' },
-    { num: 2, label: 'Período de vacaciones',  valor: vacIni && vacFin ? `${formatFecha(vacIni)} → ${formatFecha(vacFin)}` : '',                               icono: '🏖' },
-    { num: 3, label: 'Fecha de cierre',        valor: cierre,                                                                                                  icono: '🔒' },
-    { num: 4, label: 'Días festivos',          valor: festivos.length > 0 ? `${festivos.length} día(s)` : '',                                                  icono: '🎉' },
-  ]
+  const diasTotales = periodo ? diasEntre(periodo.inicio, periodo.cierre) : 0
+  const diasVac     = periodo?.vacIni && periodo?.vacFin ? diasEntre(periodo.vacIni, periodo.vacFin) : 0
+  const diasFest    = periodo ? periodo.festivos.filter(f => f >= periodo.inicio && f <= periodo.cierre).length : 0
+  const diasEfect   = Math.max(0, diasTotales - diasVac - diasFest)
 
   return (
     <div className="flex flex-col h-full">
@@ -264,489 +459,75 @@ export default function CicloPage() {
 
       <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', gap:'1.25rem' }}>
 
-        {/* ── VISTA WIZARD ── */}
-        {vista === 'wizard' && (
-          <>
-            {/* Header */}
-            <div className="flex items-center justify-between shrink-0">
-              <div>
-                <p className="text-sm font-semibold" style={{ color:'#1e3a5f' }}>Configurar nuevo período escolar</p>
-                <p className="text-xs mt-0.5" style={{ color:'#94a3b8' }}>Sigue los pasos para definir las fechas del semestre</p>
+        {/* ── Sin periodo activo ── */}
+        {!periodo && (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'1.25rem' }}>
+            <div style={{ textAlign:'center' }}>
+              <div style={{ width:'56px', height:'56px', borderRadius:'1rem', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
+                <svg width="24" height="24" fill="none" stroke="#2563eb" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
               </div>
-              {/* Progreso */}
-              <div className="flex items-center gap-1.5">
-                {[0,1,2,3,4,5].map(n => (
-                  <div key={n} style={{
-                    width: paso >= n ? '28px' : '8px',
-                    height: '8px', borderRadius:'9999px',
-                    background: paso > n ? '#16a34a' : paso === n ? '#2563eb' : '#e2e8f0',
-                    transition: 'all 0.3s',
-                  }}/>
-                ))}
-              </div>
+              <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem' }}>No hay ciclo escolar activo</p>
+              <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>Crea un nuevo ciclo para comenzar a gestionar fechas</p>
             </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:'1.25rem', flex:'1 1 0', minHeight:0 }}>
-
-              {/* Columna izquierda — pasos */}
-              <div style={{ display:'flex', flexDirection:'column', gap:'1rem', overflowY:'auto', minHeight:0 }}>
-
-                {/* Paso 0 — Tipo de período */}
-                {paso === 0 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#2563eb', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', flexShrink:0 }}>✦</div>
-                      <div>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>¿Qué tipo de períodos usa tu institución?</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>Determina cómo se organizan calificaciones y asistencias</p>
-                      </div>
-                    </div>
-
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'0.75rem', marginBottom:'1rem' }}>
-                      {([
-                        { key:'bimestre', label:'Bimestre', desc:'Períodos de ~2 meses', niveles:'Primaria · Secundaria',     color:'#3b82f6' },
-                        { key:'semestre', label:'Semestre', desc:'Períodos de ~6 meses', niveles:'Bachillerato · Universidad', color:'#1e3a5f' },
-                      ] as { key: TipoPeriodo; label: string; desc: string; niveles: string; color: string }[]).map(op => {
-                        const selec = tipoPeriodo === op.key
-                        return (
-                          <button key={op.key as string}
-                            onClick={() => setTipoPeriodo(op.key)}
-                            style={{
-                              padding:'1rem', borderRadius:'0.875rem', textAlign:'left', cursor:'pointer',
-                              border:     selec ? `2px solid ${op.color}` : '1px solid #e2e8f0',
-                              background: selec ? `${op.color}12` : 'white',
-                              transition:'all 0.18s', outline:'none',
-                            }}
-                            onMouseEnter={e => { if (!selec) { e.currentTarget.style.borderColor=op.color; e.currentTarget.style.background=`${op.color}08`; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 4px 14px ${op.color}22` } }}
-                            onMouseLeave={e => { if (!selec) { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.background='white'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none' } }}>
-                            <p style={{ fontSize:'1rem', fontWeight:700, color:selec?op.color:'#1e3a5f', margin:'0 0 0.25rem', fontFamily:'Outfit, sans-serif' }}>{op.label}</p>
-                            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0 0 0.5rem' }}>{op.desc}</p>
-                            <span style={{ fontSize:'0.6rem', fontWeight:600, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:selec?`${op.color}18`:'#f1f5f9', color:selec?op.color:'#94a3b8' }}>
-                              {op.niveles}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {tipoPeriodo && (
-                      <button onClick={() => setPaso(1)}
-                        style={{ width:'100%', padding:'0.75rem', background:'#1e3a5f', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                        onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-                        onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-                        Continuar con {tipoPeriodo === 'bimestre' ? 'Bimestres' : tipoPeriodo === 'trimestre' ? 'Trimestres' : tipoPeriodo === 'cuatrimestre' ? 'Cuatrimestres' : tipoPeriodo === 'semestre' ? 'Semestres' : tipoPeriodo === 'anual' ? 'Período Anual' : 'Configuración Personalizada'} →
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Paso 1 — Fecha de inicio */}
-                {paso === 1 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#1e3a5f', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, fontFamily:'Outfit, sans-serif', flexShrink:0 }}>1</div>
-                      <div style={{ flex:1 }}>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>¿Cuándo inicia el semestre?</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>Selecciona la fecha de inicio en el almanaque</p>
-                      </div>
-                      <button onClick={() => setPaso(0)}
-                        style={{ fontSize:'0.75rem', fontWeight:600, padding:'0.375rem 0.75rem', borderRadius:'0.5rem', background:'#f1f5f9', color:'#475569', border:'none', cursor:'pointer', flexShrink:0 }}
-                        onMouseEnter={e => (e.currentTarget.style.background='#e2e8f0')}
-                        onMouseLeave={e => (e.currentTarget.style.background='#f1f5f9')}>
-                        ← Cambiar tipo
-                      </button>
-                    </div>
-                    {inicio ? (
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem', borderRadius:'0.875rem', background:'#eff6ff', border:'1px solid #bfdbfe' }}>
-                        <div>
-                          <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0 0 0.25rem' }}>Fecha de inicio seleccionada</p>
-                          <p style={{ fontSize:'1.125rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{formatFecha(inicio)}</p>
-                        </div>
-                        <button onClick={() => setPaso(2)}
-                          style={{ padding:'0.625rem 1.25rem', background:'#1e3a5f', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                          onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-                          onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-                          Continuar →
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px dashed #e2e8f0', textAlign:'center' }}>
-                        <p style={{ fontSize:'0.875rem', color:'#94a3b8', margin:0 }}>Selecciona una fecha en el almanaque →</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Paso 2 — Vacaciones */}
-                {paso === 2 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#d97706', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, fontFamily:'Outfit, sans-serif', flexShrink:0 }}>2</div>
-                      <div>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>¿Cuándo son las vacaciones?</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>
-                          {!vacIni ? 'Selecciona el inicio de vacaciones' : !vacFin ? 'Ahora selecciona el fin de vacaciones' : 'Período de vacaciones definido'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem', marginBottom:'1rem' }}>
-                      {[
-                        { label:'Inicio vacaciones', valor: vacIni, activo: !vacIni },
-                        { label:'Fin vacaciones',    valor: vacFin, activo: !!vacIni && !vacFin },
-                      ].map(f => (
-                        <div key={f.label} style={{ padding:'0.875rem', borderRadius:'0.875rem', background: f.activo ? '#fffbeb' : f.valor ? '#fef9c3' : '#f8fafc', border: f.activo ? '1.5px dashed #d97706' : f.valor ? '1px solid #fde68a' : '1px solid #e2e8f0' }}>
-                          <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0 0 0.25rem', fontWeight:600, textTransform:'uppercase' }}>{f.label}</p>
-                          <p style={{ fontSize:'0.9375rem', fontWeight:700, color: f.valor ? '#854d0e' : '#cbd5e1', margin:0, fontFamily:'Outfit, sans-serif' }}>
-                            {f.valor ? formatFecha(f.valor) : f.activo ? 'Selecciona →' : '—'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {vacIni && vacFin && (
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                        <p style={{ fontSize:'0.75rem', color:'#64748b', margin:0 }}>
-                          {diasEntre(vacIni, vacFin)} días de vacaciones
-                        </p>
-                        <button onClick={() => setPaso(3)}
-                          style={{ padding:'0.625rem 1.25rem', background:'#1e3a5f', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                          onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-                          onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-                          Continuar →
-                        </button>
-                      </div>
-                    )}
-
-                    <button onClick={() => { setVacIni(''); setVacFin(''); setPaso(3) }}
-                      style={{ marginTop:'0.5rem', fontSize:'0.75rem', color:'#94a3b8', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>
-                      Omitir vacaciones
-                    </button>
-                  </div>
-                )}
-
-                {/* Paso 3 — Fecha de cierre */}
-                {paso === 3 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#dc2626', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, fontFamily:'Outfit, sans-serif', flexShrink:0 }}>3</div>
-                      <div>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>¿Cuándo cierra el semestre?</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>Selecciona la fecha de cierre en el almanaque</p>
-                      </div>
-                    </div>
-                    {cierre ? (
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem', borderRadius:'0.875rem', background:'#fef2f2', border:'1px solid #fecaca' }}>
-                        <div>
-                          <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0 0 0.25rem' }}>Fecha de cierre seleccionada</p>
-                          <p style={{ fontSize:'1.125rem', fontWeight:700, color:'#dc2626', margin:0, fontFamily:'Outfit, sans-serif' }}>{formatFecha(cierre)}</p>
-                        </div>
-                        <button onClick={() => setPaso(4)}
-                          style={{ padding:'0.625rem 1.25rem', background:'#1e3a5f', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                          onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-                          onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-                          Continuar →
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px dashed #e2e8f0', textAlign:'center' }}>
-                        <p style={{ fontSize:'0.875rem', color:'#94a3b8', margin:0 }}>Selecciona una fecha en el almanaque →</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Paso 4 — Días festivos */}
-                {paso === 4 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#8b5cf6', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, fontFamily:'Outfit, sans-serif', flexShrink:0 }}>4</div>
-                      <div>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Días festivos o inhábiles</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>Clic en un día del almanaque para marcarlo como festivo</p>
-                      </div>
-                    </div>
-
-                    {festivos.length > 0 ? (
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', marginBottom:'1rem' }}>
-                        {festivos.sort().map(f => (
-                          <span key={f} style={{ display:'inline-flex', alignItems:'center', gap:'0.375rem', fontSize:'0.75rem', fontWeight:600, padding:'0.3rem 0.625rem', borderRadius:'0.5rem', background:'#fee2e2', color:'#dc2626', border:'1px solid #fecaca' }}>
-                            {formatFecha(f)}
-                            <button onClick={() => toggleFestivo(f)} style={{ background:'none', border:'none', cursor:'pointer', color:'#dc2626', lineHeight:1, padding:0, fontSize:'0.7rem' }}>✕</button>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ padding:'0.875rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px dashed #e2e8f0', marginBottom:'1rem', textAlign:'center' }}>
-                        <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>Ningún día festivo marcado todavía</p>
-                      </div>
-                    )}
-
-                    <div style={{ display:'flex', gap:'0.75rem' }}>
-                      <button onClick={() => setPaso(5)}
-                        style={{ flex:1, padding:'0.625rem', background:'#1e3a5f', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                        onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
-                        onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
-                        Ver resumen →
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Paso 5 — Resumen */}
-                {paso === 5 && (
-                  <div className="bg-white rounded-2xl p-6 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <div className="flex items-center gap-3 mb-5">
-                      <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'#16a34a', color:'white', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <div>
-                        <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Resumen del período</p>
-                        <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>Revisa la configuración antes de habilitar</p>
-                      </div>
-                    </div>
-
-                    {/* Fechas resumen */}
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem', marginBottom:'1.25rem' }}>
-                      {[
-                        { label:'Inicio del semestre', valor: formatFecha(inicio), color:'#1e3a5f', bg:'#eff6ff' },
-                        { label:'Inicio vacaciones',   valor: formatFecha(vacIni), color:'#d97706', bg:'#fffbeb' },
-                        { label:'Fin vacaciones',      valor: formatFecha(vacFin), color:'#d97706', bg:'#fffbeb' },
-                        { label:'Cierre del semestre', valor: formatFecha(cierre), color:'#dc2626', bg:'#fef2f2' },
-                      ].map(item => (
-                        <div key={item.label} style={{ padding:'0.875rem', borderRadius:'0.875rem', background:item.bg }}>
-                          <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0 0 0.25rem', fontWeight:600, textTransform:'uppercase' }}>{item.label}</p>
-                          <p style={{ fontSize:'0.9375rem', fontWeight:700, color:item.color, margin:0, fontFamily:'Outfit, sans-serif' }}>{item.valor}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Estadísticas */}
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.75rem', marginBottom:'1.25rem' }}>
-                      <div style={{ padding:'0.875rem', borderRadius:'0.875rem', background:'#eff6ff', textAlign:'center' }}>
-                        <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{diasTotales}</p>
-                        <p style={{ fontSize:'0.7rem', color:'#64748b', margin:'0.25rem 0 0' }}>Días totales</p>
-                      </div>
-                      <div style={{ padding:'0.875rem', borderRadius:'0.875rem', background:'#f0fdf4', textAlign:'center' }}>
-                        <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#16a34a', margin:0, fontFamily:'Outfit, sans-serif' }}>{diasClase}</p>
-                        <p style={{ fontSize:'0.7rem', color:'#64748b', margin:'0.25rem 0 0' }}>Días de clase</p>
-                      </div>
-                      <div style={{ padding:'0.875rem', borderRadius:'0.875rem', background:'#fef2f2', textAlign:'center' }}>
-                        <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#dc2626', margin:0, fontFamily:'Outfit, sans-serif' }}>{diasFest}</p>
-                        <p style={{ fontSize:'0.7rem', color:'#64748b', margin:'0.25rem 0 0' }}>Días festivos</p>
-                      </div>
-                    </div>
-
-                    {festivos.length > 0 && (
-                      <div style={{ padding:'0.875rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px solid #f1f5f9', marginBottom:'1.25rem' }}>
-                        <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0 0 0.5rem', fontWeight:600, textTransform:'uppercase' }}>Días festivos/inhábiles</p>
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem' }}>
-                          {festivos.sort().map(f => (
-                            <span key={f} style={{ fontSize:'0.7rem', fontWeight:600, padding:'0.2rem 0.5rem', borderRadius:'0.375rem', background:'#fee2e2', color:'#dc2626' }}>
-                              {formatFecha(f)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ display:'flex', gap:'0.75rem' }}>
-                      <button onClick={() => setPaso(4)}
-                        style={{ padding:'0.625rem 1rem', background:'#f1f5f9', color:'#475569', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:500 }}>
-                        ← Editar
-                      </button>
-                      <button onClick={() => setModalHabilitar(true)}
-                        style={{ flex:1, padding:'0.625rem', background:'#16a34a', color:'white', borderRadius:'0.75rem', border:'none', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                        onMouseEnter={e => (e.currentTarget.style.background='#15803d')}
-                        onMouseLeave={e => (e.currentTarget.style.background='#16a34a')}>
-                        ✓ Crear período
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Barra de pasos completados */}
-                <div className="bg-white rounded-2xl p-4 shadow-sm" style={{ border:'1px solid #f1f5f9' }}>
-                  <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                    {pasosConfig.map(p => (
-                      <div key={p.num} style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                        <div style={{
-                          width:'28px', height:'28px', borderRadius:'50%', flexShrink:0,
-                          background: paso > p.num ? '#16a34a' : paso === p.num ? '#1e3a5f' : '#f1f5f9',
-                          color:      paso > p.num ? 'white'   : paso === p.num ? 'white'   : '#94a3b8',
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                          fontSize:'0.75rem', fontWeight:700,
-                        }}>
-                          {paso > p.num ? '✓' : p.num}
-                        </div>
-                        <div style={{ flex:1 }}>
-                          <p style={{ fontSize:'0.8125rem', fontWeight: paso === p.num ? 600 : 400, color: paso === p.num ? '#1e3a5f' : '#64748b', margin:0 }}>{p.label}</p>
-                        </div>
-                        {p.valor && (
-                          <span style={{ fontSize:'0.7rem', color:'#16a34a', fontWeight:600 }}>{p.valor}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Columna derecha — almanaque */}
-              <div style={{ position:'sticky', top:'1rem', height:'fit-content' }}>
-                <div className="bg-white rounded-2xl shadow-sm" style={{ border:'1px solid #e2e8f0', padding:'1.5rem' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 1.25rem' }}>
-                    {paso === 0 ? 'Tipo de período' : paso === 1 ? 'Selecciona inicio' : paso === 2 ? (!vacIni ? 'Selecciona inicio vacaciones' : 'Selecciona fin vacaciones') : paso === 3 ? 'Selecciona cierre' : paso === 4 ? 'Marca días festivos' : 'Vista previa'}
-                  </p>
-                  <div style={{ transform:'scale(1.08)', transformOrigin:'top center' }}>
-                  <MiniCalendario
-                    seleccionado={paso===1?inicio:paso===2?(!vacIni?vacIni:vacFin):paso===3?cierre:paso===4?'':inicio}
-                    inicio={inicio} vacIni={vacIni} vacFin={vacFin} cierre={cierre} festivos={festivos}
-                    onChange={iso => {
-                      if (paso === 1) { setInicio(iso) }
-                      else if (paso === 2) { if (!vacIni) setVacIni(iso); else if (!vacFin) setVacFin(iso) }
-                      else if (paso === 3) { setCierre(iso) }
-                      else if (paso === 4) { toggleFestivo(iso) }
-                    }}
-                  />
-                  </div>
-                  {/* Leyenda */}
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.625rem', marginTop:'1rem', paddingTop:'0.75rem', borderTop:'1px solid #f1f5f9' }}>
-                    {[
-                      { color:'#1e3a5f', label:'Inicio' },
-                      { color:'#dbeafe', label:'Días activos', text:'#1d4ed8' },
-                      { color:'#fef9c3', label:'Vacaciones',   text:'#854d0e' },
-                      { color:'#fee2e2', label:'Festivos',     text:'#dc2626' },
-                      { color:'#dc2626', label:'Cierre' },
-                    ].map(l => (
-                      <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
-                        <div style={{ width:'10px', height:'10px', borderRadius:'50%', background:l.color, flexShrink:0 }}/>
-                        <span style={{ fontSize:'0.65rem', color:'#64748b' }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
+            <CrearCicloBtn onClick={() => setWizardAbierto(true)} />
+          </div>
         )}
 
-        {/* ── VISTA ACTIVO ── */}
-        {vista === 'activo' && (
-          <>
-            <div className="flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
+        {/* ── Con periodo activo ── */}
+        {periodo && (
+          <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem', animation:'cicloIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+            <style>{`@keyframes cicloIn { from { opacity:0; transform:translateY(12px) scale(0.98) } to { opacity:1; transform:translateY(0) scale(1) } }`}</style>
+
+            {/* Header */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                 <div style={{ width:'10px', height:'10px', borderRadius:'50%', background:'#16a34a' }}/>
-                <div>
-                  <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Período escolar activo</p>
-                  <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.125rem 0 0' }}>
-                    {formatFecha(periodoActivo.inicio)} → {formatFecha(periodoActivo.cierre)}
-                  </p>
-                </div>
+                <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Ciclo escolar activo</p>
+                <span style={{ fontSize:'0.7rem', fontWeight:600, padding:'0.2rem 0.625rem', borderRadius:'9999px', background:'#fce7f3', color:'#be185d', border:'1px solid #f9a8d4' }}>
+                  {formatFecha(periodo.inicio)} → {formatFecha(periodo.cierre)}
+                </span>
               </div>
               <button onClick={() => setModalEliminar(true)}
-                style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 1rem', background:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca', borderRadius:'0.75rem', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}
-                onMouseEnter={e => { e.currentTarget.style.background='#fee2e2' }}
-                onMouseLeave={e => { e.currentTarget.style.background='#fef2f2' }}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', background:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca', borderRadius:'0.75rem', cursor:'pointer', fontSize:'0.8rem', fontWeight:600, transition:'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                 </svg>
-                Eliminar período
+                Eliminar ciclo
               </button>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 300px', gap:'1.25rem' }}>
-              <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-
-                {/* Fechas */}
-                <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 1rem' }}>Fechas del semestre</p>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem' }}>
-                    {[
-                      { label:'Inicio del semestre', valor: periodoActivo.inicio, color:'#1e3a5f', bg:'#eff6ff' },
-                      { label:'Inicio vacaciones',   valor: periodoActivo.vacIni, color:'#d97706', bg:'#fffbeb' },
-                      { label:'Fin vacaciones',      valor: periodoActivo.vacFin, color:'#d97706', bg:'#fffbeb' },
-                      { label:'Cierre del semestre', valor: periodoActivo.cierre, color:'#dc2626', bg:'#fef2f2' },
-                    ].map(item => (
-                      <div key={item.label} style={{ padding:'1rem', borderRadius:'0.875rem', background:item.bg }}>
-                        <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0 0 0.25rem', fontWeight:600, textTransform:'uppercase' }}>{item.label}</p>
-                        <p style={{ fontSize:'1rem', fontWeight:700, color:item.color, margin:0, fontFamily:'Outfit, sans-serif' }}>{item.valor ? formatFecha(item.valor) : '—'}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="bg-white rounded-2xl shadow-sm" style={{ border:'1px solid #e2e8f0', padding:'1rem 1.25rem' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.75rem' }}>Resumen del período</p>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'0.625rem' }}>
-                    <div style={{ padding:'0.625rem', borderRadius:'0.875rem', background:'#eff6ff', textAlign:'center' }}>
-                      <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{diasEntre(periodoActivo.inicio, periodoActivo.cierre)}</p>
-                      <p style={{ fontSize:'0.65rem', color:'#64748b', margin:'0.125rem 0 0' }}>Días totales</p>
-                    </div>
-                    <div style={{ padding:'0.625rem', borderRadius:'0.875rem', background:'#f0fdf4', textAlign:'center' }}>
-                      <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#16a34a', margin:0, fontFamily:'Outfit, sans-serif' }}>
-                        {Math.max(0, diasEntre(periodoActivo.inicio, periodoActivo.cierre) - (periodoActivo.vacIni && periodoActivo.vacFin ? diasEntre(periodoActivo.vacIni, periodoActivo.vacFin) : 0) - periodoActivo.festivos.length)}
-                      </p>
-                      <p style={{ fontSize:'0.65rem', color:'#64748b', margin:'0.125rem 0 0' }}>Días de clase</p>
-                    </div>
-                    <div style={{ padding:'0.625rem', borderRadius:'0.875rem', background:'#fef2f2', textAlign:'center' }}>
-                      <p style={{ fontSize:'1.5rem', fontWeight:700, color:'#dc2626', margin:0, fontFamily:'Outfit, sans-serif' }}>{periodoActivo.festivos.length}</p>
-                      <p style={{ fontSize:'0.65rem', color:'#64748b', margin:'0.125rem 0 0' }}>Días festivos</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Festivos */}
-                {periodoActivo.festivos.length > 0 && (
-                  <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                    <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.75rem' }}>Días festivos/inhábiles</p>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem' }}>
-                      {periodoActivo.festivos.sort().map(f => (
-                        <span key={f} style={{ fontSize:'0.75rem', fontWeight:600, padding:'0.3rem 0.75rem', borderRadius:'0.5rem', background:'#fee2e2', color:'#dc2626', border:'1px solid #fecaca' }}>
-                          {formatFecha(f)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Almanaque activo */}
-              <div style={{ position:'sticky', top:'1rem', height:'fit-content' }}>
-                <div className="bg-white rounded-2xl p-5 shadow-sm" style={{ border:'1px solid #e2e8f0' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 1rem' }}>Vista del período</p>
-                  <MiniCalendario
-                    seleccionado={periodoActivo.inicio}
-                    inicio={periodoActivo.inicio} vacIni={periodoActivo.vacIni}
-                    vacFin={periodoActivo.vacFin} cierre={periodoActivo.cierre}
-                    festivos={periodoActivo.festivos}
-                    onChange={() => {}}
-                  />
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:'0.625rem', marginTop:'1rem', paddingTop:'0.75rem', borderTop:'1px solid #f1f5f9' }}>
-                    {[
-                      { color:'#1e3a5f', label:'Inicio' },
-                      { color:'#dbeafe', label:'Días activos' },
-                      { color:'#fef9c3', label:'Vacaciones' },
-                      { color:'#fee2e2', label:'Festivos' },
-                      { color:'#dc2626', label:'Cierre' },
-                    ].map(l => (
-                      <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
-                        <div style={{ width:'10px', height:'10px', borderRadius:'50%', background:l.color, flexShrink:0 }}/>
-                        <span style={{ fontSize:'0.65rem', color:'#64748b' }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            {/* Card resumen con círculos */}
+            <div style={{ background:'white', borderRadius:'1.25rem', padding:'2rem', border:'1px solid #e2e8f0', boxShadow:'0 2px 12px rgba(0,0,0,0.04)' }}>
+              <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.75rem' }}>Resumen del período</p>
+              <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
+                <CircleStat value={diasEfect}             label="Días efectivos"  color="#2563eb" bg="#eff6ff" />
+                <CircleStat value={diasVac}               label="Días vacaciones" color="#d97706" bg="#fffbeb" />
+                <CircleStat value={diasFest}              label="Días festivos"   color="#be185d" bg="#fce7f3" />
+                <CircleStat value={formatFecha(periodo.cierre)} label="Fin de ciclo"   color="#dc2626" bg="#fef2f2" />
               </div>
             </div>
-          </>
+
+            {/* Calendario de vista */}
+            <div style={{ background:'white', borderRadius:'1.25rem', padding:'1.5rem', border:'1px solid #e2e8f0', maxWidth:'340px' }}>
+              <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1rem' }}>Vista del calendario</p>
+              <MiniCalendario
+                seleccionado={periodo.inicio}
+                inicio={periodo.inicio} vacIni={periodo.vacIni}
+                vacFin={periodo.vacFin} cierre={periodo.cierre}
+                festivos={periodo.festivos}
+                onChange={() => {}}
+              />
+            </div>
+          </div>
         )}
       </div>
 
-      {modalHabilitar && <ModalConfirmar onAceptar={habilitar} onCancelar={() => setModalHabilitar(false)} />}
-      {modalEliminar  && <ModalEliminar  onAceptar={eliminarPeriodo} onCancelar={() => setModalEliminar(false)} />}
+      {wizardAbierto && <WizardModal onCrear={crearCiclo} onCerrar={() => setWizardAbierto(false)} />}
+      {modalEliminar && <ModalEliminar onAceptar={eliminarCiclo} onCancelar={() => setModalEliminar(false)} />}
     </div>
   )
 }
