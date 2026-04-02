@@ -144,12 +144,24 @@ function CrearCicloBtn({ onClick }: { onClick: () => void }) {
 
 // ─── Círculo stat ─────────────────────────────────────────────────────────────
 function CircleStat({ value, label, color, bg }: { value: number|string; label: string; color: string; bg: string }) {
+  const isDate = typeof value === 'string' && value.includes(' ')
+  // For dates like "15 Dic 2025" split into parts
+  const parts = isDate ? (value as string).split(' ') : null
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.625rem' }}>
-      <div style={{ width:'80px', height:'80px', borderRadius:'50%', background:bg, border:`3px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-        <span style={{ fontSize:'1.375rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif' }}>{value}</span>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem' }}>
+      <div style={{ width:'64px', height:'64px', borderRadius:'50%', background:bg, border:`2.5px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, flexDirection:'column', gap:'1px' }}>
+        {isDate && parts ? (
+          <>
+            <span style={{ fontSize:'0.8rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif', lineHeight:1 }}>{parts[0]}</span>
+            <span style={{ fontSize:'0.6rem', fontWeight:700, color, fontFamily:'Outfit, sans-serif', lineHeight:1 }}>{parts[1]}</span>
+            <span style={{ fontSize:'0.55rem', fontWeight:600, color, opacity:0.75, lineHeight:1 }}>{parts[2]}</span>
+          </>
+        ) : (
+          <span style={{ fontSize:'1.25rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif' }}>{value}</span>
+        )}
       </div>
-      <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#64748b', textAlign:'center', maxWidth:'80px', lineHeight:1.3 }}>{label}</span>
+      <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textAlign:'center', maxWidth:'72px', lineHeight:1.3 }}>{label}</span>
     </div>
   )
 }
@@ -271,11 +283,11 @@ function WizardModal({
           </div>
 
           {/* Body */}
-          <div style={{ display:'grid', gridTemplateColumns: calendarioActivo ? '1fr 1fr' : '1fr', flex:1, overflow:'hidden' }}>
+          <div style={{ display:'grid', gridTemplateColumns: calendarioActivo ? '1fr 1fr' : '1fr', height:'480px', overflow:'hidden' }}>
 
             {/* Izquierda — preguntas */}
-            <div style={{ padding:'2rem', display:'flex', flexDirection:'column', justifyContent:'space-between', borderRight: calendarioActivo ? '1px solid #f1f5f9' : 'none' }}>
-              <div style={contentStyle}>
+            <div style={{ padding:'2rem', display:'flex', flexDirection:'column', justifyContent:'space-between', borderRight: calendarioActivo ? '1px solid #f1f5f9' : 'none', minHeight:0, overflowY:'auto' }}>
+              <div style={{ ...contentStyle, overflowY:'auto', flex:1 }}>
                 <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>
                   {paso < 5 ? `Paso ${paso + 1}` : 'Resumen'}
                 </p>
@@ -378,15 +390,15 @@ function WizardModal({
 
             {/* Derecha — calendario */}
             {calendarioActivo && (
-              <div style={{ padding:'2rem', background:'#fafbfc', display:'flex', flexDirection:'column' }}>
-                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.25rem' }}>
+              <div style={{ padding:'2rem', background:'#fafbfc', display:'flex', flexDirection:'column', overflowY:'auto', maxHeight:'520px' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.25rem', flexShrink:0 }}>
                   {paso === 0 ? 'Selecciona la fecha de inicio' :
                    paso === 1 ? 'Selecciona inicio de vacaciones' :
                    paso === 2 ? 'Selecciona fin de vacaciones' :
                    paso === 3 ? 'Selecciona la fecha de cierre' :
                    'Selecciona días festivos'}
                 </p>
-                <div style={{ transform:'scale(1.05)', transformOrigin:'top center' }}>
+                <div style={{ transform:'scale(1.05)', transformOrigin:'top center', flexShrink:0 }}>
                   <MiniCalendario
                     seleccionado={valorActual}
                     inicio={inicio} vacIni={vacIni} vacFin={vacFin} cierre={cierre} festivos={festivos}
@@ -433,9 +445,83 @@ function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCan
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Botón eliminar expandible ────────────────────────────────────────────────
+function EliminarCicloBtn({ borrando, onClick }: { borrando: boolean; onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (leaveT.current) clearTimeout(leaveT.current)
+    enterT.current = setTimeout(() => setHov(true), 150)
+  }
+  function handleLeave() {
+    if (enterT.current) clearTimeout(enterT.current)
+    leaveT.current = setTimeout(() => setHov(false), 220)
+  }
+
+  const expandido = hov || borrando
+
+  return (
+    <>
+      <style>{`
+        @keyframes trashBounce {
+          0%   { transform: translateY(0) rotate(0deg) }
+          15%  { transform: translateY(-6px) rotate(-8deg) }
+          30%  { transform: translateY(0) rotate(6deg) }
+          45%  { transform: translateY(-4px) rotate(-5deg) }
+          60%  { transform: translateY(0) rotate(3deg) }
+          75%  { transform: translateY(-2px) rotate(-2deg) }
+          100% { transform: translateY(0) rotate(0deg) }
+        }
+        @keyframes borradoIn {
+          from { opacity:0; transform:scale(0.85) }
+          to   { opacity:1; transform:scale(1) }
+        }
+      `}</style>
+      <button
+        onClick={onClick}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        disabled={borrando}
+        style={{
+          display:'flex', alignItems:'center', justifyContent:'center',
+          gap: expandido ? '0.5rem' : '0',
+          height:'36px',
+          width: expandido ? 'auto' : '36px',
+          minWidth: expandido ? '145px' : '36px',
+          padding: expandido ? '0 1rem' : '0',
+          borderRadius: expandido ? '0.75rem' : '50%',
+          background: expandido ? '#fef2f2' : 'transparent',
+          border: expandido ? '1px solid #fecaca' : '1.5px solid #fca5a5',
+          color: '#dc2626',
+          cursor: borrando ? 'not-allowed' : 'pointer',
+          transition: 'all 0.32s cubic-bezier(0.4,0,0.2,1)',
+          overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
+        }}
+        >
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+          style={{ animation: borrando ? 'trashBounce 0.55s ease-in-out infinite' : 'none', flexShrink:0 }}>
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+        {expandido && (
+          <span style={{ fontSize:'0.8rem', fontWeight:600 }}>
+            {borrando ? 'Borrando...' : 'Eliminar ciclo'}
+          </span>
+        )}
+      </button>
+    </>
+  )
+}
+
 export default function CicloPage() {
   const [wizardAbierto, setWizardAbierto] = useState(false)
   const [modalEliminar, setModalEliminar] = useState(false)
+  const [borrando, setBorrando]           = useState(false)
+  const [borrado, setBorrado]             = useState(false)
   const [periodo, setPeriodo] = useState<{ inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] } | null>(null)
 
   function crearCiclo(data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) {
@@ -444,8 +530,10 @@ export default function CicloPage() {
   }
 
   function eliminarCiclo() {
-    setPeriodo(null)
     setModalEliminar(false)
+    setBorrando(true)
+    setTimeout(() => { setBorrando(false); setBorrado(true) }, 1400)
+    setTimeout(() => { setPeriodo(null); setBorrado(false) }, 2200)
   }
 
   const diasTotales = periodo ? diasEntre(periodo.inicio, periodo.cierre) : 0
@@ -489,15 +577,32 @@ export default function CicloPage() {
                   {formatFecha(periodo.inicio)} → {formatFecha(periodo.cierre)}
                 </span>
               </div>
-              <button onClick={() => setModalEliminar(true)}
-                style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', background:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca', borderRadius:'0.75rem', cursor:'pointer', fontSize:'0.8rem', fontWeight:600, transition:'background 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
-                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                </svg>
-                Eliminar ciclo
-              </button>
+              {/* Botón eliminar con animación */}
+              <style>{`
+                @keyframes trashBounce {
+                  0%   { transform: translateY(0) rotate(0deg) }
+                  15%  { transform: translateY(-6px) rotate(-8deg) }
+                  30%  { transform: translateY(0) rotate(6deg) }
+                  45%  { transform: translateY(-4px) rotate(-5deg) }
+                  60%  { transform: translateY(0) rotate(3deg) }
+                  75%  { transform: translateY(-2px) rotate(-2deg) }
+                  100% { transform: translateY(0) rotate(0deg) }
+                }
+                @keyframes borradoIn {
+                  from { opacity:0; transform:scale(0.85) }
+                  to   { opacity:1; transform:scale(1) }
+                }
+              `}</style>
+              {borrado ? (
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 1rem', background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0', borderRadius:'0.75rem', fontSize:'0.8rem', fontWeight:600, animation:'borradoIn 0.38s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                  <svg width="14" height="14" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Ciclo borrado
+                </div>
+              ) : (
+                <EliminarCicloBtn borrando={borrando} onClick={() => !borrando && setModalEliminar(true)} />
+              )}
             </div>
 
             {/* Card resumen con círculos */}
