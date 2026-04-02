@@ -39,7 +39,7 @@ export default function LoginPage() {
 
     // Éxito — activar spring de salida antes de navegar
     setExiting(true)
-    await new Promise(r => setTimeout(r, 600))
+    await new Promise(r => setTimeout(r, 450))
 
     const meta = data.user?.user_metadata
     if (meta?.primer_login === true) { router.push('/cambiar-password'); return }
@@ -87,7 +87,7 @@ export default function LoginPage() {
         }
         @keyframes loginOut {
           from { opacity:1; transform:translateY(0) scale(1); }
-          to   { opacity:0; transform:translateY(-24px) scale(1.03); }
+          to   { opacity:0; transform:translateY(-10px) scale(0.97); }
         }
         @keyframes fadeInPage {
           from { opacity:0; }
@@ -113,8 +113,9 @@ export default function LoginPage() {
         border:'1px solid rgba(255,255,255,0.32)',
         boxShadow:'0 24px 64px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
         padding:'2.5rem 2.25rem',
+        boxSizing:'border-box',
         animation: exiting
-          ? 'loginOut 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards'
+          ? 'loginOut 0.45s ease-in forwards'
           : 'loginIn 0.55s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
 
@@ -209,12 +210,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{ background:'rgba(220,38,38,0.15)', border:'1px solid rgba(220,38,38,0.35)', borderRadius:'0.75rem', padding:'0.625rem 1rem' }}>
-              <p style={{ fontSize:'0.8rem', color:'#fca5a5', margin:0, textAlign:'center' }}>{error}</p>
-            </div>
-          )}
+          {/* Error — reserva espacio para no deformar */}
+          <div style={{ minHeight:'2.25rem', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            {error && (
+              <div style={{ background:'rgba(220,38,38,0.15)', border:'1px solid rgba(220,38,38,0.35)', borderRadius:'0.75rem', padding:'0.5rem 1rem', width:'100%' }}>
+                <p style={{ fontSize:'0.8rem', color:'#fca5a5', margin:0, textAlign:'center' }}>{error}</p>
+              </div>
+            )}
+          </div>
 
           {/* Botón ingresar */}
           <button onClick={handleLogin} disabled={loading}
@@ -224,7 +227,7 @@ export default function LoginPage() {
             {loading ? 'Verificando...' : 'Iniciar sesión'}
           </button>
 
-          {/* Olvidé mi contraseña */}
+          {/* Olvé mi contraseña */}
           <button onClick={() => { setOlvidé(true); setResetEmail(email) }}
             style={{ fontSize:'0.775rem', fontWeight:500, color:'rgba(255,255,255,0.5)', background:'none', border:'none', cursor:'pointer', textAlign:'center', transition:'color 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.color='rgba(255,255,255,0.85)')}
