@@ -448,7 +448,7 @@ export default function Header({ titulo }: { titulo: string }) {
   return (
     <div className="px-4 pt-4 sticky top-0 z-40">
       <header className="flex items-center justify-between px-6 py-3 rounded-2xl"
-        style={{ background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 2px 12px rgba(60,80,120,0.07)' }}>
+        style={{ background: 'rgba(99,130,180,0.18)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.22)', boxShadow: '0 4px 32px rgba(60,80,120,0.10)' }}>
 
         <h1 className="text-base font-semibold tracking-tight" style={{ color: '#1e3a5f', fontFamily: 'DM Sans, sans-serif' }}>
           {titulo}
