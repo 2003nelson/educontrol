@@ -1,5 +1,6 @@
 'use client'
-import { useState, useRef,} from 'react'
+import { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
 type Vista         = 'semestres' | 'grupos' | 'alumnos' | 'historial'
@@ -181,6 +182,318 @@ function VolverBtn({ onClick }: { onClick: () => void }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Modal editar calificación ────────────────────────────────────────────────
+function ModalEditarCalif({
+  alumno,
+  onCerrar,
+}: {
+  alumno: typeof reprobadosMock[0]
+  onCerrar: () => void
+}) {
+  const [materiaIdx, setMateriaIdx]   = useState(0)
+  const [califSelec, setCalifSelec]   = useState(alumno.materias[0].promedio)
+  const [paso, setPaso]               = useState<'editar'|'confirmar'>('editar')
+  const [pasoCerrando, setPasoCerrando] = useState(false)
+  const [cerrando, setCerrando]       = useState(false)
+
+  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
+
+  function irConfirmar() {
+    setPasoCerrando(true)
+    setTimeout(() => { setPaso('confirmar'); setPasoCerrando(false) }, 220)
+  }
+  function volverEditar() {
+    setPasoCerrando(true)
+    setTimeout(() => { setPaso('editar'); setPasoCerrando(false) }, 220)
+  }
+
+  const materiaActual = alumno.materias[materiaIdx]
+  const backdropAnim  = cerrando ? 'rBackdropOut 0.38s ease forwards' : 'rBackdropIn 0.25s ease'
+  const modalAnim     = cerrando ? 'rSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'rSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)'
+  const colorCalif    = califSelec >= 60 ? '#16a34a' : '#dc2626'
+  const bgCalif       = califSelec >= 60 ? '#f0fdf4' : '#fef2f2'
+
+  const pasoStyle: React.CSSProperties = {
+    opacity:   pasoCerrando ? 0 : 1,
+    transform: pasoCerrando
+      ? (paso === 'editar' ? 'translateX(-16px) scale(0.97)' : 'translateX(16px) scale(0.97)')
+      : 'translateX(0) scale(1)',
+    transition: pasoCerrando
+      ? 'opacity 0.18s ease, transform 0.18s ease'
+      : 'opacity 0.32s cubic-bezier(0.34,1.56,0.64,1), transform 0.32s cubic-bezier(0.34,1.56,0.64,1)',
+  }
+
+  if (typeof window === 'undefined') return null
+
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes rBackdropIn  { from{opacity:0} to{opacity:1} }
+        @keyframes rBackdropOut { from{opacity:1} to{opacity:0} }
+        @keyframes rSpringIn  { from{opacity:0;transform:scale(0.92) translateY(14px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes rSpringOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.92) translateY(14px)} }
+      `}</style>
+      <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation:backdropAnim }}/>
+      <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ background:'white', borderRadius:'1.25rem', width:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.2)', overflow:'hidden', pointerEvents:'all', animation:modalAnim }}>
+
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.5rem', borderBottom:'1px solid #f1f5f9' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+              <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#fef2f2', border:'1px solid #fecaca', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', fontWeight:700, color:'#dc2626', flexShrink:0 }}>
+                {alumno.nombre.charAt(0)}
+              </div>
+              <div>
+                <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>{alumno.nombre}</p>
+                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>Grupo {alumno.grupo} · {alumno.materias.length} materia{alumno.materias.length !== 1 ? 's' : ''} reprobada{alumno.materias.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <button onClick={cerrar}
+              style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:700, fontSize:'0.85rem', transition:'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background='#e2e8f0')}
+              onMouseLeave={e => (e.currentTarget.style.background='#f1f5f9')}>✕</button>
+          </div>
+
+          {/* Selector materia */}
+          {alumno.materias.length > 1 && paso === 'editar' && (
+            <div style={{ padding:'0.75rem 1.5rem', display:'flex', gap:'0.4rem', flexWrap:'wrap', borderBottom:'1px solid #f1f5f9' }}>
+              {alumno.materias.map((m, i) => (
+                <button key={i} onClick={() => { setMateriaIdx(i); setCalifSelec(m.promedio) }}
+                  style={{ fontSize:'0.7rem', fontWeight: materiaIdx===i ? 700 : 500, padding:'0.25rem 0.625rem', borderRadius:'9999px', border: materiaIdx===i ? '1.5px solid #dc2626' : '1px solid #e2e8f0', background: materiaIdx===i ? '#fef2f2' : 'white', color: materiaIdx===i ? '#dc2626' : '#64748b', cursor:'pointer', transition:'all 0.15s' }}>
+                  {m.materia}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Body con transición entre pasos */}
+          <div style={{ padding:'1.5rem', ...pasoStyle }}>
+
+            {paso === 'editar' ? (
+              <>
+                <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem', textAlign:'center' }}>¿Deseas aprobar a</p>
+                <p style={{ fontSize:'1rem', fontWeight:700, color:'#2563eb', margin:'0 0 0.25rem', textAlign:'center' }}>
+                  &ldquo;{alumno.nombre.split(',')[0]}&rdquo;
+                </p>
+                <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0 0 1.25rem', textAlign:'center' }}>en {materiaActual.materia}?</p>
+
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem', marginBottom:'1.25rem' }}>
+                  <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:bgCalif, border:`3px solid ${colorCalif}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}>
+                    <span style={{ fontSize:'1.5rem', fontWeight:800, color:colorCalif, fontFamily:'Outfit,sans-serif' }}>{califSelec}</span>
+                  </div>
+                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:colorCalif, margin:0 }}>
+                    {califSelec >= 60 ? '✓ Calificación aprobatoria' : '✗ Calificación reprobatoria'}
+                  </p>
+                </div>
+
+                <div style={{ marginBottom:'1.5rem' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem' }}>
+                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>0</span>
+                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>50</span>
+                    <span style={{ fontSize:'0.7rem', color:'#16a34a', fontWeight:600 }}>60 mín.</span>
+                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>100</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={califSelec}
+                    onChange={e => setCalifSelec(Number(e.target.value))}
+                    style={{ width:'100%', accentColor:colorCalif, cursor:'pointer', height:'6px' }}
+                  />
+                </div>
+
+                <div style={{ display:'flex', gap:'0.75rem' }}>
+                  <button onClick={cerrar}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background='white')}>
+                    Cancelar
+                  </button>
+                  <button onClick={irConfirmar}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: califSelec >= 60 ? '#16a34a' : '#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = califSelec >= 60 ? '#15803d' : '#2563eb' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = califSelec >= 60 ? '#16a34a' : '#1e3a5f' }}>
+                    {califSelec >= 60 ? 'Aprobar →' : 'Guardar →'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Paso confirmación */}
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.875rem', marginBottom:'1.5rem' }}>
+                  <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:bgCalif, border:`2.5px solid ${colorCalif}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:'1.25rem', fontWeight:800, color:colorCalif, fontFamily:'Outfit,sans-serif' }}>{califSelec}</span>
+                  </div>
+                  <div style={{ textAlign:'center' }}>
+                    <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem' }}>
+                      ¿Estás seguro?
+                    </p>
+                    <p style={{ fontSize:'0.8125rem', color:'#475569', margin:'0 0 0.25rem' }}>
+                      Asignarás la calificación <span style={{ fontWeight:700, color:colorCalif }}>{califSelec}</span> a
+                    </p>
+                    <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem' }}>
+                      &ldquo;{alumno.nombre}&rdquo;
+                    </p>
+                    <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:0 }}>en {materiaActual.materia}</p>
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', gap:'0.75rem' }}>
+                  <button onClick={volverEditar}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background='white')}>
+                    ← Editar
+                  </button>
+                  <button onClick={cerrar}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: califSelec >= 60 ? '#16a34a' : '#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = califSelec >= 60 ? '#15803d' : '#2563eb' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = califSelec >= 60 ? '#16a34a' : '#1e3a5f' }}>
+                    Sí, guardar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+
+// ─── Tabla alumnos reprobados ─────────────────────────────────────────────────
+const reprobadosMock = [
+  { id:'r1', nombre:'Ramírez Vega, Gabriel',       grupo:'101', semestre:1, materias:[{materia:'Matemáticas I', promedio:58},{materia:'Historia I', promedio:45}] },
+  { id:'r2', nombre:'Martínez Ruiz, Carlos',        grupo:'102', semestre:1, materias:[{materia:'Español I', promedio:55}] },
+  { id:'r3', nombre:'Hernández Cruz, Fernanda',     grupo:'301', semestre:3, materias:[{materia:'Química I', promedio:52},{materia:'Física I', promedio:48},{materia:'Inglés III', promedio:57}] },
+  { id:'r4', nombre:'Torres Jiménez, Roberto',      grupo:'301', semestre:3, materias:[{materia:'Física I', promedio:48}] },
+  { id:'r5', nombre:'Gómez Sánchez, Patricia',      grupo:'501', semestre:5, materias:[{materia:'Inglés V', promedio:57},{materia:'Biología II', promedio:53}] },
+  { id:'r6', nombre:'Flores Méndez, Andrés',        grupo:'102', semestre:1, materias:[{materia:'Historia I', promedio:45}] },
+  { id:'r7', nombre:'Castillo Ríos, Daniela',       grupo:'502', semestre:5, materias:[{materia:'Biología II', promedio:53}] },
+  { id:'r8', nombre:'Morales López, Jesús',         grupo:'303', semestre:3, materias:[{materia:'Matemáticas III', promedio:50},{materia:'Historia Universal', promedio:47}] },
+]
+
+function ReprobadosTable() {
+  const [busqueda, setBusqueda] = useState('')
+  const [searchExp, setSearchExp] = useState(false)
+  const [alumnoEditando, setAlumnoEditando] = useState<typeof reprobadosMock[0] | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const filtrados = reprobadosMock.filter(a =>
+    a.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    a.grupo.includes(busqueda) ||
+    a.materias.some(m => m.materia.toLowerCase().includes(busqueda.toLowerCase()))
+  )
+
+  return (
+    <div style={{ background:'white', borderRadius:'1.25rem', border:'1px solid #e2e8f0', overflow:'hidden', animation:'cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) 0.25s both' }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem 1.25rem', borderBottom:'1px solid #f1f5f9' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+          <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#dc2626', flexShrink:0 }}/>
+          <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Alumnos en riesgo de reprobar</p>
+          <span style={{ fontSize:'0.7rem', fontWeight:600, padding:'0.2rem 0.625rem', borderRadius:'9999px', background:'#fef2f2', color:'#dc2626', border:'1px solid #fecaca' }}>
+            {filtrados.length} alumno{filtrados.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* Buscador colapsable */}
+        <div
+          onMouseEnter={() => { setSearchExp(true); setTimeout(() => inputRef.current?.focus(), 50) }}
+          onMouseLeave={() => { if (!busqueda) setSearchExp(false) }}
+          style={{ display:'flex', alignItems:'center', height:'34px', width: searchExp ? '220px' : '34px', borderRadius:'0.75rem', border:'1px solid #e2e8f0', background:'#f8fafc', transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s', overflow:'hidden', cursor: searchExp ? 'text' : 'pointer', boxShadow: searchExp ? '0 0 0 2px #bfdbfe' : 'none', flexShrink:0 }}>
+          <div style={{ width:'34px', height:'34px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <input ref={inputRef} type="text" placeholder="Buscar alumno o grupo..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            onFocus={() => setSearchExp(true)}
+            onBlur={() => { if (!busqueda) setSearchExp(false) }}
+            style={{ border:'none', outline:'none', fontSize:'0.775rem', color:'#334155', background:'transparent', width:'calc(100% - 34px)', paddingRight:'0.5rem', opacity: searchExp ? 1 : 0, transition:'opacity 0.2s' }}
+          />
+          {busqueda && searchExp && (
+            <button onClick={() => setBusqueda('')}
+              style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', paddingRight:'0.375rem', fontSize:'0.875rem', lineHeight:1, flexShrink:0 }}>✕</button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabla con scroll a >6 filas */}
+      <div style={{ maxHeight:`calc(6 * 52px + 42px)`, overflowY:'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'white', zIndex:1 }}>
+              {['#','Alumno','Grupo','Materias reprobadas','Asig.','Acciones'].map(col => (
+                <th key={col} style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtrados.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding:'2rem', textAlign:'center', fontSize:'0.8125rem', color:'#94a3b8' }}>
+                  No se encontraron alumnos
+                </td>
+              </tr>
+            ) : filtrados.map((a, i) => (
+              <tr key={a.id} style={{ borderBottom:'1px solid #f8fafc' }}
+                onMouseEnter={e => (e.currentTarget.style.background='#fff5f5')}
+                onMouseLeave={e => (e.currentTarget.style.background='white')}>
+                <td style={{ padding:'0.75rem 1rem', fontSize:'0.75rem', color:'#94a3b8' }}>{i+1}</td>
+                <td style={{ padding:'0.75rem 1rem' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+                    <div style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#fef2f2', border:'1px solid #fecaca', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700, color:'#dc2626', flexShrink:0 }}>
+                      {a.nombre.charAt(0)}
+                    </div>
+                    <span style={{ fontSize:'0.8rem', fontWeight:500, color:'#1e3a5f' }}>{a.nombre}</span>
+                  </div>
+                </td>
+                <td style={{ padding:'0.75rem 1rem' }}>
+                  <span style={{ fontSize:'0.75rem', fontWeight:700, padding:'0.2rem 0.5rem', borderRadius:'0.375rem', background:'#f1f5f9', color:'#475569', fontFamily:'Outfit,sans-serif' }}>{a.grupo}</span>
+                </td>
+                <td style={{ padding:'0.75rem 1rem', maxWidth:'240px' }}>
+                  <div style={{ display:'flex', gap:'0.3rem', overflowX:'auto', paddingBottom:'2px', scrollbarWidth:'none' }}>
+                    {a.materias.map((m, i) => (
+                      <span key={i} style={{ fontSize:'0.68rem', fontWeight:600, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:'#fff5f5', color:'#dc2626', border:'1px solid #fecaca', whiteSpace:'nowrap', flexShrink:0 }}>
+                        {m.materia} · {m.promedio}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td style={{ padding:'0.75rem 1rem', textAlign:'center' }}>
+                  <span style={{ fontSize:'0.875rem', fontWeight:800, color:'#dc2626', fontFamily:'Outfit,sans-serif' }}>
+                    {a.materias.length}
+                  </span>
+                </td>
+                <td style={{ padding:'0.75rem 1rem' }}>
+                  <button onClick={() => setAlumnoEditando(a)}
+                    title="Editar calificación"
+                    style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#eff6ff', border:'1px solid #bfdbfe', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#dbeafe'; e.currentTarget.style.borderColor='#2563eb' }}
+                    onMouseLeave={e => { e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#bfdbfe' }}>
+                    <span style={{ fontSize:'0.65rem', fontWeight:800, color:'#2563eb', fontFamily:'Outfit,sans-serif' }}>E</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {alumnoEditando && (
+        <ModalEditarCalif
+          alumno={alumnoEditando}
+          onCerrar={() => setAlumnoEditando(null)}
+        />
+      )}
+    </div>
+  )
+}
+
 export default function SeguimientoPage() {
   const [vista,setVista]                   = useState<Vista>('semestres')
   const [semestreActivo,setSemestreActivo] = useState<number|null>(null)
@@ -338,6 +651,9 @@ export default function SeguimientoPage() {
                 </button>
               ))}
             </div>
+
+            {/* ── Tabla alumnos reprobados ── */}
+            <ReprobadosTable />
           </div>
         )}
 

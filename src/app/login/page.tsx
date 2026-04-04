@@ -19,8 +19,8 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setFadeOut(true), 1500)
-    const hideTimer = setTimeout(() => setSplash(false), 2000)
+    const fadeTimer = setTimeout(() => setFadeOut(true), 1600)
+    const hideTimer = setTimeout(() => setSplash(false), 2200)
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
   }, [])
 
@@ -62,15 +62,88 @@ export default function LoginPage() {
   if (splash) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center"
-        style={{ background:'white', opacity: fadeOut ? 0 : 1, transition:'opacity 0.5s ease-in-out' }}>
-        <div style={{ opacity: fadeOut ? 0 : 1, transform: fadeOut ? 'scale(0.95)' : 'scale(1)', transition:'opacity 0.5s ease-in-out, transform 0.5s ease-in-out', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px' }}>
-          <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <div style={{ position:'absolute', width:'90px', height:'90px', borderRadius:'28px', background:'radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(59,130,246,0) 70%)', filter:'blur(8px)', transform:'scale(1.4)' }}/>
-            <div style={{ width:'64px', height:'64px', borderRadius:'18px', background:'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(37,99,235,0.35)', position:'relative' }}>
-              <span style={{ color:'white', fontSize:'28px', fontWeight:700, fontFamily:'Outfit, sans-serif' }}>E</span>
+        style={{
+          backgroundImage:'url(/fondo.png)',
+          backgroundSize:'cover', backgroundPosition:'center', backgroundRepeat:'no-repeat',
+          opacity: fadeOut ? 0 : 1,
+          transition:'opacity 0.65s ease-in-out',
+        }}>
+        <style>{`
+          @keyframes splashIn {
+            from { opacity:0; transform:scale(0.88) translateY(16px); }
+            to   { opacity:1; transform:scale(1) translateY(0); }
+          }
+          @keyframes splashPulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4), 0 8px 32px rgba(37,99,235,0.35); }
+            50%      { box-shadow: 0 0 0 12px rgba(59,130,246,0), 0 8px 32px rgba(37,99,235,0.35); }
+          }
+        `}</style>
+
+        {/* Overlay */}
+        <div style={{ position:'absolute', inset:0, background:'rgba(15,23,42,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}/>
+
+        {/* Contenido centrado */}
+        <div style={{
+          position:'relative', zIndex:1,
+          display:'flex', flexDirection:'column', alignItems:'center', gap:'1.25rem',
+          opacity: fadeOut ? 0 : 1,
+          transform: fadeOut ? 'scale(0.95) translateY(-8px)' : 'scale(1) translateY(0)',
+          transition:'opacity 0.65s ease-in-out, transform 0.65s ease-in-out',
+          animation:'splashIn 0.55s cubic-bezier(0.34,1.56,0.64,1)',
+        }}>
+          {/* Card crystal */}
+          <div style={{
+            background:'rgba(255,255,255,0.14)',
+            backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)',
+            borderRadius:'1.75rem',
+            border:'1px solid rgba(255,255,255,0.28)',
+            boxShadow:'0 24px 64px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.35)',
+            padding:'2.5rem 3rem',
+            display:'flex', flexDirection:'column', alignItems:'center', gap:'1.125rem',
+          }}>
+            {/* Logo */}
+            <div style={{ position:'relative' }}>
+              <div style={{
+                position:'absolute', inset:'-8px', borderRadius:'26px',
+                background:'rgba(59,130,246,0.2)',
+                filter:'blur(10px)',
+              }}/>
+              <div style={{
+                width:'64px', height:'64px', borderRadius:'18px',
+                background:'linear-gradient(135deg,#3b82f6,#2563eb)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                position:'relative',
+                animation:'splashPulse 2s ease-in-out infinite',
+              }}>
+                <span style={{ color:'white', fontSize:'28px', fontWeight:700, fontFamily:'Outfit,sans-serif' }}>E</span>
+              </div>
+            </div>
+
+            <div style={{ textAlign:'center' }}>
+              <p style={{ fontSize:'1.375rem', fontWeight:700, color:'white', fontFamily:'Outfit,sans-serif', margin:0, letterSpacing:'-0.3px', textShadow:'0 1px 8px rgba(0,0,0,0.2)' }}>
+                EduControl
+              </p>
+              <p style={{ fontSize:'0.8rem', color:'rgba(255,255,255,0.55)', margin:'0.375rem 0 0' }}>
+                Sistema de administración escolar
+              </p>
+            </div>
+
+            {/* Loader dots */}
+            <div style={{ display:'flex', gap:'0.4rem', marginTop:'0.25rem' }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width:'6px', height:'6px', borderRadius:'50%',
+                  background:'rgba(255,255,255,0.5)',
+                  animation:`splashPulse 1.2s ease-in-out ${i*0.2}s infinite`,
+                  boxShadow:'none',
+                }}/>
+              ))}
             </div>
           </div>
-          <p style={{ fontSize:'20px', fontWeight:700, color:'#1e3a5f', fontFamily:'Outfit, sans-serif', letterSpacing:'-0.3px' }}>EduControl</p>
+
+          <p style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.3)', margin:0 }}>
+            Dinoti Platforms
+          </p>
         </div>
       </div>
     )
@@ -82,7 +155,7 @@ export default function LoginPage() {
       style={{ backgroundImage:'url(/fondo.png)', backgroundSize:'cover', backgroundPosition:'center', backgroundRepeat:'no-repeat', backgroundAttachment:'fixed' }}>
       <style>{`
         @keyframes loginIn {
-          from { opacity:0; transform:translateY(20px) scale(0.97); }
+          from { opacity:0; transform:translateY(24px) scale(0.96); }
           to   { opacity:1; transform:translateY(0) scale(1); }
         }
         @keyframes loginOut {
@@ -105,22 +178,22 @@ export default function LoginPage() {
       {/* Card */}
       <div style={{
         position:'relative', zIndex:10,
-        width:'100%', maxWidth:'420px', margin:'0 1rem',
+        width:'100%', maxWidth:'360px', margin:'0 1rem',
         background:'rgba(255,255,255,0.18)',
         backdropFilter:'blur(24px)',
         WebkitBackdropFilter:'blur(24px)',
         borderRadius:'1.5rem',
         border:'1px solid rgba(255,255,255,0.32)',
         boxShadow:'0 24px 64px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
-        padding:'2.5rem 2.25rem',
+        padding:'2rem 1.875rem',
         boxSizing:'border-box',
         animation: exiting
           ? 'loginOut 0.45s ease-in forwards'
-          : 'loginIn 0.55s cubic-bezier(0.34,1.56,0.64,1)',
+          : 'loginIn 0.7s cubic-bezier(0.22,1,0.36,1)',
       }}>
 
         {/* Logo */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'2rem' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:'1.5rem' }}>
           <div style={{ width:'56px', height:'56px', borderRadius:'1rem', background:'linear-gradient(135deg,#3b82f6,#2563eb)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 24px rgba(37,99,235,0.45)', marginBottom:'0.875rem' }}>
             <span style={{ color:'white', fontSize:'1.5rem', fontWeight:700, fontFamily:'Outfit,sans-serif' }}>E</span>
           </div>
@@ -227,7 +300,7 @@ export default function LoginPage() {
             {loading ? 'Verificando...' : 'Iniciar sesión'}
           </button>
 
-          {/* Olvé mi contraseña */}
+          {/* Olvidé mi contraseña */}
           <button onClick={() => { setOlvidé(true); setResetEmail(email) }}
             style={{ fontSize:'0.775rem', fontWeight:500, color:'rgba(255,255,255,0.5)', background:'none', border:'none', cursor:'pointer', textAlign:'center', transition:'color 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.color='rgba(255,255,255,0.85)')}
