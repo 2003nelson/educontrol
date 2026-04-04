@@ -79,115 +79,13 @@ const iconoTipo = {
   aviso:         { bg: '#fffbeb', color: '#d97706', svg: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 }
 
-const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const DIAS_SEM = ['L','M','X','J','V','S','D']
+
 
 function colorNota(v: number) { return v >= 70 ? '#16a34a' : '#dc2626' }
 function bgNota(v: number)    { return v >= 70 ? '#f0fdf4' : '#fef2f2' }
 
-// ─── Calendario de asistencia ─────────────────────────────────────────────────
-function CalendarioAsistencia({ alumno, onVolver }: { alumno: Alumno; onVolver: () => void }) {
-  const mesesDisponibles = [...new Set(alumno.historialDias.map(d => d.fecha.slice(0, 7)))].sort()
-  const [mesActual, setMesActual] = useState(mesesDisponibles[0] ?? '2026-02')
-
-  const idxMes = mesesDisponibles.indexOf(mesActual)
-  const [anio, mes] = mesActual.split('-').map(Number)
-  const primerDia   = new Date(anio, mes - 1, 1)
-  const diasEnMes   = new Date(anio, mes, 0).getDate()
-  const offset      = (primerDia.getDay() + 6) % 7
-
-  const diasDelMes = alumno.historialDias.filter(d => d.fecha.startsWith(mesActual))
-  const mapaEstado: Record<string, DiaAsistencia['estado']> = {}
-  diasDelMes.forEach(d => { mapaEstado[d.fecha] = d.estado })
-
-  const totalClase   = alumno.historialDias.filter(d => d.estado !== 'noClase').length
-  const presentes    = alumno.historialDias.filter(d => d.estado === 'P').length
-  const ausentes     = alumno.historialDias.filter(d => d.estado === 'A').length
-  const justificados = alumno.historialDias.filter(d => d.estado === 'J').length
-
-  const coloresDia: Record<DiaAsistencia['estado'], { bg: string; color: string; border: string }> = {
-    P:       { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
-    A:       { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
-    J:       { bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
-    noClase: { bg: '#f8fafc', color: '#cbd5e1', border: '#f1f5f9' },
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: '1.25rem 1.25rem 0 0', padding: '1.25rem 1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-          <button onClick={onVolver} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
-            <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <div>
-            <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'white', margin: 0 }}>Historial de asistencia</p>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)', margin: '0.125rem 0 0' }}>{alumno.nombre}</p>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.5rem' }}>
-          {[
-            { label: 'Días clase', value: totalClase,    color: 'rgba(255,255,255,0.9)' },
-            { label: 'Presentes',  value: presentes,     color: '#86efac' },
-            { label: 'Ausentes',   value: ausentes,      color: '#fca5a5' },
-            { label: 'Justific.',  value: justificados,  color: '#fde68a' },
-          ].map(s => (
-            <div key={s.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '0.625rem', padding: '0.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '1.1rem', fontWeight: 700, color: s.color, margin: 0, fontFamily: 'Outfit, sans-serif' }}>{s.value}</p>
-              <p style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ overflowY: 'auto', flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => idxMes > 0 && setMesActual(mesesDisponibles[idxMes - 1])} disabled={idxMes === 0}
-            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === 0 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === 0 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', fontFamily: 'Outfit, sans-serif' }}>{MESES_ES[mes - 1]} {anio}</p>
-          <button onClick={() => idxMes < mesesDisponibles.length - 1 && setMesActual(mesesDisponibles[idxMes + 1])} disabled={idxMes === mesesDisponibles.length - 1}
-            style={{ width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: idxMes === mesesDisponibles.length - 1 ? '#f1f5f9' : '#e2e8f0', cursor: idxMes === mesesDisponibles.length - 1 ? 'default' : 'pointer', color: '#475569', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
-          {DIAS_SEM.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', padding: '2px 0', textTransform: 'uppercase' }}>{d}</div>
-          ))}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px' }}>
-          {Array.from({ length: offset }).map((_, i) => <div key={`e-${i}`} />)}
-          {Array.from({ length: diasEnMes }, (_, i) => {
-            const day = i + 1
-            const iso = `${anio}-${String(mes).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-            const est = mapaEstado[iso]
-            const col = est ? coloresDia[est] : null
-            const esFinSemana = [0, 6].includes(new Date(iso).getDay())
-            return (
-              <div key={day} style={{ aspectRatio: '1', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: col ? 700 : 400, background: col ? col.bg : esFinSemana ? 'transparent' : '#f8fafc', color: col ? col.color : esFinSemana ? '#e2e8f0' : '#94a3b8', border: col ? `1px solid ${col.border}` : '1px solid transparent', position: 'relative' }}>
-                {day}
-                {est && est !== 'noClase' && <span style={{ position: 'absolute', bottom: '2px', right: '2px', width: '5px', height: '5px', borderRadius: '50%', background: col!.color }} />}
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {[{ color: '#16a34a', bg: '#f0fdf4', label: 'Presente' }, { color: '#dc2626', bg: '#fef2f2', label: 'Ausente' }, { color: '#d97706', bg: '#fffbeb', label: 'Justificado' }, { color: '#cbd5e1', bg: '#f8fafc', label: 'No hubo clase' }].map(l => (
-            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: l.bg, border: `1px solid ${l.color}20` }} />
-              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{l.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Card boleta alumno ───────────────────────────────────────────────────────
 type ParcialKey = 1 | 2 | 3 | 'final'
 
-// ─── Botón ayuda expandible ───────────────────────────────────────────────────
 function AyudaBtn() {
   const [hov, setHov] = useState(false)
   const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -231,20 +129,11 @@ function AyudaBtn() {
 }
 
 function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void }) {
-  const [vistaCalendario, setVistaCalendario] = useState(false)
-  const [parcialActivo, setParcialActivo]     = useState<ParcialKey>(1)
-  const [btnExpandido, setBtnExpandido]       = useState(false)
-  const btnLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const btnEnterTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function handleBtnEnter() {
-    if (btnLeaveTimer.current) clearTimeout(btnLeaveTimer.current)
-    btnEnterTimer.current = setTimeout(() => setBtnExpandido(true), 120)
-  }
-  function handleBtnLeave() {
-    if (btnEnterTimer.current) clearTimeout(btnEnterTimer.current)
-    btnLeaveTimer.current = setTimeout(() => setBtnExpandido(false), 200)
-  }
+  const [parcialActivo, setParcialActivo] = useState<ParcialKey>(1)
+  const [parcialDir, setParcialDir]       = useState<'der'|'izq'>('der')
+  const [parcialVis, setParcialVis]       = useState(true)
+  const [descargando, setDescargando]     = useState(false)
+  const [descargado,  setDescargado]      = useState(false)
 
   const tabs: { key: ParcialKey; label: string }[] = [
     { key: 1,       label: '1er Parcial' },
@@ -252,192 +141,99 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
     { key: 3,       label: '3er Parcial' },
     { key: 'final', label: 'Final'       },
   ]
+  const tabIdx = tabs.findIndex(t => t.key === parcialActivo)
 
-  // Datos del parcial activo
+  function cambiarParcial(key: ParcialKey) {
+    if (key === parcialActivo) return
+    const newIdx = tabs.findIndex(t => t.key === key)
+    setParcialDir(newIdx > tabIdx ? 'der' : 'izq')
+    setParcialVis(false)
+    setTimeout(() => { setParcialActivo(key); setParcialVis(true) }, 180)
+  }
+
   const calActiva = parcialActivo === 'final'
     ? alumno.promedioFinal
     : alumno.calificaciones.find(c => c.parcial === parcialActivo)?.valor ?? 0
 
-  const asistActiva = parcialActivo === 'final'
-    ? alumno.asistenciaFinal
-    : alumno.asistencia.find(a => a.parcial === parcialActivo)?.porcentaje ?? 0
-
-  // Faltas aproximadas por parcial (30 días de clase por parcial aprox)
-  const diasPorParcial = 30
-  const faltasParcial = parcialActivo === 'final'
-    ? alumno.faltas
-    : Math.round((1 - asistActiva / 100) * diasPorParcial)
-
-  const [descargando, setDescargando] = useState(false)
-  const [descargado,  setDescargado]  = useState(false)
-
   function handleDescargar() {
     if (descargando || descargado) return
     setDescargando(true)
-    setTimeout(() => {
-      setDescargando(false)
-      setDescargado(true)
-      setTimeout(() => setDescargado(false), 2500)
-    }, 1800)
+    setTimeout(() => { setDescargando(false); setDescargado(true); setTimeout(() => setDescargado(false), 2500) }, 1800)
   }
 
   if (typeof window === 'undefined') return null
 
   return createPortal(
-    <div onClick={onCerrar} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'backdropAlumnoIn 0.3s ease' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:'backdropAlumnoIn 0.3s ease' }}>
       <style>{`
-        @keyframes cardAlumnoIn {
-          from { opacity: 0; transform: scale(0.92) translateY(12px); }
-          to   { opacity: 1; transform: scale(1)    translateY(0);    }
-        }
-        @keyframes backdropAlumnoIn { from { opacity:0 } to { opacity:1 } }
+        @keyframes cardAlumnoIn { from{opacity:0;transform:scale(0.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes backdropAlumnoIn { from{opacity:0} to{opacity:1} }
       `}</style>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '1.25rem', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '520px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'cardAlumnoIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', width:'400px', display:'flex', flexDirection:'column', overflow:'hidden', animation:'cardAlumnoIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
-        {vistaCalendario
-          ? <CalendarioAsistencia alumno={alumno} onVolver={() => setVistaCalendario(false)} />
-          : (
-            <>
-              {/* Header */}
-              <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: '1.25rem 1.25rem 0 0', padding: '1.25rem 1.5rem', position: 'relative' }}>
-                <button onClick={onCerrar} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', width: '28px', height: '28px', borderRadius: '50%', color: 'white', fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        {/* Header gris */}
+        <div style={{ background:'linear-gradient(135deg,#475569,#64748b)', borderRadius:'1.25rem 1.25rem 0 0', padding:'1.25rem 1.5rem 1rem', position:'relative' }}>
+          <button onClick={onCerrar} style={{ position:'absolute', top:'1rem', right:'1rem', background:'rgba(255,255,255,0.2)', border:'none', cursor:'pointer', width:'28px', height:'28px', borderRadius:'50%', color:'white', fontSize:'1rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
-                    {alumno.nombre.charAt(0)}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{alumno.nombre}</p>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
-                      <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>Grupo {alumno.grupo}</span>
-                      <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.2)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontWeight: 600 }}>{alumno.semestre}° Semestre</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tabs parciales */}
-                <div style={{ display: 'flex', gap: '0.375rem' }}>
-                  {tabs.map(t => (
-                    <button key={t.key} onClick={() => setParcialActivo(t.key)}
-                      style={{ flex: 1, padding: '0.375rem 0', fontSize: '0.7rem', fontWeight: 600, borderRadius: '0.5rem', border: 'none', cursor: 'pointer', transition: 'all 0.15s', background: parcialActivo === t.key ? 'white' : 'rgba(255,255,255,0.15)', color: parcialActivo === t.key ? '#1e3a5f' : 'rgba(255,255,255,0.8)' }}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
+          <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem' }}>
+            <div style={{ width:'44px', height:'44px', borderRadius:'0.75rem', background:'rgba(255,255,255,0.92)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', fontWeight:800, color:'#475569', flexShrink:0, fontFamily:'Outfit,sans-serif' }}>
+              {alumno.semestre}
+            </div>
+            <div>
+              <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'white', margin:0, fontFamily:'Outfit,sans-serif' }}>{alumno.nombre}</p>
+              <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.3rem' }}>
+                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.2)', color:'white', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>Grupo {alumno.grupo}</span>
+                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.2)', color:'white', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>{alumno.semestre}° Semestre</span>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Cuerpo */}
-              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Slide pill menu parciales — fuera del header */}
+        <div style={{ padding:'0.75rem 1.5rem', borderBottom:'1px solid #f1f5f9' }}>
+          <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'0.875rem', padding:'3px' }}>
+            <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(${100/4}% - 2px)`, left:`calc(${tabIdx*(100/4)}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', transition:'left 0.3s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+            {tabs.map(t => (
+              <button key={String(t.key)} onClick={() => cambiarParcial(t.key)}
+                style={{ position:'relative', zIndex:1, flex:1, padding:'0.4rem 0', fontSize:'0.7rem', fontWeight: parcialActivo===t.key ? 700 : 500, color: parcialActivo===t.key ? '#1e3a5f' : '#94a3b8', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                {/* Calificación */}
-                <div style={{ background: bgNota(calActiva), borderRadius: '1rem', padding: '1.25rem', textAlign: 'center', border: `1px solid ${calActiva >= 70 ? '#bbf7d0' : '#fecaca'}` }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.5rem' }}>
-                    Calificación — {tabs.find(t => t.key === parcialActivo)?.label}
-                  </p>
-                  <p style={{ fontSize: '3.5rem', fontWeight: 700, color: colorNota(calActiva), margin: 0, fontFamily: 'Outfit, sans-serif', lineHeight: 1 }}>
-                    {calActiva}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: colorNota(calActiva), margin: '0.5rem 0 0', fontWeight: 600 }}>
-                    {calActiva >= 90 ? 'Excelente' : calActiva >= 70 ? 'Aprobado' : 'Reprobado'}
-                  </p>
-                </div>
+        {/* Cuerpo */}
+        <div style={{ padding:'1.25rem 1.5rem 1.5rem' }}>
+          <div style={{
+            opacity:   parcialVis ? 1 : 0,
+            transform: parcialVis ? 'translateX(0) scale(1)' : `translateX(${parcialDir==='der'?'14px':'-14px'}) scale(0.97)`,
+            transition: parcialVis ? 'opacity 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'opacity 0.14s ease, transform 0.14s ease',
+          }}>
+            <div style={{ background: bgNota(calActiva), borderRadius:'1rem', padding:'2rem', textAlign:'center', border:`1px solid ${calActiva>=60?'#bbf7d0':'#fecaca'}`, marginBottom:'1rem' }}>
+              <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.625rem' }}>
+                {tabs.find(t=>t.key===parcialActivo)?.label}
+              </p>
+              <p style={{ fontSize:'4.5rem', fontWeight:800, color:colorNota(calActiva), margin:0, fontFamily:'Outfit,sans-serif', lineHeight:1 }}>
+                {calActiva}
+              </p>
+              <p style={{ fontSize:'0.8rem', color:colorNota(calActiva), margin:'0.75rem 0 0', fontWeight:600 }}>
+                {calActiva>=90?'Excelente':calActiva>=60?'Aprobado':'Reprobado'}
+              </p>
+            </div>
+          </div>
 
-                {/* Faltas + botón historial */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', alignItems: 'stretch' }}>
-                  <div style={{ background: faltasParcial === 0 ? '#f0fdf4' : faltasParcial <= 3 ? '#fffbeb' : '#fef2f2', borderRadius: '1rem', padding: '1rem 1.25rem', border: `1px solid ${faltasParcial === 0 ? '#bbf7d0' : faltasParcial <= 3 ? '#fde68a' : '#fecaca'}` }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 0.375rem' }}>
-                      Faltas en este período
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
-                      <p style={{ fontSize: '2.25rem', fontWeight: 700, margin: 0, fontFamily: 'Outfit, sans-serif', color: faltasParcial === 0 ? '#16a34a' : faltasParcial <= 3 ? '#d97706' : '#dc2626', lineHeight: 1 }}>
-                        {faltasParcial}
-                      </p>
-                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>faltas</p>
-                    </div>
-                    <p style={{ fontSize: '0.7rem', margin: '0.375rem 0 0', fontWeight: 600, color: faltasParcial === 0 ? '#16a34a' : faltasParcial <= 3 ? '#d97706' : '#dc2626' }}>
-                      {asistActiva}% de asistencia
-                    </p>
-                  </div>
-
-                  {/* Botón ver historial — círculo que se expande */}
-                  <button
-                    onClick={() => setVistaCalendario(true)}
-                    onMouseEnter={handleBtnEnter}
-                    onMouseLeave={handleBtnLeave}
-                    style={{
-                      background: '#1e3a5f', border: 'none', cursor: 'pointer',
-                      borderRadius: btnExpandido ? '0.875rem' : '50%',
-                      width:   btnExpandido ? 'auto' : '48px',
-                      height:  '48px',
-                      minWidth: btnExpandido ? '180px' : '48px',
-                      alignSelf: 'center',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      gap: '0.5rem', padding: btnExpandido ? '0 1.25rem' : '0',
-                      transition: 'all 0.25s ease',
-                      boxShadow: '0 2px 8px rgba(30,58,95,0.25)',
-                      overflow: 'hidden', whiteSpace: 'nowrap',
-                    }}>
-                    <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                      <line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/>
-                      <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    {btnExpandido && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'white' }}>
-                        Ver historial
-                      </span>
-                    )}
-                  </button>
-                </div>
-                {/* Botón descargar PDF */}
-                <button onClick={handleDescargar}
-                  style={{
-                    width: '100%', padding: '0.75rem', borderRadius: '0.875rem',
-                    cursor: descargando || descargado ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem',
-                    fontSize: '0.875rem', fontWeight: 600,
-                    background: descargado ? '#16a34a' : descargando ? '#f1f5f9' : '#fef2f2',
-                    color:      descargado ? 'white'   : descargando ? '#94a3b8' : '#dc2626',
-                    border:     descargado ? 'none' : `1px solid ${descargando ? '#e2e8f0' : '#fecaca'}`,
-                    transition: 'all 0.3s',
-                  }}
-                  onMouseEnter={e => { if (!descargando && !descargado) { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; e.currentTarget.style.border = 'none' } }}
-                  onMouseLeave={e => { if (!descargando && !descargado) { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.border = '1px solid #fecaca' } }}>
-
-                  {descargando ? (
-                    <>
-                      {/* Spinner */}
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"
-                        style={{ animation: 'spin 0.8s linear infinite' }}>
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round"/>
-                      </svg>
-                      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                      Generando PDF...
-                    </>
-                  ) : descargado ? (
-                    <>
-                      <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      ¡PDF descargado!
-                    </>
-                  ) : (
-                    <>
-                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                        <line x1="12" y1="18" x2="12" y2="12"/>
-                        <polyline points="9 15 12 18 15 15"/>
-                      </svg>
-                      Descargar boleta PDF — {tabs.find(t => t.key === parcialActivo)?.label}
-                    </>
-                  )}
-                </button>
-              </div>
-            </>
-          )
-        }
+          <button onClick={handleDescargar}
+            style={{ width:'100%', padding:'0.75rem', borderRadius:'0.875rem', cursor:descargando||descargado?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.625rem', fontSize:'0.875rem', fontWeight:600, background:descargado?'#16a34a':descargando?'#f1f5f9':'#fef2f2', color:descargado?'white':descargando?'#94a3b8':'#dc2626', border:descargado?'none':`1px solid ${descargando?'#e2e8f0':'#fecaca'}`, transition:'all 0.3s' }}
+            onMouseEnter={e=>{ if(!descargando&&!descargado){e.currentTarget.style.background='#dc2626';e.currentTarget.style.color='white';e.currentTarget.style.border='none'} }}
+            onMouseLeave={e=>{ if(!descargando&&!descargado){e.currentTarget.style.background='#fef2f2';e.currentTarget.style.color='#dc2626';e.currentTarget.style.border='1px solid #fecaca'} }}>
+            {descargado
+              ? <><svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg> Boleta descargada</>
+              : descargando
+              ? <><div style={{ width:'14px', height:'14px', border:'2px solid #e2e8f0', borderTopColor:'#94a3b8', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Generando boleta...</>
+              : <><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar boleta PDF</>
+            }
+          </button>
+        </div>
       </div>
     </div>,
     document.body
@@ -555,7 +351,7 @@ export default function Header({ titulo }: { titulo: string }) {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>{a.nombre}</p>
-                      <p className="text-xs" style={{ color: '#94a3b8' }}>Grupo {a.grupo} · {a.semestre}° Sem · Prom: {a.promedioFinal}</p>
+                      <p className="text-xs" style={{ color: '#94a3b8' }}>Grupo {a.grupo} · {a.semestre}° Semestre</p>
                     </div>
                     <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" className="shrink-0 ml-auto">
                       <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
