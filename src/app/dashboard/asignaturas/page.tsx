@@ -7,33 +7,34 @@ type Asignatura = {
   id: string
   nombre: string
   semestre: number
+  creadoEl: string
 }
 
 const SEMESTRES = [1, 2, 3, 4, 5, 6]
 
 const asignaturasIniciales: Asignatura[] = [
-  { id: '1',  nombre: 'Matemáticas I',       semestre: 1 },
-  { id: '2',  nombre: 'Español I',            semestre: 1 },
-  { id: '3',  nombre: 'Historia de México I', semestre: 1 },
-  { id: '4',  nombre: 'Química I',            semestre: 1 },
-  { id: '5',  nombre: 'Inglés I',             semestre: 1 },
-  { id: '6',  nombre: 'Informática I',        semestre: 1 },
-  { id: '7',  nombre: 'Matemáticas II',       semestre: 2 },
-  { id: '8',  nombre: 'Español II',           semestre: 2 },
-  { id: '9',  nombre: 'Física I',             semestre: 2 },
-  { id: '10', nombre: 'Biología I',           semestre: 2 },
-  { id: '11', nombre: 'Inglés II',            semestre: 2 },
-  { id: '12', nombre: 'Cálculo I',            semestre: 3 },
-  { id: '13', nombre: 'Historia Universal',   semestre: 3 },
-  { id: '14', nombre: 'Química II',           semestre: 3 },
-  { id: '15', nombre: 'Inglés III',           semestre: 3 },
-  { id: '16', nombre: 'Física II',            semestre: 4 },
-  { id: '17', nombre: 'Literatura',           semestre: 4 },
-  { id: '18', nombre: 'Administración',       semestre: 4 },
-  { id: '19', nombre: 'Geografía',            semestre: 5 },
-  { id: '20', nombre: 'Educación Física',     semestre: 5 },
-  { id: '21', nombre: 'Contabilidad',         semestre: 6 },
-  { id: '22', nombre: 'Inglés VI',            semestre: 6 },
+  { id: '1',  nombre: 'Matemáticas I',       semestre: 1, creadoEl: '12 Ago 2025' },
+  { id: '2',  nombre: 'Español I',            semestre: 1, creadoEl: '12 Ago 2025' },
+  { id: '3',  nombre: 'Historia de México I', semestre: 1, creadoEl: '12 Ago 2025' },
+  { id: '4',  nombre: 'Química I',            semestre: 1, creadoEl: '13 Ago 2025' },
+  { id: '5',  nombre: 'Inglés I',             semestre: 1, creadoEl: '13 Ago 2025' },
+  { id: '6',  nombre: 'Informática I',        semestre: 1, creadoEl: '14 Ago 2025' },
+  { id: '7',  nombre: 'Matemáticas II',       semestre: 2, creadoEl: '12 Ago 2025' },
+  { id: '8',  nombre: 'Español II',           semestre: 2, creadoEl: '12 Ago 2025' },
+  { id: '9',  nombre: 'Física I',             semestre: 2, creadoEl: '13 Ago 2025' },
+  { id: '10', nombre: 'Biología I',           semestre: 2, creadoEl: '13 Ago 2025' },
+  { id: '11', nombre: 'Inglés II',            semestre: 2, creadoEl: '14 Ago 2025' },
+  { id: '12', nombre: 'Cálculo I',            semestre: 3, creadoEl: '12 Ago 2025' },
+  { id: '13', nombre: 'Historia Universal',   semestre: 3, creadoEl: '12 Ago 2025' },
+  { id: '14', nombre: 'Química II',           semestre: 3, creadoEl: '13 Ago 2025' },
+  { id: '15', nombre: 'Inglés III',           semestre: 3, creadoEl: '14 Ago 2025' },
+  { id: '16', nombre: 'Física II',            semestre: 4, creadoEl: '12 Ago 2025' },
+  { id: '17', nombre: 'Literatura',           semestre: 4, creadoEl: '12 Ago 2025' },
+  { id: '18', nombre: 'Administración',       semestre: 4, creadoEl: '13 Ago 2025' },
+  { id: '19', nombre: 'Geografía',            semestre: 5, creadoEl: '12 Ago 2025' },
+  { id: '20', nombre: 'Educación Física',     semestre: 5, creadoEl: '13 Ago 2025' },
+  { id: '21', nombre: 'Contabilidad',         semestre: 6, creadoEl: '12 Ago 2025' },
+  { id: '22', nombre: 'Inglés VI',            semestre: 6, creadoEl: '13 Ago 2025' },
 ]
 
 // ─── Botón + expandible ───────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ function AsignaturaModal({
   onGuardar,
   onCerrar,
 }: {
-  onGuardar: (data: Omit<Asignatura, 'id'>) => void
+  onGuardar: (data: Omit<Asignatura, 'id' | 'creadoEl'>) => void
   onCerrar: () => void
 }) {
   const [nombre, setNombre]           = useState('')
@@ -224,6 +225,45 @@ function AsignaturaModal({
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Botón eliminar expandible ────────────────────────────────────────────────
+function EliminarAsigBtn({ onClick }: { onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (leaveT.current) clearTimeout(leaveT.current)
+    enterT.current = setTimeout(() => setHov(true), 180)
+  }
+  function handleLeave() {
+    if (enterT.current) clearTimeout(enterT.current)
+    leaveT.current = setTimeout(() => setHov(false), 280)
+  }
+
+  return (
+    <button onClick={onClick} onMouseEnter={handleEnter} onMouseLeave={handleLeave}
+      style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        gap: hov ? '0.4rem' : '0',
+        height:'28px',
+        width: hov ? 'auto' : '28px',
+        minWidth: hov ? '148px' : '28px',
+        padding: hov ? '0 0.75rem' : '0',
+        borderRadius: hov ? '0.5rem' : '50%',
+        background: hov ? '#fee2e2' : '#fef2f2',
+        border: hov ? '1px solid #dc2626' : '1px solid #fecaca',
+        cursor:'pointer',
+        transition:'all 0.28s cubic-bezier(0.4,0,0.2,1)',
+        overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
+      }}>
+      <svg width="11" height="11" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
+        <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/>
+      </svg>
+      {hov && <span style={{ fontSize:'0.75rem', fontWeight:600, color:'#dc2626' }}>Eliminar asignatura</span>}
+    </button>
+  )
+}
+
 export default function AsignaturasPage() {
   const [asignaturas, setAsignaturas]       = useState<Asignatura[]>(asignaturasIniciales)
   const [modalAbierto, setModalAbierto]     = useState(false)
@@ -261,8 +301,11 @@ export default function AsignaturasPage() {
     items: asignaturasFiltradas.filter(a => a.semestre === s),
   })).filter(g => g.items.length > 0)
 
-  function handleGuardar(data: Omit<Asignatura, 'id'>) {
-    setAsignaturas(prev => [...prev, { ...data, id: Date.now().toString() }])
+  function handleGuardar(data: Omit<Asignatura, 'id' | 'creadoEl'>) {
+    const hoy = new Date()
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    const creadoEl = `${hoy.getDate()} ${meses[hoy.getMonth()]} ${hoy.getFullYear()}`
+    setAsignaturas(prev => [...prev, { ...data, id: Date.now().toString(), creadoEl }])
     setModalAbierto(false)
     setAgregada(true)
     setTimeout(() => setAgregada(false), 2500)
@@ -413,29 +456,42 @@ export default function AsignaturasPage() {
                 </button>
               </div>
 
-              {/* Grid de asignaturas — con transición */}
+              {/* Tabla de asignaturas */}
               <div style={{
-                display: 'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:'0.625rem',
                 overflow:'hidden',
-                maxHeight: contraido ? '0' : '1000px',
+                maxHeight: contraido ? '0' : '2000px',
                 opacity: contraido ? 0 : 1,
                 transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
-                marginBottom: contraido ? '0' : undefined,
               }}>
-                {items.map(a => (
-                  <div key={a.id}
-                    style={{ background:'white', borderRadius:'0.875rem', padding:'0.875rem 1rem', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.5rem', transition:'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='#1e3a5f'; e.currentTarget.style.boxShadow='0 2px 8px rgba(30,58,95,0.1)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.boxShadow='none' }}>
-                    <p style={{ fontSize:'0.8125rem', fontWeight:600, color:'#1e3a5f', margin:0, lineHeight:1.3 }}>{a.nombre}</p>
-                    <button onClick={() => setEliminando(a)}
-                      style={{ width:'22px', height:'22px', borderRadius:'50%', background:'#fef2f2', color:'#dc2626', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'0.6rem', fontWeight:700 }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                <div style={{ background:'white', borderRadius:'0.875rem', border:'1px solid #e2e8f0', overflow:'hidden' }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
+                    <thead>
+                      <tr style={{ borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
+                        <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'45%' }}>Asignatura</th>
+                        <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'35%' }}>Fecha de creación</th>
+                        <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'20%' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map(a => (
+                        <tr key={a.id} style={{ borderBottom:'1px solid #f8fafc' }}
+                          onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
+                          onMouseLeave={e => (e.currentTarget.style.background='white')}>
+                          <td style={{ padding:'0.75rem 1rem' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                              <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#2563eb', flexShrink:0 }}/>
+                              <span style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f' }}>{a.nombre}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{a.creadoEl}</td>
+                          <td style={{ padding:'0.75rem 1rem', overflow:'visible', position:'relative' }}>
+                            <EliminarAsigBtn onClick={() => setEliminando(a)} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             )
@@ -453,22 +509,26 @@ export default function AsignaturasPage() {
 
       {/* Modal confirmar eliminar */}
       {eliminando && typeof window !== 'undefined' && createPortal(
-        <div onClick={cerrarEliminar} style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: elimCerrando ? 'elimBackdropOut 0.36s ease forwards' : 'elimBackdropIn 0.25s ease' }}>
+        <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: elimCerrando ? 'elimBackdropOut 0.36s ease forwards' : 'elimBackdropIn 0.25s ease' }}>
           <style>{`
             @keyframes elimBackdropIn  { from { opacity:0 } to { opacity:1 } }
             @keyframes elimBackdropOut { from { opacity:1 } to { opacity:0 } }
             @keyframes elimSpringIn  { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
             @keyframes elimSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.92) translateY(12px) } }
           `}</style>
-          <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'380px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', animation: elimCerrando ? 'elimSpringOut 0.36s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'elimSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1rem', width:'400px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', animation: elimCerrando ? 'elimSpringOut 0.36s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'elimSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
             <div style={{ width:'48px', height:'48px', borderRadius:'50%', background:'#fef2f2', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'1.25rem' }}>
               <svg width="22" height="22" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>
               </svg>
             </div>
-            <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>¿Eliminar asignatura?</h3>
-            <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem', textAlign:'center' }}>&ldquo;{eliminando.nombre}&rdquo;</p>
-            <p style={{ fontSize:'0.8rem', color:'#94a3b8', margin:'0 0 1.5rem', textAlign:'center' }}>del {eliminando.semestre}° Semestre</p>
+            <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem', textAlign:'center' }}>¿Eliminar asignatura?</h3>
+            <p style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>&ldquo;{eliminando.nombre}&rdquo;</p>
+            <div style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:'0.75rem', padding:'0.75rem 1rem', marginBottom:'1.5rem', width:'100%' }}>
+              <p style={{ fontSize:'0.8rem', color:'#dc2626', margin:0, textAlign:'center', lineHeight:1.5 }}>
+                ⚠️ Esta acción borrará la asignatura permanentemente y no podrás recuperarla después.
+              </p>
+            </div>
             <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
               <button onClick={cerrarEliminar}
                 style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer' }}
