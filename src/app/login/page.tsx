@@ -1,28 +1,21 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [splash, setSplash]         = useState(true)
-  const [fadeOut, setFadeOut]       = useState(false)
+  const [splash, setSplash]         = useState(false)
+  const [fadeOut]                    = useState(false)
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
   const [showPass, setShowPass]     = useState(false)
   const [error, setError]           = useState('')
   const [loading, setLoading]       = useState(false)
-  const [exiting, setExiting]       = useState(false)
   const [olvidé, setOlvidé]         = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent, setResetSent]   = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
-
-  useEffect(() => {
-    const fadeTimer = setTimeout(() => setFadeOut(true), 1600)
-    const hideTimer = setTimeout(() => setSplash(false), 2200)
-    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
-  }, [])
 
   async function handleLogin() {
     if (!email || !password) { setError('Completa todos los campos'); return }
@@ -37,9 +30,9 @@ export default function LoginPage() {
       return
     }
 
-    // Éxito — activar spring de salida antes de navegar
-    setExiting(true)
-    await new Promise(r => setTimeout(r, 450))
+    // Éxito — mostrar splash de carga antes de navegar
+    setSplash(true)
+    await new Promise(r => setTimeout(r, 2000))
 
     const meta = data.user?.user_metadata
     if (meta?.primer_login === true) { router.push('/cambiar-password'); return }
@@ -72,6 +65,14 @@ export default function LoginPage() {
           @keyframes splashIn {
             from { opacity:0; transform:scale(0.88) translateY(16px); }
             to   { opacity:1; transform:scale(1) translateY(0); }
+          }
+          @keyframes loginFadeIn {
+            from { opacity:0; transform:translateY(10px); }
+            to   { opacity:1; transform:translateY(0); }
+          }
+          @keyframes dotPulse {
+            0%,100% { opacity:0.4; transform:scale(0.85); }
+            50%      { opacity:1;   transform:scale(1.15); }
           }
           @keyframes splashPulse {
             0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4), 0 8px 32px rgba(37,99,235,0.35); }
@@ -128,14 +129,14 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Loader dots */}
+            {/* Loader dots — rojo / amarillo / verde */}
             <div style={{ display:'flex', gap:'0.4rem', marginTop:'0.25rem' }}>
-              {[0,1,2].map(i => (
+              {[['#ef4444','rgba(239,68,68,0.4)'],['#f59e0b','rgba(245,158,11,0.4)'],['#22c55e','rgba(34,197,94,0.4)']].map(([color, glow], i) => (
                 <div key={i} style={{
-                  width:'6px', height:'6px', borderRadius:'50%',
-                  background:'rgba(255,255,255,0.5)',
-                  animation:`splashPulse 1.2s ease-in-out ${i*0.2}s infinite`,
-                  boxShadow:'none',
+                  width:'8px', height:'8px', borderRadius:'50%',
+                  background: color,
+                  animation:`dotPulse 1.2s ease-in-out ${i*0.22}s infinite`,
+                  boxShadow: `0 0 6px ${glow}`,
                 }}/>
               ))}
             </div>
@@ -187,9 +188,7 @@ export default function LoginPage() {
         boxShadow:'0 24px 64px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
         padding:'2rem 1.875rem',
         boxSizing:'border-box',
-        animation: exiting
-          ? 'loginOut 0.45s ease-in forwards'
-          : 'loginIn 0.7s cubic-bezier(0.22,1,0.36,1)',
+        animation: 'loginIn 0.7s cubic-bezier(0.22,1,0.36,1)',
       }}>
 
         {/* Logo */}

@@ -141,16 +141,19 @@ function ModalEditarCalif({
   onCerrar: () => void
   onAprobar: (materia: string) => void
 }) {
-  const pendientes = alumno.materias.filter(m => !aprobadas.has(m.materia))
+  // Copia local para que pendientes no cambie cuando el padre actualiza aprobadas
+  const [localAprobadas, setLocalAprobadas] = useState<Set<string>>(new Set(aprobadas))
+  const pendientes = alumno.materias.filter(m => !localAprobadas.has(m.materia))
 
-  const [materiaIdx, setMateriaIdx]     = useState(0)
-  const [califSelec, setCalifSelec]     = useState(pendientes[0]?.promedio ?? 0)
-  const [paso, setPaso]                 = useState<'editar'|'confirmar'|'siguiente'>('editar')
-  const [pasoCerrando, setPasoCerrando] = useState(false)
-  const [cerrando, setCerrando]         = useState(false)
-  const [ultimaAprobada, setUltimaAprobada] = useState<string>('')
+  const [materiaIdx, setMateriaIdx]         = useState(0)
+  const [califSelec, setCalifSelec]         = useState(alumno.materias.find(m => !new Set(aprobadas).has(m.materia))?.promedio ?? 0)
+  const [paso, setPaso]                     = useState<'editar'|'confirmar'|'siguiente'>('editar')
+  const [pasoCerrando, setPasoCerrando]     = useState(false)
+  const [cerrando, setCerrando]             = useState(false)
+  const [ultimaAprobada, setUltimaAprobada]   = useState<string>('')
+  const [proximaMateria, setProximaMateria]   = useState<string>('')
 
-  const materiaActual = pendientes[materiaIdx]
+  const materiaActual      = pendientes[materiaIdx]
   const siguientePendiente = pendientes[materiaIdx + 1]
 
   function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
@@ -164,8 +167,13 @@ function ModalEditarCalif({
     setTimeout(() => { setPaso('editar'); setPasoCerrando(false) }, 220)
   }
   function guardar() {
-    setUltimaAprobada(materiaActual.materia)
-    onAprobar(materiaActual.materia)
+    if (!materiaActual) return
+    const nombre = materiaActual.materia
+    const proxima = siguientePendiente?.materia ?? ''
+    setUltimaAprobada(nombre)
+    setProximaMateria(proxima)
+    setLocalAprobadas(prev => { const next = new Set(prev); next.add(nombre); return next })
+    onAprobar(nombre)
     if (siguientePendiente) {
       setPasoCerrando(true)
       setTimeout(() => {
@@ -251,7 +259,7 @@ function ModalEditarCalif({
                   <div style={{ textAlign:'center' }}>
                     <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#16a34a', margin:'0 0 0.25rem' }}>✓ {ultimaAprobada}</p>
                     <p style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem' }}>Queda otra materia pendiente</p>
-                    <p style={{ fontSize:'0.8rem', color:'#64748b', margin:0 }}>¿Deseas revisar también <strong>{siguientePendiente?.materia ?? materiaActual.materia}</strong>?</p>
+                    <p style={{ fontSize:'0.8rem', color:'#64748b', margin:0 }}>¿Deseas revisar también <strong>{proximaMateria}</strong>?</p>
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:'0.75rem' }}>

@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
 type TipoFiltro  = 'parcial' | 'grupo' | 'semana' | null
-type TipoFormato = 'pdf' | 'excel' | null
 
 const SEMANAS = Array.from({ length: 16 }, (_, i) => ({ key: `semana-${i+1}`, label: `Semana ${i + 1}` }))
 const GRUPOS  = [
@@ -14,12 +13,6 @@ const GRUPOS  = [
 ].map(g => ({ key: g, label: `Grupo ${g}` }))
 
 const OPCION_GENERAL = { key: 'general', label: 'Quitar selección' }
-
-const stats = [
-  { label: 'POBLACIÓN',        value: '840',  suffix: 'alumnos', color: 'text-gray-800'  },
-  { label: 'PROMEDIO GRAL',    value: '8.7',  suffix: '',        color: 'text-blue-600'  },
-  { label: 'ASISTENCIA MEDIA', value: '89.7', suffix: '%',       color: 'text-green-500' },
-]
 
 // ─── Botón descargar expandible ───────────────────────────────────────────────
 function DescargaBtn({ onClick }: { onClick: () => void }) {
@@ -143,217 +136,116 @@ function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar, force
 
 // ─── Modal Descargar Informe ──────────────────────────────────────────────────
 function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
-  const [grupo,    setGrupo]    = useState('')
-  const [parcial,  setParcial]  = useState('')
-  const [formato,  setFormato]  = useState<TipoFormato>(null)
-  const [contenido, setContenido] = useState({ calificaciones: true, asistencia: true })
-  const [cerrando, setCerrando] = useState(false)
+  const [grupo,      setGrupo]      = useState('')
+  const [parcial,    setParcial]    = useState('')
+  const [alcance,    setAlcance]    = useState<'general'|'asignatura'>('general')
+  const [asignatura, setAsignatura] = useState('')
+  const [cerrando,   setCerrando]   = useState(false)
 
-  function handleCerrar() {
-    setCerrando(true)
-    setTimeout(() => onCerrar(), 480)
-  }
+  function handleCerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
 
-  const listo = grupo && parcial && formato && (contenido.calificaciones || contenido.asistencia)
+  const listo = grupo && parcial && (alcance === 'general' || asignatura)
 
   if (typeof window === 'undefined') return null
 
+  const ASIGS = ['Matemáticas','Español','Historia','Física','Química','Inglés','Biología','Informática','Cálculo','Literatura','Administración','Geografía','Ed. Física','Contabilidad']
+
   return createPortal(
-    <div
-      onClick={handleCerrar}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
-        animation: cerrando ? 'informeBackdropOut 0.48s ease forwards' : 'informeBackdrop 0.3s ease',
-      }}>
+    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: cerrando ? 'informeBackdropOut 0.38s ease forwards' : 'informeBackdrop 0.25s ease' }}>
       <style>{`
-        @keyframes informeBackdrop { from { opacity:0 } to { opacity:1 } }
-        @keyframes informeBackdropOut { from { opacity:1 } to { opacity:0 } }
-        @keyframes informeSpring {
-          from { opacity:0; transform:scale(0.92) translateY(12px); }
-          to   { opacity:1; transform:scale(1) translateY(0); }
-        }
-        @keyframes informeSpringOut {
-          from { opacity:1; transform:scale(1) translateY(0); }
-          to   { opacity:0; transform:scale(0.92) translateY(12px); }
-        }
+        @keyframes informeBackdrop    { from{opacity:0} to{opacity:1} }
+        @keyframes informeBackdropOut { from{opacity:1} to{opacity:0} }
+        @keyframes informeSpring    { from{opacity:0;transform:scale(0.93) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes informeSpringOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.93) translateY(10px)} }
+        @keyframes asigIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
-      <div onClick={e => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-xl w-full flex flex-col"
-        style={{ maxWidth: '560px', maxHeight: '88vh', animation: cerrando ? 'informeSpringOut 0.48s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'informeSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', width:'420px', boxShadow:'0 20px 60px rgba(0,0,0,0.18)', animation: cerrando ? 'informeSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'informeSpring 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b shrink-0"
-          style={{ borderColor: '#f1f5f9' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.875rem 1.25rem', borderBottom:'1px solid #f1f5f9' }}>
           <div>
-            <h2 className="text-base font-bold" style={{ color: '#1e3a5f' }}>Descargar Informe</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
-              Selecciona el grupo, parcial y formato de descarga
-            </p>
+            <h2 style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Descargar informe</h2>
+            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.1rem 0 0' }}>Grupo · Período · Alcance</p>
           </div>
-          <button onClick={handleCerrar}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
+          <button onClick={handleCerrar} style={{ width:'26px', height:'26px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.8rem' }}
+            onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
         </div>
 
-        <div className="overflow-y-auto px-7 py-5 space-y-5 flex-1">
+        <div style={{ padding:'1rem 1.25rem', display:'flex', flexDirection:'column', gap:'0.75rem' }}>
 
-          {/* Paso 1 */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
-              1 · Selecciona grupo y parcial
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#475569' }}>Grupo</label>
-                <select value={grupo} onChange={e => setGrupo(e.target.value)}
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0', color: grupo ? '#1e3a5f' : '#94a3b8' }}>
-                  <option value="">Selecciona un grupo</option>
-                  {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#475569' }}>Parcial</label>
-                <select value={parcial} onChange={e => setParcial(e.target.value)}
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  style={{ borderColor: '#e2e8f0', color: parcial ? '#1e3a5f' : '#94a3b8' }}>
-                  <option value="">Selecciona un parcial</option>
-                  <option value="1">1er Parcial</option>
-                  <option value="2">2do Parcial</option>
-                  <option value="3">3er Parcial</option>
-                  <option value="final">Calificación Final</option>
-                </select>
-              </div>
+          {/* Grupo + Período en fila */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem' }}>
+            <div>
+              <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Grupo</label>
+              <select value={grupo} onChange={e => setGrupo(e.target.value)}
+                style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.45rem 0.75rem', fontSize:'0.8rem', color: grupo ? '#1e3a5f' : '#94a3b8', outline:'none', background:'white', boxSizing:'border-box' }}
+                onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}>
+                <option value="">Selecciona</option>
+                {GRUPOS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Período</label>
+              <select value={parcial} onChange={e => setParcial(e.target.value)}
+                style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.45rem 0.75rem', fontSize:'0.8rem', color: parcial ? '#1e3a5f' : '#94a3b8', outline:'none', background:'white', boxSizing:'border-box' }}
+                onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}>
+                <option value="">Selecciona</option>
+                <option value="1">1er Parcial</option>
+                <option value="2">2do Parcial</option>
+                <option value="3">3er Parcial</option>
+                <option value="final">Final</option>
+              </select>
             </div>
           </div>
 
-          {/* Paso 2 */}
+          {/* Alcance */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
-              2 · Contenido a incluir
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { key: 'calificaciones', label: 'Calificaciones', desc: 'Promedio por parcial y final',
-                  icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                },
-                { key: 'asistencia', label: 'Asistencia', desc: 'Porcentaje y faltas por alumno',
-                  icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                },
-              ].map(op => {
-                const activo = contenido[op.key as keyof typeof contenido]
-                return (
-                  <button key={op.key}
-                    onClick={() => setContenido(prev => ({ ...prev, [op.key]: !prev[op.key as keyof typeof prev] }))}
-                    className="flex items-center gap-3 rounded-xl p-3.5 text-left transition-all"
-                    style={{ border: activo ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: activo ? '#eff6ff' : 'white' }}>
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: activo ? '#2563eb' : '#f1f5f9', color: activo ? 'white' : '#94a3b8' }}>
-                      {op.icon}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: activo ? '#2563eb' : '#1e3a5f' }}>{op.label}</p>
-                      <p className="text-xs" style={{ color: '#94a3b8' }}>{op.desc}</p>
-                    </div>
+            <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Alcance</label>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.375rem' }}>
+              {[{key:'general',label:'General',desc:'Todo el grupo'},{key:'asignatura',label:'Por asignatura',desc:'Una materia'}].map(op=>(
+                <button key={op.key} onClick={()=>{ setAlcance(op.key as typeof alcance); setAsignatura('') }}
+                  style={{ padding:'0.5rem 0.75rem', borderRadius:'0.625rem', textAlign:'left', border: alcance===op.key ? '1.5px solid #2563eb' : '1px solid #e2e8f0', background: alcance===op.key ? '#eff6ff' : 'white', cursor:'pointer', transition:'all 0.15s' }}>
+                  <p style={{ fontSize:'0.775rem', fontWeight:700, color: alcance===op.key ? '#2563eb' : '#1e3a5f', margin:'0 0 0.1rem' }}>{op.label}</p>
+                  <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>{op.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Asignaturas pills */}
+          {alcance === 'asignatura' && (
+            <div style={{ animation:'asigIn 0.28s cubic-bezier(0.34,1.56,0.64,1)' }}>
+              <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Asignatura</label>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'0.3rem' }}>
+                {ASIGS.map(a=>(
+                  <button key={a} onClick={()=>setAsignatura(a)}
+                    style={{ padding:'0.2rem 0.6rem', borderRadius:'9999px', fontSize:'0.72rem', fontWeight: asignatura===a ? 700 : 400, border: asignatura===a ? '1.5px solid #2563eb' : '1px solid #e2e8f0', background: asignatura===a ? '#eff6ff' : 'white', color: asignatura===a ? '#2563eb' : '#475569', cursor:'pointer', transition:'all 0.12s' }}>
+                    {a}
                   </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Paso 3 */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
-              3 · Formato de descarga
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setFormato(formato === 'pdf' ? null : 'pdf')}
-                className="rounded-xl p-4 text-left transition-all"
-                style={{ border: formato === 'pdf' ? '2px solid #dc2626' : '1px solid #e2e8f0', background: formato === 'pdf' ? '#fef2f2' : 'white' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: formato === 'pdf' ? '#dc2626' : '#f1f5f9' }}>
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <polyline points="14 2 14 8 20 8" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="9" y1="13" x2="15" y2="13" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="9" y1="17" x2="15" y2="17" stroke={formato === 'pdf' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: formato === 'pdf' ? '#dc2626' : '#1e3a5f' }}>PDF</p>
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>Para imprimir o compartir</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {['Listo para imprimir', 'Firma del director'].map(tag => (
-                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ background: formato === 'pdf' ? '#fee2e2' : '#f1f5f9', color: formato === 'pdf' ? '#dc2626' : '#94a3b8' }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </button>
-
-              <button onClick={() => setFormato(formato === 'excel' ? null : 'excel')}
-                className="rounded-xl p-4 text-left transition-all"
-                style={{ border: formato === 'excel' ? '2px solid #16a34a' : '1px solid #e2e8f0', background: formato === 'excel' ? '#f0fdf4' : 'white' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: formato === 'excel' ? '#16a34a' : '#f1f5f9' }}>
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <polyline points="14 2 14 8 20 8" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="8" y1="13" x2="16" y2="13" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="8" y1="17" x2="16" y2="17" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                      <line x1="10" y1="9" x2="14" y2="9" stroke={formato === 'excel' ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: formato === 'excel' ? '#16a34a' : '#1e3a5f' }}>Excel</p>
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>Para analizar o editar</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {['Editable', 'Filtros automáticos'].map(tag => (
-                    <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ background: formato === 'excel' ? '#dcfce7' : '#f1f5f9', color: formato === 'excel' ? '#16a34a' : '#94a3b8' }}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Resumen */}
-          {listo && (
-            <div className="rounded-xl p-4" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>Resumen</p>
-              <div className="space-y-1">
-                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Grupo: </span>{grupo}</p>
-                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Parcial: </span>{parcial === 'final' ? 'Calificación Final' : `${parcial}° Parcial`}</p>
-                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Incluye: </span>{[contenido.calificaciones && 'Calificaciones', contenido.asistencia && 'Asistencia'].filter(Boolean).join(' + ')}</p>
-                <p className="text-xs" style={{ color: '#475569' }}><span className="font-semibold" style={{ color: '#1e3a5f' }}>Formato: </span>{formato === 'pdf' ? 'PDF' : 'Excel (.xlsx)'}</p>
+                ))}
               </div>
             </div>
           )}
 
+          {/* Resumen siempre visible */}
+          <div style={{ background:'#f8fafc', borderRadius:'0.75rem', padding:'0.625rem 0.875rem', border:'1px solid #f1f5f9' }}>
+            <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.375rem' }}>Resumen</p>
+            <p style={{ fontSize:'0.775rem', color:'#475569', margin:'0 0 0.15rem' }}><span style={{ fontWeight:600, color:'#1e3a5f' }}>Grupo: </span>{grupo || <span style={{ color:'#cbd5e1' }}>—</span>}</p>
+            <p style={{ fontSize:'0.775rem', color:'#475569', margin:'0 0 0.15rem' }}><span style={{ fontWeight:600, color:'#1e3a5f' }}>Período: </span>{parcial ? (parcial==='final'?'Final':`${parcial}° Parcial`) : <span style={{ color:'#cbd5e1' }}>—</span>}</p>
+            <p style={{ fontSize:'0.775rem', color:'#475569', margin:0 }}><span style={{ fontWeight:600, color:'#1e3a5f' }}>Alcance: </span>{alcance==='general' ? 'Todo el grupo' : (asignatura || <span style={{ color:'#cbd5e1' }}>—</span>)}</p>
+          </div>
+
           {/* Botones */}
-          <div className="flex gap-3 pt-1">
+          <div style={{ display:'flex', gap:'0.625rem' }}>
             <button onClick={handleCerrar}
-              className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
-              style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
+              style={{ flex:1, padding:'0.6rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
               Cancelar
             </button>
             <button disabled={!listo}
-              className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition flex items-center justify-center gap-2"
-              style={{ background: !listo ? '#e2e8f0' : formato === 'pdf' ? '#dc2626' : '#16a34a', cursor: !listo ? 'not-allowed' : 'pointer', color: !listo ? '#94a3b8' : 'white' }}
-              onMouseEnter={e => { if (listo) e.currentTarget.style.opacity = '0.88' }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}>
-              {!listo ? 'Completa los campos' : `↓ Descargar ${formato === 'pdf' ? 'PDF' : 'Excel'}`}
+              style={{ flex:1, padding:'0.6rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background: listo ? '#1e3a5f' : '#e2e8f0', color: listo ? 'white' : '#94a3b8', cursor: listo ? 'pointer' : 'not-allowed', transition:'background 0.15s' }}
+              onMouseEnter={e=>{ if(listo) e.currentTarget.style.background='#2563eb' }} onMouseLeave={e=>{ if(listo) e.currentTarget.style.background='#1e3a5f' }}>
+              {listo ? '↓ Descargar' : 'Completa los campos'}
             </button>
           </div>
         </div>
@@ -363,7 +255,6 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [vistaGrafica, setVistaGrafica]   = useState<'calificaciones' | 'asistencias'>('calificaciones')
   const [filtroAbierto, setFiltroAbierto] = useState<TipoFiltro>(null)
@@ -601,28 +492,106 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Panel derecho */}
-        <div className="w-72 bg-white rounded-2xl shadow-sm p-6 flex flex-col" style={{ minHeight: 0, overflowY: 'auto' }}>
-          <div className="flex items-center gap-2 mb-6">
-            <span className="text-blue-500">ℹ️</span>
-            <h3 className="font-semibold text-gray-700">Información Institucional</h3>
-          </div>
-          <div className="space-y-5 flex-1">
-            {stats.map(s => (
-              <div key={s.label} className="border-b border-gray-100 pb-4">
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{s.label}</p>
-                <p className={`text-2xl font-bold mt-1 ${s.color}`}>
-                  {s.value}<span className="text-sm font-normal text-gray-400 ml-1">{s.suffix}</span>
+        {/* Panel derecho — contextual */}
+        {(() => {
+          const tieneGrupo   = grupoSelec !== 'general'
+          const tienePeriodo = vistaGrafica === 'calificaciones' ? parcialSelec !== 'general' : semanaSelec !== 'general'
+          const graficaActiva = tieneGrupo && tienePeriodo
+
+          // Datos mock por grupo
+          const datosGrupo: Record<string, { alumnos: number; promedio: number; asistencia: number }> = {
+            '101': { alumnos: 28, promedio: 82, asistencia: 91 },
+            '102': { alumnos: 30, promedio: 78, asistencia: 87 },
+            '103': { alumnos: 27, promedio: 85, asistencia: 93 },
+            '201': { alumnos: 29, promedio: 76, asistencia: 84 },
+            '202': { alumnos: 31, promedio: 80, asistencia: 89 },
+            '203': { alumnos: 26, promedio: 83, asistencia: 90 },
+            '301': { alumnos: 28, promedio: 79, asistencia: 86 },
+            '302': { alumnos: 27, promedio: 81, asistencia: 88 },
+            '401': { alumnos: 25, promedio: 77, asistencia: 85 },
+            '501': { alumnos: 24, promedio: 74, asistencia: 83 },
+            '502': { alumnos: 26, promedio: 76, asistencia: 82 },
+            '601': { alumnos: 22, promedio: 80, asistencia: 87 },
+          }
+          const grupo = datosGrupo[grupoSelec]
+
+          return (
+            <div className="w-72 bg-white rounded-2xl shadow-sm flex flex-col" style={{ minHeight:0 }}>
+
+              {/* Header */}
+              <div style={{ padding:'1.25rem 1.5rem', borderBottom:'1px solid #f1f5f9' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.25rem' }}>
+                  {graficaActiva ? `Grupo ${grupoSelec}` : 'Institución'}
+                </p>
+                <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>
+                  {graficaActiva
+                    ? (vistaGrafica === 'calificaciones' ? 'Estadísticas de calificaciones' : 'Estadísticas de asistencia')
+                    : 'Población escolar'}
                 </p>
               </div>
-            ))}
-          </div>
-          <div className="mt-auto pt-3 flex justify-end">
-            <p className="text-xs text-gray-400">
-              Sincronizado: <span className="text-green-500 font-medium">Justo ahora</span>
-            </p>
-          </div>
-        </div>
+
+              {/* Cuerpo */}
+              <div style={{ padding:'1.25rem 1.5rem', flex:1, display:'flex', flexDirection:'column', gap:'1.125rem' }}>
+
+                {!graficaActiva ? (
+                  /* Estado inicial — solo total alumnos */
+                  <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.5rem', textAlign:'center' }}>
+                    <div style={{ width:'52px', height:'52px', borderRadius:'1rem', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'0.25rem' }}>
+                      <svg width="24" height="24" fill="none" stroke="#2563eb" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                    </div>
+                    <p style={{ fontSize:'2.75rem', fontWeight:800, color:'#1e3a5f', margin:0, lineHeight:1, fontFamily:'Outfit,sans-serif' }}>840</p>
+                    <p style={{ fontSize:'0.8rem', color:'#94a3b8', margin:0 }}>alumnos registrados</p>
+                    <p style={{ fontSize:'0.7rem', color:'#cbd5e1', margin:'0.5rem 0 0' }}>Selecciona grupo y período<br/>para ver estadísticas</p>
+                  </div>
+                ) : (
+                  /* Estado con gráfica activa */
+                  <>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
+                      {/* Alumnos en grupo */}
+                      <div style={{ background:'#f8fafc', borderRadius:'0.875rem', padding:'0.875rem 1rem' }}>
+                        <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.375rem' }}>Alumnos en grupo</p>
+                        <p style={{ fontSize:'2rem', fontWeight:800, color:'#1e3a5f', margin:0, fontFamily:'Outfit,sans-serif', lineHeight:1 }}>
+                          {grupo?.alumnos ?? '—'}
+                        </p>
+                        <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.25rem 0 0' }}>de 840 total institución</p>
+                      </div>
+
+                      {/* Métrica principal según vista */}
+                      <div style={{ background: vistaGrafica === 'calificaciones' ? '#eff6ff' : '#f0fdf4', borderRadius:'0.875rem', padding:'0.875rem 1rem', border:`1px solid ${vistaGrafica==='calificaciones'?'#bfdbfe':'#bbf7d0'}` }}>
+                        <p style={{ fontSize:'0.65rem', fontWeight:600, color: vistaGrafica==='calificaciones' ? '#2563eb' : '#16a34a', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.375rem' }}>
+                          {vistaGrafica === 'calificaciones' ? 'Promedio grupo' : 'Asistencia grupo'}
+                        </p>
+                        <p style={{ fontSize:'2rem', fontWeight:800, color: vistaGrafica==='calificaciones' ? '#2563eb' : '#16a34a', margin:0, fontFamily:'Outfit,sans-serif', lineHeight:1 }}>
+                          {vistaGrafica === 'calificaciones'
+                            ? (grupo?.promedio ?? '—')
+                            : `${grupo?.asistencia ?? '—'}%`}
+                        </p>
+                        <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.25rem 0 0' }}>
+                          {vistaGrafica === 'calificaciones'
+                            ? (PARCIALES.find(p=>p.key===parcialSelec)?.label ?? '')
+                            : (SEMANAS.find(s=>s.key===semanaSelec)?.label ?? '')}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding:'0.75rem 1.5rem', borderTop:'1px solid #f1f5f9', display:'flex', justifyContent:'flex-end' }}>
+                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>
+                  {graficaActiva
+                    ? <>Sincronizado: <span style={{ color:'#16a34a', fontWeight:600 }}>Justo ahora</span></>
+                    : <span style={{ color:'#cbd5e1' }}>Served by Dinoti</span>
+                  }
+                </p>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {modalInforme && <ModalInforme onCerrar={() => setModalInforme(false)} />}
