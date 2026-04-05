@@ -452,9 +452,103 @@ function ReprobadosTable() {
   )
 }
 
+// ─── Modal confirmar cambio de estado semestre ────────────────────────────────
+function ModalEstadoSemestre({
+  semestre,
+  activando,
+  onConfirmar,
+  onCerrar,
+}: {
+  semestre: number
+  activando: boolean
+  onConfirmar: () => void
+  onCerrar: () => void
+}) {
+  const [cerrando, setCerrando] = useState(false)
+
+  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
+  function confirmar() { setCerrando(true); setTimeout(() => { onConfirmar(); onCerrar() }, 380) }
+
+  const backdropAnim = cerrando ? 'msBackOut 0.38s ease forwards' : 'msBackIn 0.25s ease'
+  const modalAnim    = cerrando ? 'msSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'msSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)'
+
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes msBackIn   { from{opacity:0} to{opacity:1} }
+        @keyframes msBackOut  { from{opacity:1} to{opacity:0} }
+        @keyframes msSpringIn  { from{opacity:0;transform:scale(0.92) translateY(14px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes msSpringOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.92) translateY(14px)} }
+      `}</style>
+      <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation:backdropAnim }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', width:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.2)', overflow:'hidden', animation:modalAnim }}>
+
+          {/* Header */}
+          <div style={{ background: activando ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,#dc2626,#b91c1c)', padding:'1.5rem', position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:'0.75rem' }}>
+            <button onClick={cerrar} style={{ position:'absolute', top:'1rem', right:'1rem', width:'28px', height:'28px', borderRadius:'50%', background:'rgba(255,255,255,0.2)', border:'none', cursor:'pointer', color:'white', fontWeight:700, fontSize:'0.9rem', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+            <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {activando
+                ? <svg width="26" height="26" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/></svg>
+                : <svg width="26" height="26" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728L5.636 5.636" strokeLinecap="round"/></svg>
+              }
+            </div>
+            <div style={{ textAlign:'center' }}>
+              <p style={{ fontSize:'1rem', fontWeight:700, color:'white', margin:0 }}>
+                {activando ? 'Activar' : 'Desactivar'} {semestre}° Semestre
+              </p>
+              <p style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.75)', margin:'0.25rem 0 0' }}>
+                {activando ? 'Reactivar acceso a docentes' : 'Restringir acceso a docentes'}
+              </p>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding:'1.5rem' }}>
+            <div style={{ background: activando ? '#f0fdf4' : '#fef2f2', border:`1px solid ${activando?'#bbf7d0':'#fecaca'}`, borderRadius:'0.875rem', padding:'1rem 1.25rem', marginBottom:'1.5rem' }}>
+              <p style={{ fontSize:'0.875rem', color: activando ? '#15803d' : '#dc2626', margin:0, lineHeight:1.6, fontWeight:500 }}>
+                {activando
+                  ? '✓ Al activar este semestre los docentes asignados podrán volver a subir y editar calificaciones y asistencias desde su módulo.'
+                  : '⚠️ Al desactivar este semestre los docentes no podrán registrar ni editar calificaciones ni asistencias hasta que se reactive.'
+                }
+              </p>
+            </div>
+
+            <div style={{ display:'flex', gap:'0.75rem' }}>
+              <button onClick={cerrar}
+                style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
+                onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')}
+                onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+                Cancelar
+              </button>
+              <button onClick={confirmar}
+                style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: activando ? '#16a34a' : '#dc2626', color:'white', cursor:'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background=activando?'#15803d':'#b91c1c'}}
+                onMouseLeave={e=>{e.currentTarget.style.background=activando?'#16a34a':'#dc2626'}}>
+                Sí, {activando ? 'activar' : 'desactivar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
 function SemestreCard({ s, i, onClick }: { s: typeof semestresActivos[0]; i: number; onClick: () => void }) {
-  const [activo, setActivo] = useState(true)
+  const [activo, setActivo]   = useState(true)
+  const [modal, setModal]     = useState(false)
+  const [pendiente, setPendiente] = useState<boolean | null>(null)
+
+  function handleSwitch(e: React.MouseEvent) {
+    e.stopPropagation()
+    setPendiente(!activo)
+    setModal(true)
+  }
+  function confirmar() { if (pendiente !== null) setActivo(pendiente) }
+  function cerrarModal() { setPendiente(null); setModal(false) }
   return (
+    <>
     <button onClick={onClick}
       style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:'1.25rem', textAlign:'left', cursor:'pointer', padding:0, overflow:'hidden', transition:'all 0.22s ease', animation:`cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ${i*0.07}s both` }}
       onMouseEnter={e=>{ e.currentTarget.style.borderColor='#93c5fd'; e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(59,130,246,0.12)' }}
@@ -478,7 +572,7 @@ function SemestreCard({ s, i, onClick }: { s: typeof semestresActivos[0]; i: num
         </div>
         <div style={{ marginLeft:'auto', display:'flex', flexDirection:'column', alignItems:'center', gap:'0.3rem' }}>
           <div
-            onClick={e=>{ e.stopPropagation(); setActivo(prev=>!prev) }}
+            onClick={handleSwitch}
             style={{ width:'44px', height:'24px', borderRadius:'9999px', background: activo ? '#16a34a' : '#dc2626', position:'relative', cursor:'pointer', transition:'background 0.25s ease', flexShrink:0, boxShadow: activo ? '0 0 8px rgba(22,163,74,0.35)' : '0 0 8px rgba(220,38,38,0.25)' }}>
             <div style={{ position:'absolute', top:'3px', left: activo ? '23px' : '3px', width:'18px', height:'18px', borderRadius:'50%', background:'white', boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.25s cubic-bezier(0.4,0,0.2,1)' }}/>
           </div>
@@ -488,6 +582,16 @@ function SemestreCard({ s, i, onClick }: { s: typeof semestresActivos[0]; i: num
         </div>
       </div>
     </button>
+
+    {modal && pendiente !== null && (
+      <ModalEstadoSemestre
+        semestre={s.numero}
+        activando={pendiente}
+        onConfirmar={confirmar}
+        onCerrar={cerrarModal}
+      />
+    )}
+    </>
   )
 }
 
