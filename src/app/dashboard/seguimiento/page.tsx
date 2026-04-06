@@ -4,14 +4,11 @@ import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
 type Vista         = 'semestres' | 'grupos' | 'alumnos'
-type FiltroPeriodo = 'semana' | 'bimestre' | 'semestre'
-type GraficaTipo   = 'asistencia' | 'calificaciones'
 type Direccion     = 'adelante' | 'atras'
 
 type DatoBimestre = { numero: 1|2|3; promedio: number; asistencia: number; faltas: number }
 type DatoSemana   = { semana: number; asistencia: number; faltas: number }
 type Alumno       = { id: string; nombre: string; bimestres: DatoBimestre[]; semanas: DatoSemana[] }
-type SliceData    = { label: string; value: number; color: string }
 
 const MATERIAS = ['Matemáticas','Español','Historia','Física','Química','Inglés','Biología','Informática']
 
@@ -54,33 +51,6 @@ function avg(nums: number[]) {
 }
 function promedioColor(v: number)   { return v >= 60 ? '#16a34a' : '#dc2626' }
 function asistenciaColor(v: number) { return v >= 80 ? '#16a34a' : '#dc2626' }
-
-function polarToCartesian(cx:number,cy:number,r:number,deg:number) {
-  const rad = (deg-90)*(Math.PI/180)
-  return { x: cx+r*Math.cos(rad), y: cy+r*Math.sin(rad) }
-}
-function buildSlicePath(cx:number,cy:number,r:number,start:number,end:number) {
-  if (end-start>=360) end=start+359.99
-  const s=polarToCartesian(cx,cy,r,start), e=polarToCartesian(cx,cy,r,end)
-  return `M${cx},${cy} L${s.x},${s.y} A${r},${r} 0 ${end-start>180?1:0} 1 ${e.x},${e.y} Z`
-}
-function DonutChart({ slices }: { slices: SliceData[] }) {
-  const total = slices.reduce((s,d)=>s+d.value,0)
-  if (total===0) return null
-  const cx=70,cy=70,r=58
-  const paths = slices.reduce<{paths:React.ReactNode[];acc:number}>(
-    ({paths,acc},s,i)=>{
-      const angle=(s.value/total)*360
-      return { paths:[...paths,<path key={i} d={buildSlicePath(cx,cy,r,acc,acc+angle)} fill={s.color}/>], acc:acc+angle }
-    }, {paths:[],acc:0}
-  ).paths
-  return (
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      {paths}
-      <circle cx={cx} cy={cy} r={32} fill="white"/>
-    </svg>
-  )
-}
 
 function useViewTransition() {
   const [visible, setVisible]     = useState(true)
@@ -130,6 +100,7 @@ const reprobadosMock = [
 ]
 
 // ─── Modal editar calificación ────────────────────────────────────────────────
+
 function ModalEditarCalif({
   alumno,
   aprobadas,
@@ -603,19 +574,236 @@ function SemestreCard({ s, i, onClick }: { s: typeof semestresActivos[0]; i: num
   )
 }
 
+// ─── Vista alumnos rediseñada ─────────────────────────────────────────────────
+function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, semanaVis, cambiarSemana, busqueda, setBusqueda, alumnosFiltrados, filasActuales, volver }: {
+  grupoActivo: string|null; semestreActivo: number|null
+  semanaSelec: number; semanaDir: 'izq'|'der'; semanaVis: boolean
+  cambiarSemana: (s:number)=>void
+  busqueda: string; setBusqueda: (v:string)=>void
+  alumnosFiltrados: Alumno[]
+  filasActuales: {alumno:Alumno;promedio:number;asistencia:number;faltas:number}[]
+  volver: ()=>void
+}) {
+  const [panelAbierto, setPanelAbierto] = useState<null|'asignaturas'|'periodo'|'asistencias'>(null)
+  const [asigSelec, setAsigSelec]       = useState<string|null>(null)
+  const [parcialSelec, setParcialSelec] = useState<1|2|3|null>(null)
+  const [searchExp, setSearchExp]       = useState(false)
+  const searchRef                       = useRef<HTMLInputElement>(null)
+
+  const tieneAsig    = asigSelec !== null
+  const tienePeriodo = parcialSelec !== null
+
+  // Período: requiere asignatura. Asistencias: requiere asignatura, pero bloquea si hay período
+  const periodoDisabled    = !tieneAsig
+  const asistenciasDisabled = !tieneAsig || tienePeriodo
+
+  function togglePanel(p: 'asignaturas'|'periodo'|'asistencias') {
+    if (p === 'periodo'     && periodoDisabled)    return
+    if (p === 'asistencias' && asistenciasDisabled) return
+    setPanelAbierto(prev => prev === p ? null : p)
+  }
+
+  function limpiarSeleccion() {
+    setAsigSelec(null); setParcialSelec(null); setPanelAbierto(null)
+  }
+
+  const btnDef = [
+    { id: 'asignaturas' as const, label: 'Asignatura',  sub: asigSelec,  disabled: false },
+    { id: 'periodo'     as const, label: 'Período',      sub: parcialSelec ? `Parcial ${parcialSelec}` : null, disabled: periodoDisabled },
+    { id: 'asistencias' as const, label: 'Asistencias',  sub: panelAbierto==='asistencias' ? `Sem. ${semanaSelec}` : null, disabled: asistenciasDisabled },
+  ]
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
+
+      {/* ── Fila header ── */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.75rem' }}>
+        {/* Izquierda */}
+        <div style={{ display:'flex', alignItems:'center', gap:'0.875rem', flexShrink:0 }}>
+          <VolverBtn onClick={volver}/>
+          <div style={{ width:'1px', height:'14px', background:'#e2e8f0' }}/>
+          <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Grupo {grupoActivo}</p>
+          <span style={{ fontSize:'0.75rem', color:'#94a3b8' }}>{semestreActivo}° Semestre</span>
+        </div>
+
+        {/* Derecha — buscador colapsable + 3 botones */}
+        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+
+          {/* Buscador colapsable */}
+          <div style={{ display:'flex', alignItems:'center', height:'36px', borderRadius:'0.875rem', border:'1px solid #e2e8f0', background:'white', overflow:'hidden', transition:'width 0.3s cubic-bezier(0.4,0,0.2,1)', width: searchExp ? '180px' : '36px', cursor: searchExp ? 'text' : 'pointer', flexShrink:0 }}
+            onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'36px', flexShrink:0 }}>
+              <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <input ref={searchRef} type="text" placeholder="Buscar..." value={busqueda} onChange={e=>setBusqueda(e.target.value)}
+              onFocus={()=>setSearchExp(true)} onBlur={()=>{ if(!busqueda) setSearchExp(false) }}
+              style={{ border:'none', outline:'none', fontSize:'0.8rem', color:'#334155', background:'transparent', width:'100%', opacity: searchExp ? 1 : 0, transition:'opacity 0.2s', paddingRight:'0.5rem' }}/>
+          </div>
+
+          <div style={{ width:'1px', height:'18px', background:'#e2e8f0' }}/>
+
+          {/* 3 botones filtro */}
+          {btnDef.map(f => {
+            const abierto = panelAbierto === f.id
+            const isPeriodo = f.id === 'periodo'
+            return (
+              <div key={f.id} style={{ position: isPeriodo ? 'relative' : undefined }}>
+                <button onClick={() => togglePanel(f.id)}
+                  title={f.disabled ? (f.id==='periodo' ? 'Selecciona una asignatura primero' : 'Quita el período para ver asistencias') : ''}
+                  style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.45rem 0.875rem', borderRadius:'0.75rem', fontSize:'0.8rem', fontWeight: abierto ? 700 : 500, color: f.disabled ? '#cbd5e1' : abierto ? '#1e3a5f' : '#64748b', background: abierto ? 'white' : '#f8fafc', border: abierto ? '1.5px solid #e2e8f0' : '1px solid #e2e8f0', cursor: f.disabled ? 'not-allowed' : 'pointer', boxShadow: abierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', opacity: f.disabled ? 0.5 : 1, transition:'all 0.2s' }}>
+                  <span>{f.label}</span>
+                  {f.sub && <span style={{ fontSize:'0.7rem', color:'#2563eb', fontWeight:600, maxWidth:'70px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>· {f.sub}</span>}
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                    style={{ transform: abierto ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}>
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+
+                {/* Dropdown flotante para Período */}
+                {isPeriodo && abierto && (
+                  <div style={{ position:'absolute', top:'calc(100% + 6px)', right:0, zIndex:50, background:'white', borderRadius:'0.875rem', border:'1px solid #e2e8f0', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', overflow:'hidden', minWidth:'140px', animation:'cardIn 0.28s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                    {([{k:1,l:'Parcial 1'},{k:2,l:'Parcial 2'},{k:3,l:'Semestre'}] as {k:1|2|3;l:string}[]).map((o,idx) => (
+                      <button key={o.k}
+                        onClick={() => { setParcialSelec(prev => prev===o.k ? null : o.k); setPanelAbierto(null) }}
+                        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', padding:'0.625rem 1rem', fontSize:'0.825rem', fontWeight: parcialSelec===o.k ? 700 : 500, color: parcialSelec===o.k ? '#1e3a5f' : '#475569', background: parcialSelec===o.k ? '#eff6ff' : 'white', border:'none', borderTop: idx>0 ? '1px solid #f1f5f9' : 'none', cursor:'pointer', textAlign:'left', transition:'background 0.12s' }}
+                        onMouseEnter={e=>{ if(parcialSelec!==o.k) e.currentTarget.style.background='#f8fafc' }}
+                        onMouseLeave={e=>{ if(parcialSelec!==o.k) e.currentTarget.style.background='white' }}>
+                        {o.l}
+                        {parcialSelec===o.k && <svg width="12" height="12" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Limpiar selección */}
+          {(tieneAsig || tienePeriodo) && (
+            <button onClick={limpiarSeleccion} style={{ padding:'0.4rem 0.75rem', borderRadius:'0.75rem', fontSize:'0.75rem', fontWeight:500, color:'#64748b', background:'transparent', border:'1px solid transparent', cursor:'pointer', transition:'all 0.15s' }}
+              onMouseEnter={e=>{e.currentTarget.style.background='#fef2f2';e.currentTarget.style.color='#dc2626'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#64748b'}}>
+              × Limpiar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Panel Asignaturas ── */}
+      {panelAbierto === 'asignaturas' && (
+        <div style={{ background:'white', borderRadius:'0.875rem', border:'1px solid #e2e8f0', padding:'0.875rem 1.25rem', animation:'cardIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.625rem' }}>Selecciona asignatura</p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'0.375rem' }}>
+            {MATERIAS.map(m => (
+              <button key={m} onClick={() => setAsigSelec(prev => prev===m ? null : m)}
+                style={{ padding:'0.25rem 0.75rem', borderRadius:'9999px', fontSize:'0.78rem', fontWeight: asigSelec===m ? 700 : 400, border: asigSelec===m ? '1.5px solid #1e3a5f' : '1px solid #e2e8f0', background: asigSelec===m ? '#1e3a5f' : 'white', color: asigSelec===m ? 'white' : '#475569', cursor:'pointer', transition:'all 0.15s' }}>
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Panel Asistencias (semanas) ── */}
+      {panelAbierto === 'asistencias' && (
+        <div style={{ background:'white', borderRadius:'0.875rem', border:'1px solid #e2e8f0', padding:'0.875rem 1.25rem', animation:'cardIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 0.625rem' }}>Selecciona semana</p>
+          <div style={{ position:'relative', display:'grid', gridTemplateColumns:'repeat(16, 34px)', gap:'0.25rem', background:'#f1f5f9', borderRadius:'0.875rem', padding:'4px' }}>
+            <div style={{ position:'absolute', top:'4px', bottom:'4px', width:'34px', left:`calc(${semanaSelec-1} * (34px + 4px) + 4px)`, background:'#1e3a5f', borderRadius:'0.5rem', boxShadow:'0 2px 8px rgba(30,58,95,0.3)', transition:'left 0.32s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+            {Array.from({length:16},(_,i)=>i+1).map(s=>(
+              <button key={s} onClick={()=>cambiarSemana(s)}
+                style={{ position:'relative', zIndex:1, width:'34px', height:'34px', borderRadius:'0.5rem', fontSize:'0.75rem', fontWeight:semanaSelec===s?700:500, background:'transparent', color:semanaSelec===s?'white':'#64748b', border:'none', cursor:'pointer', transition:'color 0.2s', textAlign:'center' }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tabla única ── */}
+      <div
+        key={semanaSelec}
+        style={{ background:'white', borderRadius:'1rem', overflow:'hidden', border:'1px solid #f1f5f9',
+          opacity: semanaVis?1:0,
+          transform: semanaVis?'translateX(0)':`translateX(${semanaDir==='der'?'12px':'-12px'})`,
+          transition: semanaVis?'opacity 0.28s cubic-bezier(0.4,0,0.2,1),transform 0.28s cubic-bezier(0.4,0,0.2,1)':'opacity 0.14s ease,transform 0.14s ease'
+        }}>
+
+        {!tieneAsig ? (
+          /* Estado vacío */
+          <div style={{ padding:'3.5rem 2rem', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.75rem' }}>
+            <div style={{ width:'44px', height:'44px', borderRadius:'0.875rem', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="20" height="20" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+                <rect x="9" y="3" width="6" height="4" rx="1"/>
+                <path d="M9 12h6M9 16h4" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#475569', margin:0 }}>Selecciona una asignatura para ver los datos</p>
+            <p style={{ fontSize:'0.775rem', color:'#94a3b8', margin:0 }}>Usa el botón <strong>Asignatura</strong> en la parte superior</p>
+          </div>
+        ) : (
+          <>
+            <div style={{ maxHeight:'calc(7 * 56px + 44px)', overflowY:'auto' }}>
+              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'white', zIndex:1 }}>
+                    {['#','Alumno','Promedio','Asistencia','Faltas'].map(col=>(
+                      <th key={col} style={{ textAlign:'left', padding:'0.75rem 1.25rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasActuales.map((fila,i)=>(
+                    <tr key={fila.alumno.id} style={{ borderBottom:'1px solid #f8fafc' }}
+                      onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+                      <td style={{ padding:'0.875rem 1.25rem', fontSize:'0.75rem', color:'#94a3b8' }}>{i+1}</td>
+                      <td style={{ padding:'0.875rem 1.25rem' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                          <div style={{ width:'30px', height:'30px', borderRadius:'50%', background:'#1e3a5f', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:700, color:'white', flexShrink:0 }}>{fila.alumno.nombre.charAt(0)}</div>
+                          <span style={{ fontSize:'0.8125rem', fontWeight:500, color:'#1e3a5f' }}>{fila.alumno.nombre}</span>
+                        </div>
+                      </td>
+                      {tienePeriodo ? (
+                        <>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:promedioColor(fila.promedio) }}>{fila.promedio}</span></td>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:asistenciaColor(fila.asistencia) }}>{fila.asistencia}%</span></td>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:600, color:fila.faltas>=5?'#dc2626':'#475569' }}>{fila.faltas}</span></td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', color:'#e2e8f0' }}>—</span></td>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', color:'#e2e8f0' }}>—</span></td>
+                          <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', color:'#e2e8f0' }}>—</span></td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding:'0.625rem 1.25rem', borderTop:'1px solid #f1f5f9', background:'#fafafa', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>{alumnosFiltrados.length} alumnos · {asigSelec}</p>
+              {!tienePeriodo && (
+                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0, fontStyle:'italic' }}>Selecciona un período para ver los datos</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 export default function SeguimientoPage() {
   const [vista,setVista]               = useState<Vista>('semestres')
   const [semestreActivo,setSemestreActivo] = useState<number|null>(null)
   const [grupoActivo,setGrupoActivo]   = useState<string|null>(null)
-  const [filtroPeriodo,setFiltroPeriodo] = useState<FiltroPeriodo>('bimestre')
-  const [bimestreSelec,setBimestreSelec] = useState<1|2|3>(1)
   const [semanaSelec,setSemanaSelec]   = useState<number>(1)
   const [semanaDir,setSemanaDir]       = useState<'izq'|'der'>('der')
   const [semanaVis,setSemanaVis]       = useState(true)
-  const [graficaTipo,setGraficaTipo]   = useState<GraficaTipo>('calificaciones')
   const [busqueda,setBusqueda]         = useState('')
-  const [materiaSelec,setMateriaSelec] = useState<string|null>(null)
   const [dir,setDir]                   = useState<Direccion>('adelante')
   const { visible, transicionar }      = useViewTransition()
 
@@ -631,45 +819,25 @@ export default function SeguimientoPage() {
     if (vista==='alumnos') navegarA('grupos','atras',()=>setGrupoActivo(null))
     if (vista==='grupos')  navegarA('semestres','atras',()=>setSemestreActivo(null))
   }
-  function cambiarFiltro(f:FiltroPeriodo) {
-    setFiltroPeriodo(f); setBimestreSelec(1); setSemanaSelec(1)
-    if (f==='semana') setGraficaTipo('asistencia')
-  }
   function cambiarSemana(s: number) {
     if (s === semanaSelec) return
     setSemanaDir(s > semanaSelec ? 'der' : 'izq')
     setSemanaVis(false)
     setTimeout(() => { setSemanaSelec(s); setSemanaVis(true) }, 200)
   }
-  function toggleMateria(m:string) { setMateriaSelec(prev=>prev===m?null:m) }
 
   const alumnosFiltrados = alumnosMock.filter(a=>a.nombre.toLowerCase().includes(busqueda.toLowerCase()))
 
   type FilaTabla = { alumno:Alumno; promedio:number; asistencia:number; faltas:number }
   const filasActuales: FilaTabla[] = alumnosFiltrados.map(a=>{
-    if (filtroPeriodo==='bimestre') {
-      const b=a.bimestres.find(b=>b.numero===bimestreSelec)!
-      return { alumno:a, promedio:b.promedio, asistencia:b.asistencia, faltas:b.faltas }
+    const s = a.semanas.find(s=>s.semana===semanaSelec)
+    return {
+      alumno:a,
+      promedio: avg(a.bimestres.map(b=>b.promedio)),
+      asistencia: s?.asistencia ?? avg(a.bimestres.map(b=>b.asistencia)),
+      faltas: s?.faltas ?? a.bimestres.reduce((t,b)=>t+b.faltas,0),
     }
-    if (filtroPeriodo==='semana') {
-      const s=a.semanas.find(s=>s.semana===semanaSelec)!
-      return { alumno:a, promedio:0, asistencia:s.asistencia, faltas:s.faltas }
-    }
-    return { alumno:a, promedio:avg(a.bimestres.map(b=>b.promedio)), asistencia:avg(a.bimestres.map(b=>b.asistencia)), faltas:a.bimestres.reduce((s,b)=>s+b.faltas,0) }
   })
-
-  const slicesGrafica: SliceData[] = (()=>{
-    const vals=filasActuales.map(f=>graficaTipo==='calificaciones'?f.promedio:f.asistencia)
-    if (graficaTipo==='calificaciones') return [
-      { label:'Excelente (90-100)', value:vals.filter(v=>v>=90).length, color:'#16a34a' },
-      { label:'Regular (70-89)',    value:vals.filter(v=>v>=70&&v<90).length, color:'#3b82f6' },
-      { label:'Reprobado (<70)',    value:vals.filter(v=>v<70).length, color:'#dc2626' },
-    ]
-    return [
-      { label:'Buena asistencia (≥80%)', value:vals.filter(v=>v>=80).length, color:'#16a34a' },
-      { label:'En riesgo (<80%)',         value:vals.filter(v=>v<80).length,  color:'#dc2626' },
-    ]
-  })()
 
   const slideIn = dir==='adelante' ? 'translateX(18px)' : 'translateX(-18px)'
   const containerStyle: React.CSSProperties = {
@@ -736,222 +904,19 @@ export default function SeguimientoPage() {
 
           {/* ── VISTA: Alumnos ── */}
           {vista==='alumnos' && (
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
-                  <VolverBtn onClick={volver}/>
-                  <div style={{ width:'1px', height:'14px', background:'#e2e8f0' }}/>
-                  <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Grupo {grupoActivo}</p>
-                  <span style={{ fontSize:'0.75rem', color:'#94a3b8' }}>{semestreActivo}° Semestre</span>
-                </div>
-                <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px', minWidth:'280px' }}>
-                  {(()=>{
-                    const opts=[{key:'semana',label:'Semana'},{key:'bimestre',label:'Parcial'},{key:'semestre',label:'Semestre'}]
-                    const idx=opts.findIndex(o=>o.key===filtroPeriodo)
-                    return (
-                      <>
-                        <div style={{ position:'absolute', top:'4px', bottom:'4px', width:`calc(${100/3}% - 2px)`, left:`calc(${idx*(100/3)}% + 4px)`, background:'white', borderRadius:'0.75rem', boxShadow:'0 1px 6px rgba(0,0,0,0.13)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
-                        {opts.map(({key,label})=>(
-                          <button key={key} onClick={()=>cambiarFiltro(key as FiltroPeriodo)}
-                            style={{ position:'relative', zIndex:1, flex:1, padding:'0.5rem 1rem', fontSize:'0.8rem', fontWeight:filtroPeriodo===key?600:500, color:filtroPeriodo===key?'#1e3a5f':'#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.75rem', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
-                            {label}
-                          </button>
-                        ))}
-                      </>
-                    )
-                  })()}
-                </div>
-              </div>
-
-              {filtroPeriodo==='bimestre' && graficaTipo==='calificaciones' && (
-                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                  <span style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8' }}>Parcial</span>
-                  <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'0.875rem', padding:'3px', minWidth:'180px' }}>
-                    {(()=>{ const opts=[1,2]; const idx=opts.indexOf(bimestreSelec); return (
-                      <>
-                        <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 2px)`, left:`calc(${idx*50}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 6px rgba(0,0,0,0.13)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
-                        {opts.map(b=>(<button key={b} onClick={()=>setBimestreSelec(b as 1|2|3)} style={{ position:'relative', zIndex:1, flex:1, padding:'0.375rem 0.875rem', fontSize:'0.775rem', fontWeight:bimestreSelec===b?600:500, color:bimestreSelec===b?'#1e3a5f':'#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', textAlign:'center' }}>Parcial {b}</button>))}
-                      </>
-                    )})()}
-                  </div>
-                </div>
-              )}
-
-              {(filtroPeriodo==='semana' || (filtroPeriodo==='bimestre' && graficaTipo==='asistencia')) && (
-                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                  <span style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8', flexShrink:0 }}>Semana</span>
-                  <div style={{ position:'relative', display:'grid', gridTemplateColumns:'repeat(16, 34px)', gap:'0.25rem', background:'#f1f5f9', borderRadius:'0.875rem', padding:'4px' }}>
-                    {/* Pill deslizante */}
-                    <div style={{
-                      position:'absolute',
-                      top:'4px', bottom:'4px',
-                      width:'34px',
-                      left:`calc(${(semanaSelec-1)} * (34px + 4px) + 4px)`,
-                      background:'#1e3a5f',
-                      borderRadius:'0.5rem',
-                      boxShadow:'0 2px 8px rgba(30,58,95,0.3)',
-                      transition:'left 0.32s cubic-bezier(0.4,0,0.2,1)',
-                      pointerEvents:'none',
-                    }}/>
-                    {Array.from({length:16},(_,i)=>i+1).map(s=>(
-                      <button key={s} onClick={()=>cambiarSemana(s)}
-                        style={{ position:'relative', zIndex:1, width:'34px', height:'34px', borderRadius:'0.5rem', fontSize:'0.75rem', fontWeight:semanaSelec===s?700:500, background:'transparent', color:semanaSelec===s?'white':'#64748b', border:'none', cursor:'pointer', transition:'color 0.22s ease', textAlign:'center' }}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.5rem' }}>
-                  <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>Asignatura</span>
-                  {materiaSelec && <button onClick={()=>setMateriaSelec(null)} style={{ fontSize:'0.65rem', fontWeight:600, color:'#3b82f6', background:'none', border:'none', cursor:'pointer', padding:0 }}>· Todas</button>}
-                </div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
-                  {MATERIAS.map(m=>{ const activa=materiaSelec===m; return (
-                    <button key={m} onClick={()=>toggleMateria(m)}
-                      style={{ display:'flex', alignItems:'center', gap:'0.3rem', padding:'0.3rem 0.75rem', borderRadius:'9999px', fontSize:'0.75rem', fontWeight:activa?600:400, background:activa?'#1e3a5f':'white', color:activa?'white':'#475569', border:activa?'1.5px solid #1e3a5f':'1px solid #e2e8f0', cursor:'pointer', opacity:materiaSelec&&!activa?0.4:1, transform:activa?'scale(1.04)':'scale(1)', boxShadow:activa?'0 3px 10px rgba(30,58,95,0.2)':'none', transition:'all 0.18s cubic-bezier(0.4,0,0.2,1)' }}
-                      onMouseEnter={e=>{if(!activa){e.currentTarget.style.borderColor='#1e3a5f';e.currentTarget.style.color='#1e3a5f'}}}
-                      onMouseLeave={e=>{if(!activa){e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.color='#475569'}}}>
-                      {activa && <svg width="8" height="8" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                      {m}
-                    </button>
-                  )})}
-                </div>
-              </div>
-
-              <div
-                key={`${semanaSelec}-${bimestreSelec}`}
-                style={{
-                  display:'flex', flexDirection:'column', gap:'0.875rem',
-                  opacity: semanaVis ? 1 : 0,
-                  transform: semanaVis ? 'translateX(0) scale(1)' : `translateX(${semanaDir==='der'?'16px':'-16px'}) scale(0.985)`,
-                  transition: semanaVis
-                    ? 'opacity 0.32s cubic-bezier(0.4,0,0.2,1), transform 0.32s cubic-bezier(0.4,0,0.2,1)'
-                    : 'opacity 0.16s ease, transform 0.16s ease',
-                }}>
-
-              <div style={{ background:'white', borderRadius:'1rem', padding:'1.25rem', border:'1px solid #f1f5f9' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
-                  <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>
-                    Distribución del grupo
-                    {filtroPeriodo==='bimestre' && graficaTipo==='calificaciones' && ` · Parcial ${bimestreSelec}`}
-                    {filtroPeriodo==='semana' && ` · Semana ${semanaSelec}`}
-                    {filtroPeriodo==='bimestre' && graficaTipo==='asistencia' && ` · Semana ${semanaSelec}`}
-                    {filtroPeriodo==='semestre' && ' — Semestre completo'}
-                    {materiaSelec && ` · ${materiaSelec}`}
-                  </p>
-                  <div style={{ position:'relative', display:'flex', background:filtroPeriodo==='semana'?'#f8fafc':'#f1f5f9', borderRadius:'1rem', padding:'3px' }}>
-                    {(()=>{ const opts=[{key:'calificaciones',label:'Calificaciones'},{key:'asistencia',label:'Asistencia'}]; const idx=opts.findIndex(o=>o.key===graficaTipo); return (
-                      <>
-                        <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(50% - 2px)`, left:`calc(${idx*50}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 6px rgba(0,0,0,0.1)', transition:'left 0.28s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
-                        {opts.map(({key,label})=>{ const disabled=filtroPeriodo==='semana'&&key==='calificaciones'; return (
-                          <button key={key} onClick={()=>{ if(!disabled) setGraficaTipo(key as GraficaTipo) }}
-                            style={{ position:'relative', zIndex:1, flex:1, padding:'0.4rem 0.875rem', fontSize:'0.75rem', fontWeight:graficaTipo===key?600:500, color:disabled?'#d1d5db':graficaTipo===key?'#1e3a5f':'#64748b', background:'transparent', border:'none', cursor:disabled?'not-allowed':'pointer', borderRadius:'0.625rem', transition:'color 0.2s', whiteSpace:'nowrap', opacity:disabled?0.5:1 }}>
-                            {label}
-                          </button>
-                        )})}
-                      </>
-                    )})()}
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:'2rem' }}>
-                  <DonutChart slices={slicesGrafica}/>
-                  <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                    {slicesGrafica.map(s=>{ const total=slicesGrafica.reduce((a,b)=>a+b.value,0); const pct=total>0?Math.round((s.value/total)*100):0; return (
-                      <div key={s.label} style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                        <div style={{ width:'10px', height:'10px', borderRadius:'50%', background:s.color, flexShrink:0 }}/>
-                        <span style={{ fontSize:'0.75rem', color:'#475569' }}>{s.label}</span>
-                        <span style={{ fontSize:'0.75rem', fontWeight:700, color:s.color, marginLeft:'0.25rem' }}>{s.value} ({pct}%)</span>
-                      </div>
-                    )})}
-                    <p style={{ fontSize:'0.7rem', color:'#cbd5e1', margin:'0.25rem 0 0', paddingTop:'0.5rem', borderTop:'1px solid #f1f5f9' }}>{alumnosFiltrados.length} alumnos en total</p>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute', left:'0.75rem', top:'50%', transform:'translateY(-50%)' }}>
-                  <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                </span>
-                <input type="text" placeholder="Buscar alumno..." value={busqueda} onChange={e=>setBusqueda(e.target.value)}
-                  style={{ paddingLeft:'2.25rem', paddingRight:'1rem', paddingTop:'0.5rem', paddingBottom:'0.5rem', fontSize:'0.8125rem', borderRadius:'0.875rem', width:'100%', boxSizing:'border-box', background:'white', border:'1px solid #e2e8f0', outline:'none', color:'#334155' }}
-                  onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}/>
-              </div>
-
-              {filtroPeriodo!=='semestre' && (
-                <div style={{ background:'white', borderRadius:'1rem', overflow:'hidden', border:'1px solid #f1f5f9' }}>
-                  <div style={{ maxHeight:'calc(6 * 56px + 44px)', overflowY:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                      <thead>
-                        <tr style={{ borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'white', zIndex:1 }}>
-                          {['#','Alumno',...(filtroPeriodo==='bimestre'?['Promedio']:[]),'Asistencia','Faltas'].map(col=>(
-                            <th key={col} style={{ textAlign:'left', padding:'0.75rem 1.25rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filasActuales.map((fila,i)=>(
-                          <tr key={fila.alumno.id} style={{ borderBottom:'1px solid #f8fafc' }}
-                            onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
-                            <td style={{ padding:'0.875rem 1.25rem', fontSize:'0.75rem', color:'#94a3b8' }}>{i+1}</td>
-                            <td style={{ padding:'0.875rem 1.25rem' }}>
-                              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                                <div style={{ width:'30px', height:'30px', borderRadius:'50%', background:'#1e3a5f', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.7rem', fontWeight:700, color:'white', flexShrink:0 }}>{fila.alumno.nombre.charAt(0)}</div>
-                                <span style={{ fontSize:'0.8125rem', fontWeight:500, color:'#1e3a5f' }}>{fila.alumno.nombre}</span>
-                              </div>
-                            </td>
-                            {filtroPeriodo==='bimestre' && <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:promedioColor(fila.promedio) }}>{fila.promedio}</span></td>}
-                            <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:asistenciaColor(fila.asistencia) }}>{fila.asistencia}%</span></td>
-                            <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:600, color:fila.faltas>=5?'#dc2626':'#475569' }}>{fila.faltas}</span></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ padding:'0.625rem 1.25rem', borderTop:'1px solid #f1f5f9', background:'#fafafa' }}>
-                    <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>{alumnosFiltrados.length} alumnos{materiaSelec?` · ${materiaSelec}`:''}</p>
-                  </div>
-                </div>
-              )}
-
-              {filtroPeriodo==='semestre' && (
-                <div style={{ background:'white', borderRadius:'1rem', overflow:'auto', border:'1px solid #f1f5f9' }}>
-                  <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom:'1px solid #f1f5f9' }}>
-                        <th style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', position:'sticky', left:0, background:'white' }}>#</th>
-                        <th style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', position:'sticky', left:32, background:'white', minWidth:180 }}>Alumno</th>
-                        {[1,2,3].map(b=><th key={`cal-${b}`} style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#1e293b', textTransform:'uppercase', letterSpacing:'0.08em', minWidth:80 }}>P{b} Cal.</th>)}
-                        <th style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#1e293b', textTransform:'uppercase', letterSpacing:'0.08em', minWidth:90 }}>Prom.</th>
-                        {[1,2,3].map(b=><th key={`asis-${b}`} style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#1e293b', textTransform:'uppercase', letterSpacing:'0.08em', minWidth:80 }}>P{b} Asis.</th>)}
-                        <th style={{ textAlign:'left', padding:'0.75rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#1e293b', textTransform:'uppercase', letterSpacing:'0.08em', minWidth:100 }}>Prom. Asis.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {alumnosFiltrados.map((alumno,i)=>{ const promCal=avg(alumno.bimestres.map(b=>b.promedio)); const promAsis=avg(alumno.bimestres.map(b=>b.asistencia)); return (
-                        <tr key={alumno.id} style={{ borderBottom:'1px solid #f8fafc' }}
-                          onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
-                          <td style={{ padding:'0.75rem 1rem', fontSize:'0.75rem', color:'#94a3b8', position:'sticky', left:0, background:'white' }}>{i+1}</td>
-                          <td style={{ padding:'0.75rem 1rem', position:'sticky', left:32, background:'white' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
-                              <div style={{ width:'26px', height:'26px', borderRadius:'50%', background:'#1e3a5f', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700, color:'white', flexShrink:0 }}>{alumno.nombre.charAt(0)}</div>
-                              <span style={{ fontSize:'0.8rem', fontWeight:500, color:'#1e3a5f' }}>{alumno.nombre}</span>
-                            </div>
-                          </td>
-                          {alumno.bimestres.map(b=><td key={`cal-${b.numero}`} style={{ padding:'0.75rem 1rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:promedioColor(b.promedio) }}>{b.promedio}</span></td>)}
-                          <td style={{ padding:'0.75rem 1rem' }}><span style={{ fontSize:'0.8rem', fontWeight:700, padding:'0.2rem 0.5rem', borderRadius:'0.5rem', background:promCal>=70?'#f0fdf4':'#fef2f2', color:promedioColor(promCal) }}>{promCal}</span></td>
-                          {alumno.bimestres.map(b=><td key={`asis-${b.numero}`} style={{ padding:'0.75rem 1rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:asistenciaColor(b.asistencia) }}>{b.asistencia}%</span></td>)}
-                          <td style={{ padding:'0.75rem 1rem' }}><span style={{ fontSize:'0.8rem', fontWeight:700, padding:'0.2rem 0.5rem', borderRadius:'0.5rem', background:promAsis>=80?'#f0fdf4':'#fef2f2', color:asistenciaColor(promAsis) }}>{promAsis}%</span></td>
-                        </tr>
-                      )})}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>{/* end semana animation wrapper */}
-            </div>
+            <AlumnosVista
+              grupoActivo={grupoActivo}
+              semestreActivo={semestreActivo}
+              semanaSelec={semanaSelec}
+              semanaDir={semanaDir}
+              semanaVis={semanaVis}
+              cambiarSemana={cambiarSemana}
+              busqueda={busqueda}
+              setBusqueda={setBusqueda}
+              alumnosFiltrados={alumnosFiltrados}
+              filasActuales={filasActuales}
+              volver={volver}
+            />
           )}
 
         </div>
