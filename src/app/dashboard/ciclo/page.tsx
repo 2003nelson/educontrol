@@ -6,7 +6,6 @@ import Header from '@/components/Header'
 const MESES       = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_SEMANA = ['L','M','X','J','V','S','D']
 
-type Paso = 0 | 1 | 2 | 3 | 4 | 5  // 0=inicio 1=vac_ini 2=vac_fin 3=cierre 4=festivos 5=resumen
 type Dir  = 'adelante' | 'atras'
 
 function formatFecha(iso: string) {
@@ -21,10 +20,11 @@ function diasEntre(a: string, b: string) {
 
 // ─── Mini calendario ──────────────────────────────────────────────────────────
 function MiniCalendario({
-  seleccionado, inicio, vacIni, vacFin, cierre, festivos, onChange, soloEntre,
+  seleccionado, inicio, cierre, festivos, onChange, minDate, maxDate, ocupadas,
 }: {
-  seleccionado: string; inicio: string; vacIni: string; vacFin: string
-  cierre: string; festivos: string[]; onChange: (iso: string) => void; soloEntre?: boolean
+  seleccionado: string; inicio: string; cierre: string
+  festivos: string[]; onChange: (iso: string) => void
+  minDate?: string; maxDate?: string; ocupadas?: string[]
 }) {
   const hoy = new Date()
   const ref = seleccionado ? new Date(seleccionado + 'T12:00:00') : hoy
@@ -42,7 +42,7 @@ function MiniCalendario({
     if (iso === inicio) return 'inicio'
     if (iso === cierre) return 'cierre'
     if (festivos.includes(iso)) return 'festivo'
-    if (vacIni && vacFin && iso >= vacIni && iso <= vacFin) return 'vacaciones'
+    if (ocupadas?.includes(iso)) return 'cierre'
     if (inicio && cierre && iso >= inicio && iso <= cierre) return 'activo'
     return 'normal'
   }
@@ -70,7 +70,7 @@ function MiniCalendario({
           const iso    = toIso(day)
           const estado = estadoDia(iso)
           const esSel  = iso === seleccionado
-          const fuera  = soloEntre && inicio && cierre && (iso < inicio || iso > cierre)
+          const fuera  = (minDate && iso < minDate) || (maxDate && iso > maxDate) || (ocupadas?.includes(iso))
           const cols: Record<string, {bg:string;color:string}> = {
             inicio:     { bg:'#1e3a5f',  color:'white'   },
             cierre:     { bg:'#dc2626',  color:'white'   },
@@ -171,66 +171,88 @@ function WizardModal({
   onCrear,
   onCerrar,
 }: {
-  onCrear: (data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) => void
+  onCrear: (data: { inicio: string; cierre: string; vacIni: string; vacFin: string; parcial1: string; parcial2: string; festivos: string[] }) => void
   onCerrar: () => void
 }) {
-  const [paso, setPaso]         = useState<Paso>(0)
-  const [dir, setDir]           = useState<Dir>('adelante')
+  type PasoW = 0|1|2|3|4|5|6|7
+  const [paso, setPaso]           = useState<PasoW>(0)
+  const [dir, setDir]             = useState<Dir>('adelante')
   const [animating, setAnimating] = useState(false)
-  const [cerrando, setCerrando] = useState(false)
+  const [cerrando, setCerrando]   = useState(false)
 
   const [inicio,   setInicio]   = useState('')
+  const [cierre,   setCierre]   = useState('')
   const [vacIni,   setVacIni]   = useState('')
   const [vacFin,   setVacFin]   = useState('')
-  const [cierre,   setCierre]   = useState('')
+  const [parcial1, setParcial1] = useState('')
+  const [parcial2, setParcial2] = useState('')
   const [festivos, setFestivos] = useState<string[]>([])
 
-  function cerrar() {
-    setCerrando(true)
-    setTimeout(() => onCerrar(), 380)
-  }
-
-  function irPaso(nuevo: Paso, d: Dir) {
-    setDir(d)
-    setAnimating(true)
+  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
+  function irPaso(nuevo: PasoW, d: Dir) {
+    setDir(d); setAnimating(true)
     setTimeout(() => { setPaso(nuevo); setAnimating(false) }, 220)
   }
-
+  function nextDay(iso: string) {
+    const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + 1)
+    return d.toISOString().slice(0,10)
+  }
+  function prevDay(iso: string) {
+    const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0,10)
+  }
   function toggleFestivo(iso: string) {
     if (!inicio || !cierre || iso < inicio || iso > cierre) return
+    if ([inicio, cierre, vacIni, vacFin, parcial1, parcial2].includes(iso)) return
     setFestivos(prev => prev.includes(iso) ? prev.filter(f => f !== iso) : [...prev, iso])
   }
 
   const diasTotales = diasEntre(inicio, cierre)
   const diasVac     = vacIni && vacFin ? diasEntre(vacIni, vacFin) : 0
-  const diasFest    = festivos.filter(f => inicio && cierre && f >= inicio && f <= cierre).length
+  const diasFest    = festivos.filter(f => f >= inicio && f <= cierre).length
   const diasEfect   = Math.max(0, diasTotales - diasVac - diasFest)
 
-  const pasos: { titulo: string; sub: string }[] = [
-    { titulo:'¿Cuándo inicia el ciclo?', sub:'Selecciona la fecha de inicio en el calendario' },
-    { titulo:'¿Inicio de vacaciones?',   sub:'Selecciona el primer día de vacaciones' },
-    { titulo:'¿Fin de vacaciones?',      sub:'Selecciona el último día de vacaciones' },
-    { titulo:'¿Cuándo cierra el ciclo?', sub:'Selecciona la fecha de cierre del semestre' },
-    { titulo:'Días festivos o inhábiles', sub:'Selecciona los días no laborables dentro del ciclo' },
-    { titulo:'Resumen del ciclo',        sub:'Todo listo para activar el período escolar' },
+  const pasos = [
+    { titulo:'¿Cuándo inicia el ciclo?',        sub:'Selecciona la fecha de inicio del semestre' },
+    { titulo:'¿Cuándo cierra el semestre?',      sub:'Selecciona la fecha de cierre del semestre' },
+    { titulo:'¿Inicio de vacaciones?',                sub:'Primer día de vacaciones dentro del ciclo' },
+    { titulo:'¿Fin de vacaciones?',                   sub:'Último día de vacaciones' },
+    { titulo:'¿Cuándo cierra el 1er parcial?',   sub:'Debe estar entre el inicio y el cierre' },
+    { titulo:'¿Cuándo cierra el 2do parcial?',   sub:'Después del 1er parcial y antes del cierre' },
+    { titulo:'Días festivos o inhábiles',         sub:'Selecciona los días no laborables dentro del ciclo' },
+    { titulo:'Resumen del ciclo',                         sub:'Todo listo para activar el período escolar' },
   ]
 
-  const valorActual = [inicio, vacIni, vacFin, cierre, '', ''][paso]
-  const calendarioActivo = paso < 5
+  const ocupadas = [inicio, cierre, vacIni, vacFin, parcial1, parcial2].filter(Boolean)
 
-  function onCalChange(iso: string) {
-    if (paso === 0) setInicio(iso)
-    else if (paso === 1) setVacIni(iso)
-    else if (paso === 2) setVacFin(iso)
-    else if (paso === 3) setCierre(iso)
-    else if (paso === 4) toggleFestivo(iso)
+  const calConfig: Record<number, { seleccionado: string; minDate?: string; maxDate?: string }> = {
+    0: { seleccionado: inicio },
+    1: { seleccionado: cierre,   minDate: inicio   ? nextDay(inicio)   : undefined },
+    2: { seleccionado: vacIni,   minDate: inicio   ? nextDay(inicio)   : undefined, maxDate: cierre ? prevDay(cierre) : undefined },
+    3: { seleccionado: vacFin,   minDate: vacIni   ? nextDay(vacIni)   : undefined, maxDate: cierre ? prevDay(cierre) : undefined },
+    4: { seleccionado: parcial1, minDate: inicio   ? nextDay(inicio)   : undefined, maxDate: cierre ? prevDay(cierre) : undefined },
+    5: { seleccionado: parcial2, minDate: parcial1 ? nextDay(parcial1) : undefined, maxDate: cierre ? prevDay(cierre) : undefined },
+    6: { seleccionado: '' },
   }
 
-  const puedeAvanzar = [
-    !!inicio, !!vacIni, !!vacFin, !!cierre, true, true
-  ][paso]
+  const valorActual      = calConfig[paso]?.seleccionado ?? ''
+  const calendarioActivo = paso < 7
 
-  const slideIn  = dir === 'adelante' ? 'translateX(20px)' : 'translateX(-20px)'
+  function onCalChange(iso: string) {
+    if (ocupadas.includes(iso) && !festivos.includes(iso)) return
+    if (paso === 0) { setInicio(iso); setCierre(''); setVacIni(''); setVacFin(''); setParcial1(''); setParcial2('') }
+    else if (paso === 1) { setCierre(iso); setVacIni(''); setVacFin(''); setParcial1(''); setParcial2('') }
+    else if (paso === 2) { setVacIni(iso); setVacFin('') }
+    else if (paso === 3) setVacFin(iso)
+    else if (paso === 4) { setParcial1(iso); setParcial2('') }
+    else if (paso === 5) setParcial2(iso)
+    else if (paso === 6) toggleFestivo(iso)
+  }
+
+  const puedeAvanzar = [!!inicio, !!cierre, !!vacIni, !!vacFin, !!parcial1, !!parcial2, true, true][paso]
+  const TOTAL_PASOS = 7
+
+  const slideIn = dir === 'adelante' ? 'translateX(20px)' : 'translateX(-20px)'
   const contentStyle: React.CSSProperties = {
     opacity: animating ? 0 : 1,
     transform: animating ? `${slideIn} scale(0.97)` : 'translateX(0) scale(1)',
@@ -249,70 +271,57 @@ function WizardModal({
         @keyframes wizSpringIn  { from { opacity:0; transform:scale(0.9) translateY(16px) } to { opacity:1; transform:scale(1) translateY(0) } }
         @keyframes wizSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.9) translateY(16px) } }
       `}</style>
-      {/* Backdrop */}
       <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation: cerrando ? 'wizBackOut 0.38s ease forwards' : 'wizBackdrop 0.28s ease' }}/>
-
-      {/* Modal */}
       <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-        <div style={{
-          background:'white', borderRadius:'1.5rem',
-          boxShadow:'0 32px 80px rgba(0,0,0,0.22)',
-          width:'820px', maxWidth:'calc(100vw - 2rem)',
-          maxHeight:'90vh', display:'flex', flexDirection:'column',
-          overflow:'hidden', pointerEvents:'all',
-          animation: cerrando ? 'wizSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'wizSpringIn 0.46s cubic-bezier(0.34,1.56,0.64,1)',
-        }}>
+        <div style={{ background:'white', borderRadius:'1.5rem', boxShadow:'0 32px 80px rgba(0,0,0,0.22)', width:'820px', maxWidth:'calc(100vw - 2rem)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden', pointerEvents:'all', animation: cerrando ? 'wizSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'wizSpringIn 0.46s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
-          {/* Header modal */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.75rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
-              {/* Steps */}
-              <div style={{ display:'flex', gap:'0.375rem' }}>
-                {[0,1,2,3,4,5].map(n => (
-                  <div key={n} style={{ height:'6px', borderRadius:'9999px', background: paso > n ? '#16a34a' : paso === n ? '#2563eb' : '#e2e8f0', width: paso === n ? '24px' : '8px', transition:'all 0.3s ease' }}/>
+              <div style={{ display:'flex', gap:'0.3rem' }}>
+                {Array.from({length:TOTAL_PASOS},(_,n) => (
+                  <div key={n} style={{ height:'6px', borderRadius:'9999px', background: paso > n ? '#16a34a' : paso === n ? '#2563eb' : '#e2e8f0', width: paso === n ? '22px' : '7px', transition:'all 0.3s ease' }}/>
                 ))}
               </div>
               <p style={{ fontSize:'0.75rem', fontWeight:500, color:'#94a3b8', margin:0 }}>
-                {paso < 5 ? `Paso ${paso + 1} de 5` : 'Listo para activar'}
+                {paso < TOTAL_PASOS ? `Paso ${paso + 1} de ${TOTAL_PASOS}` : 'Listo para activar'}
               </p>
             </div>
-            <button onClick={cerrar}
-              style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:700, fontSize:'0.9rem', transition:'background 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>✕</button>
+            <button onClick={cerrar} style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:700, fontSize:'0.9rem' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
           </div>
 
-          {/* Body */}
           <div style={{ display:'grid', gridTemplateColumns: calendarioActivo ? '1fr 1fr' : '1fr', height:'480px', overflow:'hidden' }}>
-
-            {/* Izquierda — preguntas */}
             <div style={{ padding:'2rem', display:'flex', flexDirection:'column', justifyContent:'space-between', borderRight: calendarioActivo ? '1px solid #f1f5f9' : 'none', minHeight:0, overflowY:'auto' }}>
               <div style={{ ...contentStyle, overflowY:'auto', flex:1 }}>
-                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>
-                  {paso < 5 ? `Paso ${paso + 1}` : 'Resumen'}
-                </p>
-                <h2 style={{ fontSize:'1.25rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem', fontFamily:'Outfit, sans-serif' }}>
-                  {pasos[paso].titulo}
-                </h2>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>{paso < 7 ? `Paso ${paso + 1}` : 'Resumen'}</p>
+                <h2 style={{ fontSize:'1.25rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem', fontFamily:'Outfit, sans-serif' }}>{pasos[paso].titulo}</h2>
                 <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:'0 0 1.5rem' }}>{pasos[paso].sub}</p>
 
-                {/* Fecha seleccionada para pasos 0-3 */}
-                {paso < 4 && valorActual && (
+                {paso < 6 && valorActual && (
                   <div style={{ padding:'1rem', borderRadius:'1rem', background:'#eff6ff', border:'1px solid #bfdbfe', marginBottom:'1.25rem' }}>
                     <p style={{ fontSize:'0.65rem', color:'#64748b', margin:'0 0 0.25rem', fontWeight:600, textTransform:'uppercase' }}>Fecha seleccionada</p>
                     <p style={{ fontSize:'1.25rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{formatFecha(valorActual)}</p>
                   </div>
                 )}
 
-                {/* Paso 4 — festivos */}
-                {paso === 4 && (
+                {paso >= 1 && paso < 6 && (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem', marginBottom:'1rem' }}>
+                    {inicio   && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}><span style={{ color:'#94a3b8' }}>Inicio:</span><span style={{ fontWeight:600, color:'#1e3a5f' }}>{formatFecha(inicio)}</span></div>}
+                    {cierre   && paso > 1 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}><span style={{ color:'#94a3b8' }}>Cierre:</span><span style={{ fontWeight:600, color:'#dc2626' }}>{formatFecha(cierre)}</span></div>}
+                    {vacIni   && paso > 2 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}><span style={{ color:'#94a3b8' }}>Vac. inicio:</span><span style={{ fontWeight:600, color:'#d97706' }}>{formatFecha(vacIni)}</span></div>}
+                    {vacFin   && paso > 3 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}><span style={{ color:'#94a3b8' }}>Vac. fin:</span><span style={{ fontWeight:600, color:'#d97706' }}>{formatFecha(vacFin)}</span></div>}
+                    {parcial1 && paso > 4 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}><span style={{ color:'#94a3b8' }}>Parcial 1:</span><span style={{ fontWeight:600, color:'#2563eb' }}>{formatFecha(parcial1)}</span></div>}
+                  </div>
+                )}
+
+                {paso === 6 && (
                   <div style={{ marginBottom:'1.25rem' }}>
                     {festivos.length === 0 ? (
                       <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px dashed #e2e8f0', textAlign:'center' }}>
                         <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:0 }}>Ningún día marcado aún</p>
                       </div>
                     ) : (
-                      <div style={{ maxHeight:'9rem', overflowY:'auto', paddingRight:'0.25rem' }}>
+                      <div style={{ maxHeight:'9rem', overflowY:'auto' }}>
                         <div style={{ display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
                           {festivos.sort().map(f => (
                             <span key={f} style={{ display:'inline-flex', alignItems:'center', gap:'0.3rem', fontSize:'0.72rem', fontWeight:600, padding:'0.25rem 0.625rem', borderRadius:'0.5rem', background:'#fce7f3', color:'#be185d', border:'1px solid #f9a8d4' }}>
@@ -323,87 +332,78 @@ function WizardModal({
                         </div>
                       </div>
                     )}
-                    <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.75rem 0 0' }}>
-                      Solo puedes marcar días entre {formatFecha(inicio)} y {formatFecha(cierre)}
-                    </p>
+                    <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.75rem 0 0' }}>Días entre {formatFecha(inicio)} y {formatFecha(cierre)}</p>
                   </div>
                 )}
 
-                {/* Paso 5 — Resumen círculos */}
-                {paso === 5 && (
+                {paso === 7 && (
                   <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
-                    <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
-                      <CircleStat value={diasEfect}  label="Días efectivos"  color="#2563eb" bg="#eff6ff" />
-                      <CircleStat value={diasVac}    label="Días vacaciones" color="#d97706" bg="#fffbeb" />
-                      <CircleStat value={diasFest}   label="Días festivos"   color="#be185d" bg="#fce7f3" />
-                      <CircleStat value={formatFecha(cierre)} label="Fin de ciclo" color="#dc2626" bg="#fef2f2" />
+                    <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start', flexWrap:'wrap', gap:'1rem' }}>
+                      <CircleStat value={diasEfect}             label="Días efectivos"   color="#2563eb" bg="#eff6ff" />
+                      <CircleStat value={diasVac}               label="Días vacaciones"  color="#d97706" bg="#fffbeb" />
+                      <CircleStat value={formatFecha(parcial1)} label="Cierre Parcial 1" color="#2563eb" bg="#eff6ff" />
+                      <CircleStat value={formatFecha(parcial2)} label="Cierre Parcial 2" color="#7c3aed" bg="#f5f3ff" />
+                      <CircleStat value={formatFecha(cierre)}   label="Fin de ciclo"     color="#dc2626" bg="#fef2f2" />
                     </div>
                     <div style={{ padding:'1rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px solid #f1f5f9' }}>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem', fontSize:'0.775rem', color:'#475569' }}>
-                        <span style={{ color:'#94a3b8' }}>Inicio:</span>  <span style={{ fontWeight:600, color:'#1e3a5f' }}>{formatFecha(inicio)}</span>
-                        <span style={{ color:'#94a3b8' }}>Vacaciones:</span> <span style={{ fontWeight:600, color:'#d97706' }}>{vacIni ? `${formatFecha(vacIni)} → ${formatFecha(vacFin)}` : 'Sin vacaciones'}</span>
-                        <span style={{ color:'#94a3b8' }}>Cierre:</span>  <span style={{ fontWeight:600, color:'#dc2626' }}>{formatFecha(cierre)}</span>
-                        <span style={{ color:'#94a3b8' }}>Festivos:</span> <span style={{ fontWeight:600, color:'#be185d' }}>{diasFest} día{diasFest !== 1 ? 's' : ''}</span>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem', fontSize:'0.775rem' }}>
+                        <span style={{ color:'#94a3b8' }}>Inicio:</span>      <span style={{ fontWeight:600, color:'#1e3a5f' }}>{formatFecha(inicio)}</span>
+                        <span style={{ color:'#94a3b8' }}>Vacaciones:</span>  <span style={{ fontWeight:600, color:'#d97706' }}>{formatFecha(vacIni)} → {formatFecha(vacFin)}</span>
+                        <span style={{ color:'#94a3b8' }}>Parcial 1:</span>   <span style={{ fontWeight:600, color:'#2563eb' }}>{formatFecha(parcial1)}</span>
+                        <span style={{ color:'#94a3b8' }}>Parcial 2:</span>   <span style={{ fontWeight:600, color:'#7c3aed' }}>{formatFecha(parcial2)}</span>
+                        <span style={{ color:'#94a3b8' }}>Cierre:</span>      <span style={{ fontWeight:600, color:'#dc2626' }}>{formatFecha(cierre)}</span>
+                        <span style={{ color:'#94a3b8' }}>Festivos:</span>    <span style={{ fontWeight:600, color:'#be185d' }}>{diasFest} día{diasFest!==1?'s':''}</span>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Botones navegación */}
               <div style={{ display:'flex', gap:'0.75rem', paddingTop:'1.5rem', flexShrink:0 }}>
                 {paso > 0 && (
-                  <button onClick={() => irPaso((paso - 1) as Paso, 'atras')}
+                  <button onClick={() => irPaso((paso - 1) as PasoW, 'atras')}
                     style={{ padding:'0.625rem 1.25rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', background:'white', color:'#64748b', cursor:'pointer' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                    onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
                     ← Regresar
                   </button>
                 )}
-                {paso < 4 && (
-                  <button onClick={() => { if (puedeAvanzar) irPaso((paso + 1) as Paso, 'adelante') }}
-                    disabled={!puedeAvanzar}
+                {paso < 6 && (
+                  <button onClick={() => { if (puedeAvanzar) irPaso((paso + 1) as PasoW, 'adelante') }} disabled={!puedeAvanzar}
                     style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: puedeAvanzar ? '#1e3a5f' : '#e2e8f0', color: puedeAvanzar ? 'white' : '#94a3b8', cursor: puedeAvanzar ? 'pointer' : 'not-allowed', transition:'background 0.2s' }}
-                    onMouseEnter={e => { if (puedeAvanzar) e.currentTarget.style.background = '#2563eb' }}
-                    onMouseLeave={e => { if (puedeAvanzar) e.currentTarget.style.background = '#1e3a5f' }}>
+                    onMouseEnter={e=>{ if(puedeAvanzar) e.currentTarget.style.background='#2563eb' }} onMouseLeave={e=>{ if(puedeAvanzar) e.currentTarget.style.background='#1e3a5f' }}>
                     Continuar →
                   </button>
                 )}
-                {paso === 4 && (
-                  <button onClick={() => irPaso(5, 'adelante')}
-                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.2s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
+                {paso === 6 && (
+                  <button onClick={() => irPaso(7, 'adelante')}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer' }}
+                    onMouseEnter={e=>(e.currentTarget.style.background='#2563eb')} onMouseLeave={e=>(e.currentTarget.style.background='#1e3a5f')}>
                     Ver resumen →
                   </button>
                 )}
-                {paso === 5 && (
-                  <button onClick={() => { onCrear({ inicio, vacIni, vacFin, cierre, festivos }) }}
-                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#16a34a', color:'white', cursor:'pointer', transition:'background 0.2s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#15803d')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#16a34a')}>
+                {paso === 7 && (
+                  <button onClick={() => onCrear({ inicio, cierre, vacIni, vacFin, parcial1, parcial2, festivos })}
+                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#16a34a', color:'white', cursor:'pointer' }}
+                    onMouseEnter={e=>(e.currentTarget.style.background='#15803d')} onMouseLeave={e=>(e.currentTarget.style.background='#16a34a')}>
                     ✓ Activar ciclo escolar
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Derecha — calendario */}
             {calendarioActivo && (
               <div style={{ padding:'2rem', background:'#fafbfc', display:'flex', flexDirection:'column', overflowY:'auto', maxHeight:'520px' }}>
                 <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.25rem', flexShrink:0 }}>
-                  {paso === 0 ? 'Selecciona la fecha de inicio' :
-                   paso === 1 ? 'Selecciona inicio de vacaciones' :
-                   paso === 2 ? 'Selecciona fin de vacaciones' :
-                   paso === 3 ? 'Selecciona la fecha de cierre' :
-                   'Selecciona días festivos'}
+                  {['Selecciona la fecha de inicio','Selecciona la fecha de cierre','Selecciona inicio de vacaciones','Selecciona fin de vacaciones','Selecciona cierre del 1er parcial','Selecciona cierre del 2do parcial','Selecciona días festivos'][paso]}
                 </p>
                 <div style={{ transform:'scale(1.05)', transformOrigin:'top center', flexShrink:0 }}>
                   <MiniCalendario
                     seleccionado={valorActual}
-                    inicio={inicio} vacIni={vacIni} vacFin={vacFin} cierre={cierre} festivos={festivos}
+                    inicio={inicio} cierre={cierre} festivos={festivos}
                     onChange={onCalChange}
-                    soloEntre={paso === 4}
+                    minDate={calConfig[paso]?.minDate}
+                    maxDate={calConfig[paso]?.maxDate}
+                    ocupadas={paso > 0 ? ocupadas.filter(d => d !== valorActual) : []}
                   />
                 </div>
               </div>
@@ -524,9 +524,9 @@ export default function CicloPage() {
   const [borrado, setBorrado]             = useState(false)
   const [exitoVisible, setExitoVisible]   = useState(false)
   const [exitoSaliendo, setExitoSaliendo] = useState(false)
-  const [periodo, setPeriodo] = useState<{ inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] } | null>(null)
+  const [periodo, setPeriodo] = useState<{ inicio: string; cierre: string; vacIni: string; vacFin: string; parcial1: string; parcial2: string; festivos: string[] } | null>(null)
 
-  function crearCiclo(data: { inicio: string; vacIni: string; vacFin: string; cierre: string; festivos: string[] }) {
+  function crearCiclo(data: { inicio: string; cierre: string; vacIni: string; vacFin: string; parcial1: string; parcial2: string; festivos: string[] }) {
     setWizardAbierto(false)
     // Pequeño delay para que el modal cierre primero con spring
     setTimeout(() => {
@@ -560,6 +560,8 @@ export default function CicloPage() {
       <Header titulo="Ciclo Escolar" />
 
       <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', gap:'1.25rem' }}>
+
+
 
         {/* ── Sin periodo activo ── */}
         {!periodo && !exitoVisible && (
@@ -654,10 +656,12 @@ export default function CicloPage() {
             <div style={{ background:'white', borderRadius:'1.25rem', padding:'2rem', border:'1px solid #e2e8f0', boxShadow:'0 2px 12px rgba(0,0,0,0.04)' }}>
               <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.75rem' }}>Resumen del período</p>
               <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
-                <CircleStat value={diasEfect}             label="Días efectivos"  color="#2563eb" bg="#eff6ff" />
-                <CircleStat value={diasVac}               label="Días vacaciones" color="#d97706" bg="#fffbeb" />
-                <CircleStat value={diasFest}              label="Días festivos"   color="#be185d" bg="#fce7f3" />
-                <CircleStat value={formatFecha(periodo.cierre)} label="Fin de ciclo"   color="#dc2626" bg="#fef2f2" />
+                <CircleStat value={diasEfect}                      label="Días efectivos"   color="#2563eb" bg="#eff6ff" />
+                <CircleStat value={diasVac}                        label="Días vacaciones"  color="#d97706" bg="#fffbeb" />
+                <CircleStat value={formatFecha(periodo.parcial1)}  label="Cierre Parcial 1" color="#2563eb" bg="#eff6ff" />
+                <CircleStat value={formatFecha(periodo.parcial2)}  label="Cierre Parcial 2" color="#7c3aed" bg="#f5f3ff" />
+                <CircleStat value={diasFest}                       label="Días festivos"    color="#be185d" bg="#fce7f3" />
+                <CircleStat value={formatFecha(periodo.cierre)}    label="Fin de ciclo"     color="#dc2626" bg="#fef2f2" />
               </div>
             </div>
 
@@ -666,9 +670,9 @@ export default function CicloPage() {
               <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1rem' }}>Vista del calendario</p>
               <MiniCalendario
                 seleccionado={periodo.inicio}
-                inicio={periodo.inicio} vacIni={periodo.vacIni}
-                vacFin={periodo.vacFin} cierre={periodo.cierre}
+                inicio={periodo.inicio} cierre={periodo.cierre}
                 festivos={periodo.festivos}
+                ocupadas={[periodo.parcial1, periodo.parcial2]}
                 onChange={() => {}}
               />
             </div>
