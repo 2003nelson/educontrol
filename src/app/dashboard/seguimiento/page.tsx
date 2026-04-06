@@ -309,7 +309,8 @@ function ReprobadosTable() {
   const [busqueda, setBusqueda]             = useState('')
   const [searchExp, setSearchExp]           = useState(false)
   const [alumnoEditando, setAlumnoEditando] = useState<typeof reprobadosMock[0] | null>(null)
-  const [filtroParcial, setFiltroParcial]   = useState<'p1'|'p2'|'semestre'>('semestre')
+  const [filtroParcial, setFiltroParcial]   = useState<'p1'|'p2'|'semestre'|null>(null)
+  const [dropdownAbierto, setDropdownAbierto] = useState(false)
   const [aprobadas, setAprobadas]           = useState<Record<string, Set<string>>>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -322,6 +323,9 @@ function ReprobadosTable() {
     })
   }
 
+  const OPTS = [{key:'p1',label:'Parcial 1'},{key:'p2',label:'Parcial 2'},{key:'semestre',label:'Semestre'}] as const
+  const labelActivo = filtroParcial ? OPTS.find(o=>o.key===filtroParcial)?.label : null
+
   const filtrados = reprobadosMock.filter(a =>
     a.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     a.grupo.includes(busqueda) ||
@@ -333,24 +337,43 @@ function ReprobadosTable() {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem 1.25rem', borderBottom:'1px solid #f1f5f9' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
           <div style={{ width:'8px', height:'8px', borderRadius:'50%', background:'#dc2626', flexShrink:0 }}/>
-          <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Alumnos en riesgo de reprobar</p>
-          {/* Slide menú parcial */}
-          <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'9999px', padding:'3px' }}>
-            {(()=>{
-              const opts = [{key:'p1',label:'Parcial 1'},{key:'p2',label:'Parcial 2'},{key:'semestre',label:'Semestre'}]
-              const idx  = opts.findIndex(o=>o.key===filtroParcial)
-              return (
-                <>
-                  <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(${100/3}% - 2px)`, left:`calc(${idx*(100/3)}% + 3px)`, background:'white', borderRadius:'9999px', boxShadow:'0 1px 4px rgba(0,0,0,0.12)', transition:'left 0.25s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
-                  {opts.map(({key,label})=>(
-                    <button key={key} onClick={()=>setFiltroParcial(key as typeof filtroParcial)}
-                      style={{ position:'relative', zIndex:1, padding:'0.25rem 0.75rem', fontSize:'0.7rem', fontWeight:filtroParcial===key?600:500, color:filtroParcial===key?'#1e3a5f':'#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'9999px', transition:'color 0.2s', whiteSpace:'nowrap' }}>
-                      {label}
-                    </button>
-                  ))}
-                </>
-              )
-            })()}
+          <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Alumnos reprobados</p>
+
+          {/* Dropdown período */}
+          <div style={{ position:'relative' }}>
+            <button onClick={()=>setDropdownAbierto(p=>!p)}
+              style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.3rem 0.75rem', borderRadius:'0.625rem', fontSize:'0.78rem', fontWeight: dropdownAbierto||labelActivo ? 600 : 500, color: dropdownAbierto||labelActivo ? '#1e3a5f' : '#64748b', background: dropdownAbierto||labelActivo ? 'white' : '#f8fafc', border: dropdownAbierto||labelActivo ? '1.5px solid #e2e8f0' : '1px solid #e2e8f0', cursor:'pointer', boxShadow: dropdownAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition:'all 0.2s' }}>
+              <span>Período{labelActivo ? ` · ${labelActivo}` : ''}</span>
+              <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                style={{ transform: dropdownAbierto ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform 0.25s cubic-bezier(0.4,0,0.2,1)', flexShrink:0 }}>
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {dropdownAbierto && (
+              <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, zIndex:50, background:'white', borderRadius:'0.875rem', border:'1px solid #e2e8f0', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', overflow:'hidden', minWidth:'130px', animation:'cardIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}>
+                {OPTS.map((o,idx)=>(
+                  <button key={o.key}
+                    onClick={()=>{ setFiltroParcial(filtroParcial===o.key ? null : o.key); setDropdownAbierto(false) }}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', padding:'0.575rem 0.875rem', fontSize:'0.8rem', fontWeight: filtroParcial===o.key ? 700 : 500, color: filtroParcial===o.key ? '#1e3a5f' : '#475569', background: filtroParcial===o.key ? '#eff6ff' : 'white', border:'none', borderTop: idx>0 ? '1px solid #f1f5f9' : 'none', cursor:'pointer', textAlign:'left', transition:'background 0.12s' }}
+                    onMouseEnter={e=>{ if(filtroParcial!==o.key) e.currentTarget.style.background='#f8fafc' }}
+                    onMouseLeave={e=>{ if(filtroParcial!==o.key) e.currentTarget.style.background='white' }}>
+                    {o.label}
+                    {filtroParcial===o.key && <svg width="11" height="11" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>}
+                  </button>
+                ))}
+                {filtroParcial && (
+                  <button
+                    onClick={()=>{ setFiltroParcial(null); setDropdownAbierto(false) }}
+                    style={{ display:'flex', alignItems:'center', gap:'0.375rem', width:'100%', padding:'0.525rem 0.875rem', fontSize:'0.78rem', fontWeight:500, color:'#dc2626', background:'white', border:'none', borderTop:'1px solid #f1f5f9', cursor:'pointer', transition:'background 0.12s' }}
+                    onMouseEnter={e=>(e.currentTarget.style.background='#fef2f2')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+                    <svg width="10" height="10" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/></svg>
+                    Quitar selección
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div onMouseEnter={()=>{ setSearchExp(true); setTimeout(()=>inputRef.current?.focus(),50) }} onMouseLeave={()=>{ if(!busqueda) setSearchExp(false) }}
@@ -594,7 +617,7 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
   const tienePeriodo = parcialSelec !== null
 
   // Período: requiere asignatura. Asistencias: requiere asignatura, pero bloquea si hay período
-  const periodoDisabled    = !tieneAsig
+  const periodoDisabled    = !tieneAsig || panelAbierto === 'asistencias'
   const asistenciasDisabled = !tieneAsig || tienePeriodo
 
   function togglePanel(p: 'asignaturas'|'periodo'|'asistencias') {
@@ -631,13 +654,21 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
 
           {/* Buscador colapsable */}
           <div style={{ display:'flex', alignItems:'center', height:'36px', borderRadius:'0.875rem', border:'1px solid #e2e8f0', background:'white', overflow:'hidden', transition:'width 0.3s cubic-bezier(0.4,0,0.2,1)', width: searchExp ? '180px' : '36px', cursor: searchExp ? 'text' : 'pointer', flexShrink:0 }}
-            onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}>
+            onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}
+            onMouseLeave={() => { if (!busqueda) { searchRef.current?.blur(); setSearchExp(false) } }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'36px', flexShrink:0 }}>
               <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
             <input ref={searchRef} type="text" placeholder="Buscar..." value={busqueda} onChange={e=>setBusqueda(e.target.value)}
               onFocus={()=>setSearchExp(true)} onBlur={()=>{ if(!busqueda) setSearchExp(false) }}
-              style={{ border:'none', outline:'none', fontSize:'0.8rem', color:'#334155', background:'transparent', width:'100%', opacity: searchExp ? 1 : 0, transition:'opacity 0.2s', paddingRight:'0.5rem' }}/>
+              style={{ border:'none', outline:'none', fontSize:'0.8rem', color:'#334155', background:'transparent', width:'100%', opacity: searchExp ? 1 : 0, transition:'opacity 0.2s' }}/>
+            {busqueda && searchExp && (
+              <button onClick={e=>{ e.stopPropagation(); setBusqueda('') }}
+                style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', padding:'0 0.4rem', fontSize:'1rem', lineHeight:1, flexShrink:0, display:'flex', alignItems:'center' }}
+                onMouseEnter={e=>(e.currentTarget.style.color='#475569')} onMouseLeave={e=>(e.currentTarget.style.color='#94a3b8')}>
+                ✕
+              </button>
+            )}
           </div>
 
           <div style={{ width:'1px', height:'18px', background:'#e2e8f0' }}/>
@@ -649,7 +680,7 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
             return (
               <div key={f.id} style={{ position: isPeriodo ? 'relative' : undefined }}>
                 <button onClick={() => togglePanel(f.id)}
-                  title={f.disabled ? (f.id==='periodo' ? 'Selecciona una asignatura primero' : 'Quita el período para ver asistencias') : ''}
+                  title={f.disabled ? (f.id==='periodo' ? (!tieneAsig ? 'Selecciona una asignatura primero' : 'Cierra asistencias para ver período') : 'Quita el período para ver asistencias') : ''}
                   style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.45rem 0.875rem', borderRadius:'0.75rem', fontSize:'0.8rem', fontWeight: abierto ? 700 : 500, color: f.disabled ? '#cbd5e1' : abierto ? '#1e3a5f' : '#64748b', background: abierto ? 'white' : '#f8fafc', border: abierto ? '1.5px solid #e2e8f0' : '1px solid #e2e8f0', cursor: f.disabled ? 'not-allowed' : 'pointer', boxShadow: abierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', opacity: f.disabled ? 0.5 : 1, transition:'all 0.2s' }}>
                   <span>{f.label}</span>
                   {f.sub && <span style={{ fontSize:'0.7rem', color:'#2563eb', fontWeight:600, maxWidth:'70px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>· {f.sub}</span>}
@@ -672,6 +703,16 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
                         {parcialSelec===o.k && <svg width="12" height="12" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>}
                       </button>
                     ))}
+                    {parcialSelec !== null && (
+                      <button
+                        onClick={() => { setParcialSelec(null); setPanelAbierto(null) }}
+                        style={{ display:'flex', alignItems:'center', gap:'0.375rem', width:'100%', padding:'0.575rem 1rem', fontSize:'0.78rem', fontWeight:500, color:'#dc2626', background:'white', border:'none', borderTop:'1px solid #f1f5f9', cursor:'pointer', transition:'background 0.12s' }}
+                        onMouseEnter={e=>(e.currentTarget.style.background='#fef2f2')}
+                        onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+                        <svg width="11" height="11" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/></svg>
+                        Quitar selección
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -748,7 +789,10 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
               <table style={{ width:'100%', borderCollapse:'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'white', zIndex:1 }}>
-                    {['#','Alumno','Promedio','Asistencia','Faltas'].map(col=>(
+                    {(panelAbierto==='asistencias'
+                      ? ['#','Alumno','Lun','Mar','Mié','Jue','Vie','Total faltas']
+                      : ['#','Alumno','Promedio','Asistencia','Faltas']
+                    ).map(col=>(
                       <th key={col} style={{ textAlign:'left', padding:'0.75rem 1.25rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</th>
                     ))}
                   </tr>
@@ -764,7 +808,26 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
                           <span style={{ fontSize:'0.8125rem', fontWeight:500, color:'#1e3a5f' }}>{fila.alumno.nombre}</span>
                         </div>
                       </td>
-                      {tienePeriodo ? (
+                      {panelAbierto==='asistencias' ? (
+                        <>
+                          {/* Faltas por día Lun–Vie (mock basado en semana seleccionada) */}
+                          {[0,1,2,3,4].map(d => {
+                            const seed = (fila.alumno.id.charCodeAt(0) + semanaSelec + d) % 5
+                            const falta = seed === 0
+                            return (
+                              <td key={d} style={{ padding:'0.875rem 1.25rem', textAlign:'left' }}>
+                                {falta
+                                  ? <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#dc2626', background:'#fef2f2', padding:'0.15rem 0.5rem', borderRadius:'9999px' }}>F</span>
+                                  : <span style={{ fontSize:'0.75rem', color:'#94a3b8' }}>—</span>
+                                }
+                              </td>
+                            )
+                          })}
+                          <td style={{ padding:'0.875rem 1.25rem' }}>
+                            <span style={{ fontSize:'0.875rem', fontWeight:700, color: fila.faltas>0?'#dc2626':'#16a34a' }}>{fila.faltas}</span>
+                          </td>
+                        </>
+                      ) : tienePeriodo ? (
                         <>
                           <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:promedioColor(fila.promedio) }}>{fila.promedio}</span></td>
                           <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.875rem', fontWeight:700, color:asistenciaColor(fila.asistencia) }}>{fila.asistencia}%</span></td>
@@ -783,8 +846,14 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
               </table>
             </div>
             <div style={{ padding:'0.625rem 1.25rem', borderTop:'1px solid #f1f5f9', background:'#fafafa', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>{alumnosFiltrados.length} alumnos · {asigSelec}</p>
-              {!tienePeriodo && (
+              <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>
+                {alumnosFiltrados.length} alumnos · {asigSelec}
+                {tienePeriodo && ` · Parcial ${parcialSelec}`}
+                {panelAbierto==='asistencias' && ` · Semana ${semanaSelec}`}
+              </p>
+              {(tienePeriodo || panelAbierto==='asistencias') ? (
+                <p style={{ fontSize:'0.7rem', margin:0 }}>Served by <span style={{ color:'#2563eb', fontWeight:600 }}>Dinoti</span></p>
+              ) : (
                 <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0, fontStyle:'italic' }}>Selecciona un período para ver los datos</p>
               )}
             </div>
