@@ -110,229 +110,14 @@ const reprobadosMock = [
   { id:'r8', nombre:'Morales López, Jesús',         grupo:'303', semestre:3, materias:[{materia:'Matemáticas III',promedio:50},{materia:'Historia Universal',promedio:47}] },
 ]
 
-// ─── Modal editar calificación ────────────────────────────────────────────────
-
-function ModalEditarCalif({
-  alumno,
-  aprobadas,
-  onCerrar,
-  onAprobar,
-}: {
-  alumno: typeof reprobadosMock[0]
-  aprobadas: Set<string>
-  onCerrar: () => void
-  onAprobar: (materia: string) => void
-}) {
-  // Copia local para que pendientes no cambie cuando el padre actualiza aprobadas
-  const [localAprobadas, setLocalAprobadas] = useState<Set<string>>(new Set(aprobadas))
-  const pendientes = alumno.materias.filter(m => !localAprobadas.has(m.materia))
-
-  const [materiaIdx, setMateriaIdx]         = useState(0)
-  const [califSelec, setCalifSelec]         = useState(alumno.materias.find(m => !new Set(aprobadas).has(m.materia))?.promedio ?? 0)
-  const [paso, setPaso]                     = useState<'editar'|'confirmar'|'siguiente'>('editar')
-  const [pasoCerrando, setPasoCerrando]     = useState(false)
-  const [cerrando, setCerrando]             = useState(false)
-  const [ultimaAprobada, setUltimaAprobada]   = useState<string>('')
-  const [proximaMateria, setProximaMateria]   = useState<string>('')
-
-  const materiaActual      = pendientes[materiaIdx]
-  const siguientePendiente = pendientes[materiaIdx + 1]
-
-  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
-
-  function irConfirmar() {
-    setPasoCerrando(true)
-    setTimeout(() => { setPaso('confirmar'); setPasoCerrando(false) }, 220)
-  }
-  function volverEditar() {
-    setPasoCerrando(true)
-    setTimeout(() => { setPaso('editar'); setPasoCerrando(false) }, 220)
-  }
-  function guardar() {
-    if (!materiaActual) return
-    const nombre = materiaActual.materia
-    const proxima = siguientePendiente?.materia ?? ''
-    setUltimaAprobada(nombre)
-    setProximaMateria(proxima)
-    setLocalAprobadas(prev => { const next = new Set(prev); next.add(nombre); return next })
-    onAprobar(nombre)
-    if (siguientePendiente) {
-      setPasoCerrando(true)
-      setTimeout(() => {
-        setMateriaIdx(i => i + 1)
-        setCalifSelec(siguientePendiente.promedio)
-        setPaso('siguiente')
-        setPasoCerrando(false)
-      }, 220)
-    } else {
-      cerrar()
-    }
-  }
-  function irASiguiente() {
-    setPasoCerrando(true)
-    setTimeout(() => { setPaso('editar'); setPasoCerrando(false) }, 220)
-  }
-  function marcarPendiente() { cerrar() }
-
-  const backdropAnim = cerrando ? 'rBackdropOut 0.38s ease forwards' : 'rBackdropIn 0.25s ease'
-  const modalAnim    = cerrando ? 'rSpringOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'rSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)'
-  const colorCalif   = califSelec >= 60 ? '#16a34a' : '#dc2626'
-  const bgCalif      = califSelec >= 60 ? '#f0fdf4' : '#fef2f2'
-
-  const pasoStyle: React.CSSProperties = {
-    opacity:   pasoCerrando ? 0 : 1,
-    transform: pasoCerrando
-      ? (paso === 'confirmar' ? 'translateX(-16px) scale(0.97)' : 'translateX(16px) scale(0.97)')
-      : 'translateX(0) scale(1)',
-    transition: pasoCerrando
-      ? 'opacity 0.18s ease, transform 0.18s ease'
-      : 'opacity 0.32s cubic-bezier(0.34,1.56,0.64,1), transform 0.32s cubic-bezier(0.34,1.56,0.64,1)',
-  }
-
-  if (typeof window === 'undefined') return null
-  return createPortal(
-    <>
-      <style>{`
-        @keyframes rBackdropIn  { from{opacity:0} to{opacity:1} }
-        @keyframes rBackdropOut { from{opacity:1} to{opacity:0} }
-        @keyframes rSpringIn  { from{opacity:0;transform:scale(0.92) translateY(14px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        @keyframes rSpringOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.92) translateY(14px)} }
-      `}</style>
-      <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation:backdropAnim }}/>
-      <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-        <div onClick={e=>e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', width:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.2)', overflow:'hidden', pointerEvents:'all', animation:modalAnim }}>
-
-          {/* Header */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.5rem', borderBottom:'1px solid #f1f5f9' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
-              <div style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#fef2f2', border:'1px solid #fecaca', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', fontWeight:700, color:'#dc2626', flexShrink:0 }}>{alumno.nombre.charAt(0)}</div>
-              <div>
-                <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>{alumno.nombre}</p>
-                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>
-                  {pendientes.length} materia{pendientes.length!==1?'s':''} pendiente{pendientes.length!==1?'s':''}
-                  {materiaIdx > 0 && <span style={{ color:'#16a34a', marginLeft:'0.4rem' }}>· {materiaIdx} aprobada{materiaIdx!==1?'s':''}</span>}
-                </p>
-              </div>
-            </div>
-            <button onClick={cerrar} style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:700, fontSize:'0.85rem' }}
-              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
-          </div>
-
-          {/* Progress dots */}
-          {pendientes.length > 1 && (
-            <div style={{ display:'flex', gap:'0.3rem', padding:'0.625rem 1.5rem', borderBottom:'1px solid #f1f5f9', alignItems:'center' }}>
-              {pendientes.map((m, i) => (
-                <div key={i} style={{ flex:1, height:'3px', borderRadius:'9999px', background: i < materiaIdx ? '#16a34a' : i === materiaIdx ? '#2563eb' : '#e2e8f0', transition:'background 0.3s' }}/>
-              ))}
-              <span style={{ fontSize:'0.65rem', color:'#94a3b8', marginLeft:'0.5rem', flexShrink:0 }}>{materiaIdx+1}/{pendientes.length}</span>
-            </div>
-          )}
-
-          {/* Body */}
-          <div style={{ padding:'1.5rem', ...pasoStyle }}>
-
-            {/* Paso: siguiente materia */}
-            {paso === 'siguiente' ? (
-              <>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.875rem', marginBottom:'1.5rem' }}>
-                  <div style={{ width:'48px', height:'48px', borderRadius:'50%', background:'#f0fdf4', border:'2.5px solid #16a34a', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <svg width="22" height="22" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  <div style={{ textAlign:'center' }}>
-                    <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#16a34a', margin:'0 0 0.25rem' }}>✓ {ultimaAprobada}</p>
-                    <p style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem' }}>Queda otra materia pendiente</p>
-                    <p style={{ fontSize:'0.8rem', color:'#64748b', margin:0 }}>¿Deseas revisar también <strong>{proximaMateria}</strong>?</p>
-                  </div>
-                </div>
-                <div style={{ display:'flex', gap:'0.75rem' }}>
-                  <button onClick={marcarPendiente}
-                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
-                    onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
-                    Dejar pendiente
-                  </button>
-                  <button onClick={irASiguiente}
-                    style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer', transition:'background 0.15s' }}
-                    onMouseEnter={e=>(e.currentTarget.style.background='#1d4ed8')} onMouseLeave={e=>(e.currentTarget.style.background='#2563eb')}>
-                    Revisar →
-                  </button>
-                </div>
-              </>
-            ) : paso === 'editar' ? (
-              <>
-                <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem', textAlign:'center' }}>¿Deseas aprobar a</p>
-                <p style={{ fontSize:'1rem', fontWeight:700, color:'#2563eb', margin:'0 0 0.25rem', textAlign:'center' }}>&ldquo;{alumno.nombre.split(',')[0]}&rdquo;</p>
-                <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0 0 1.25rem', textAlign:'center' }}>en <strong style={{ color:'#475569' }}>{materiaActual?.materia}</strong>?</p>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem', marginBottom:'1.25rem' }}>
-                  <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:bgCalif, border:`3px solid ${colorCalif}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}>
-                    <span style={{ fontSize:'1.5rem', fontWeight:800, color:colorCalif, fontFamily:'Outfit,sans-serif' }}>{califSelec}</span>
-                  </div>
-                  <p style={{ fontSize:'0.7rem', fontWeight:600, color:colorCalif, margin:0 }}>{califSelec>=60?'✓ Calificación aprobatoria':'✗ Calificación reprobatoria'}</p>
-                </div>
-                <div style={{ marginBottom:'1.5rem' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem' }}>
-                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>0</span>
-                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>50</span>
-                    <span style={{ fontSize:'0.7rem', color:'#16a34a', fontWeight:600 }}>60 mín.</span>
-                    <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500 }}>100</span>
-                  </div>
-                  <input type="range" min={0} max={100} value={califSelec} onChange={e=>setCalifSelec(Number(e.target.value))} style={{ width:'100%', accentColor:colorCalif, cursor:'pointer', height:'6px' }}/>
-                </div>
-                <div style={{ display:'flex', gap:'0.75rem' }}>
-                  <button onClick={cerrar} style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
-                    onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>Cancelar</button>
-                  <button onClick={irConfirmar} style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:califSelec>=60?'#16a34a':'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background=califSelec>=60?'#15803d':'#2563eb'}} onMouseLeave={e=>{e.currentTarget.style.background=califSelec>=60?'#16a34a':'#1e3a5f'}}>
-                    {califSelec>=60?'Aprobar →':'Guardar →'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.875rem', marginBottom:'1.5rem' }}>
-                  <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:bgCalif, border:`2.5px solid ${colorCalif}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <span style={{ fontSize:'1.25rem', fontWeight:800, color:colorCalif, fontFamily:'Outfit,sans-serif' }}>{califSelec}</span>
-                  </div>
-                  <div style={{ textAlign:'center' }}>
-                    <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.375rem' }}>¿Estás seguro?</p>
-                    <p style={{ fontSize:'0.8125rem', color:'#475569', margin:'0 0 0.25rem' }}>Asignarás la calificación <span style={{ fontWeight:700, color:colorCalif }}>{califSelec}</span> a</p>
-                    <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.25rem' }}>&ldquo;{alumno.nombre}&rdquo;</p>
-                    <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:0 }}>en {materiaActual?.materia}</p>
-                  </div>
-                </div>
-                <div style={{ display:'flex', gap:'0.75rem' }}>
-                  <button onClick={volverEditar} style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
-                    onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>← Editar</button>
-                  <button onClick={guardar} style={{ flex:1, padding:'0.75rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:califSelec>=60?'#16a34a':'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background=califSelec>=60?'#15803d':'#2563eb'}} onMouseLeave={e=>{e.currentTarget.style.background=califSelec>=60?'#16a34a':'#1e3a5f'}}>Sí, guardar</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </>,
-    document.body
-  )
-}
-
 // ─── Tabla reprobados ─────────────────────────────────────────────────────────
 function ReprobadosTable() {
   const [busqueda, setBusqueda]             = useState('')
   const [searchExp, setSearchExp]           = useState(false)
-  const [alumnoEditando, setAlumnoEditando] = useState<typeof reprobadosMock[0] | null>(null)
   const [filtroParcial, setFiltroParcial]   = useState<'p1'|'p2'|'semestre'|null>(null)
   const [dropdownAbierto, setDropdownAbierto] = useState(false)
-  const [aprobadas, setAprobadas]           = useState<Record<string, Set<string>>>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
-  function getAprobadas(id: string) { return aprobadas[id] ?? new Set<string>() }
-  function onAprobar(alumnoId: string, materia: string) {
-    setAprobadas(prev => {
-      const next = new Set(prev[alumnoId] ?? [])
-      next.add(materia)
-      return { ...prev, [alumnoId]: next }
-    })
-  }
 
   const OPTS = [{key:'p1',label:'Parcial 1'},{key:'p2',label:'Parcial 2'},{key:'semestre',label:'Semestre'}] as const
   const labelActivo = filtroParcial ? OPTS.find(o=>o.key===filtroParcial)?.label : null
@@ -402,19 +187,15 @@ function ReprobadosTable() {
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
             <tr style={{ borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, background:'white', zIndex:1 }}>
-              {['#','Alumno','Grupo','Materias reprobadas','Asig.','Acciones'].map(col=>(
+              {['#','Alumno','Grupo','Materias reprobadas','Asig.'].map(col=>(
                 <th key={col} style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtrados.length===0 ? (
-              <tr><td colSpan={6} style={{ padding:'2rem', textAlign:'center', fontSize:'0.8125rem', color:'#94a3b8' }}>No se encontraron alumnos</td></tr>
-            ) : filtrados.map((a,i)=>{
-              const ap = getAprobadas(a.id)
-              const pendientes = a.materias.filter(m => !ap.has(m.materia))
-              if (pendientes.length === 0) return null
-              return (
+              <tr><td colSpan={5} style={{ padding:'2rem', textAlign:'center', fontSize:'0.8125rem', color:'#94a3b8' }}>No se encontraron alumnos</td></tr>
+            ) : filtrados.map((a,i)=>(
               <tr key={a.id} style={{ borderBottom:'1px solid #f8fafc' }}
                 onMouseEnter={e=>(e.currentTarget.style.background='#fff5f5')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>
                 <td style={{ padding:'0.75rem 1rem', fontSize:'0.75rem', color:'#94a3b8' }}>{i+1}</td>
@@ -429,7 +210,7 @@ function ReprobadosTable() {
                 </td>
                 <td style={{ padding:'0.75rem 1rem', maxWidth:'240px' }}>
                   <div style={{ display:'flex', gap:'0.3rem', overflowX:'auto', paddingBottom:'2px', scrollbarWidth:'none' }}>
-                    {pendientes.map((m,idx)=>(
+                    {a.materias.map((m,idx)=>(
                       <span key={idx} style={{ fontSize:'0.68rem', fontWeight:600, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:'#fff5f5', color:'#dc2626', border:'1px solid #fecaca', whiteSpace:'nowrap', flexShrink:0 }}>
                         {m.materia} · {m.promedio}
                       </span>
@@ -437,30 +218,14 @@ function ReprobadosTable() {
                   </div>
                 </td>
                 <td style={{ padding:'0.75rem 1rem', textAlign:'center' }}>
-                  <span style={{ fontSize:'0.875rem', fontWeight:800, color:'#dc2626', fontFamily:'Outfit,sans-serif' }}>{pendientes.length}</span>
-                </td>
-                <td style={{ padding:'0.75rem 1rem' }}>
-                  <button onClick={()=>setAlumnoEditando(a)}
-                    style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#eff6ff', border:'1px solid #bfdbfe', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.background='#dbeafe';e.currentTarget.style.borderColor='#2563eb'}}
-                    onMouseLeave={e=>{e.currentTarget.style.background='#eff6ff';e.currentTarget.style.borderColor='#bfdbfe'}}>
-                    <span style={{ fontSize:'0.65rem', fontWeight:800, color:'#2563eb', fontFamily:'Outfit,sans-serif' }}>E</span>
-                  </button>
+                  <span style={{ fontSize:'0.875rem', fontWeight:800, color:'#dc2626', fontFamily:'Outfit,sans-serif' }}>{a.materias.length}</span>
                 </td>
               </tr>
-              )
-            })}
+            ))}
           </tbody>
         </table>
       </div>
-      {alumnoEditando && (
-        <ModalEditarCalif
-          alumno={alumnoEditando}
-          aprobadas={getAprobadas(alumnoEditando.id)}
-          onCerrar={()=>setAlumnoEditando(null)}
-          onAprobar={(materia)=>onAprobar(alumnoEditando.id, materia)}
-        />
-      )}
+
     </div>
   )
 }
@@ -566,7 +331,7 @@ function SemestreCard({ s, i, onClick }: { s: typeof semestresActivos[0]; i: num
       style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:'1.25rem', textAlign:'left', cursor:'pointer', padding:0, overflow:'hidden', transition:'all 0.22s ease', animation:`cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ${i*0.07}s both` }}
       onMouseEnter={e=>{ e.currentTarget.style.borderColor='#93c5fd'; e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(59,130,246,0.12)' }}
       onMouseLeave={e=>{ e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e3a5f,#2563eb)', padding:'1.25rem 1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <div style={{ background:'linear-gradient(135deg,#64748b,#94a3b8)', padding:'1.25rem 1.5rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'0.875rem' }}>
           <div style={{ width:'40px', height:'40px', borderRadius:'0.75rem', background:'rgba(255,255,255,0.88)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.125rem', fontWeight:800, color:'#1e3a5f', fontFamily:'Outfit,sans-serif', flexShrink:0 }}>{s.numero}</div>
           <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'white', margin:0, fontFamily:'Outfit,sans-serif' }}>{s.numero}° Semestre</p>
@@ -873,11 +638,26 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
                 {tienePeriodo && ` · Parcial ${parcialSelec}`}
                 {panelAbierto==='asistencias' && ` · Semana ${semanaSelec}`}
               </p>
-              {(tienePeriodo || panelAbierto==='asistencias') ? (
-                <p style={{ fontSize:'0.7rem', margin:0 }}>Served by <span style={{ color:'#2563eb', fontWeight:600 }}>Dinoti</span></p>
-              ) : (
-                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0, fontStyle:'italic' }}>Selecciona un período para ver los datos</p>
-              )}
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                {tienePeriodo && panelAbierto!=='asistencias' && (
+                  <button
+                    style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.35rem 0.75rem', borderRadius:'0.625rem', fontSize:'0.75rem', fontWeight:600, color:'#1e3a5f', background:'white', border:'1px solid #e2e8f0', cursor:'pointer', transition:'all 0.15s', flexShrink:0 }}
+                    onMouseEnter={e=>{ e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#bfdbfe' }}
+                    onMouseLeave={e=>{ e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0' }}>
+                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round"/>
+                      <polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round"/>
+                      <line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round"/>
+                    </svg>
+                    Descargar informe
+                  </button>
+                )}
+                {(tienePeriodo || panelAbierto==='asistencias') ? (
+                  <p style={{ fontSize:'0.7rem', margin:0 }}>Served by <span style={{ color:'#2563eb', fontWeight:600 }}>Dinoti</span></p>
+                ) : (
+                  <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0, fontStyle:'italic' }}>Selecciona un período para ver los datos</p>
+                )}
+              </div>
             </div>
           </>
         )}
