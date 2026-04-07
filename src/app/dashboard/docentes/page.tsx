@@ -50,6 +50,7 @@ function getColor(nombre: string) {
   return PALETA[nombre.charCodeAt(0) % PALETA.length]
 }
 
+// Agrupa asignaciones por materia para mostrarlas de forma compacta
 
 // ─── Modal eliminar materias ──────────────────────────────────────────────────
 function ModalEliminarMaterias({
@@ -424,7 +425,7 @@ export default function DocentesPage() {
             <div className="flex items-center gap-3">
               {[
                 { letra: 'E', label: 'Editar',          bg: '#eff6ff', color: '#2563eb' },
-                { letra: 'M', label: 'Materias',        bg: '#fffbeb', color: '#d97706' },
+                { letra: 'A', label: 'Eliminar asignaturas', bg: '#fffbeb', color: '#d97706' },
                 { letra: 'X', label: 'Eliminar docente',bg: '#fef2f2', color: '#dc2626' },
               ].map(l => (
                 <div key={l.letra} className="flex items-center gap-1.5">
@@ -560,7 +561,7 @@ export default function DocentesPage() {
                   <div className="flex gap-2 items-center">
                     {[
                       { letra: 'E', label: 'Editar',   bg: '#eff6ff', color: '#2563eb', hoverBg: '#dbeafe', action: () => handleEditar(docente) },
-                      { letra: 'M', label: 'Materias', bg: '#fffbeb', color: '#d97706', hoverBg: '#fef3c7', action: () => setDocenteLimpiarMaterias(docente) },
+                      { letra: 'A', label: 'Eliminar asignaturas', bg: '#fffbeb', color: '#d97706', hoverBg: '#fef3c7', action: () => setDocenteLimpiarMaterias(docente) },
                       { letra: 'X', label: 'Eliminar', bg: '#fef2f2', color: '#dc2626', hoverBg: '#fee2e2', action: () => setDocenteAEliminar(docente) },
                     ].map(btn => (
                       <button key={btn.letra}
