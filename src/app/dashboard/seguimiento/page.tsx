@@ -12,6 +12,17 @@ type Alumno       = { id: string; nombre: string; bimestres: DatoBimestre[]; sem
 
 const MATERIAS = ['Matemáticas','Español','Historia','Física','Química','Inglés','Biología','Informática']
 
+const DOCENTES_MATERIA: Record<string, string> = {
+  'Matemáticas': 'Prof. Ramírez Torres',
+  'Español':     'Prof. López Herrera',
+  'Historia':    'Prof. Gutiérrez Paz',
+  'Física':      'Prof. Mendoza Ríos',
+  'Química':     'Prof. Castillo Vera',
+  'Inglés':      'Prof. Flores Aguilar',
+  'Biología':    'Prof. Soto Morales',
+  'Informática': 'Prof. Vega Sandoval',
+}
+
 const semestresActivos = [
   { numero: 1, ciclo: 'Ago–Dic 2025', grupos: ['101','102','103'], alumnos: 87 },
   { numero: 3, ciclo: 'Ago–Dic 2025', grupos: ['301','302','303'], alumnos: 82 },
@@ -742,6 +753,17 @@ function AlumnosVista({ grupoActivo, semestreActivo, semanaSelec, semanaDir, sem
               </button>
             ))}
           </div>
+          {asigSelec && DOCENTES_MATERIA[asigSelec] && (
+            <div style={{ marginTop:'0.75rem', paddingTop:'0.625rem', borderTop:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <div style={{ width:'24px', height:'24px', borderRadius:'50%', background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', fontWeight:700, color:'#2563eb', flexShrink:0 }}>
+                {DOCENTES_MATERIA[asigSelec].split(' ')[1]?.charAt(0)}{DOCENTES_MATERIA[asigSelec].split(' ')[2]?.charAt(0)}
+              </div>
+              <div>
+                <span style={{ fontSize:'0.65rem', color:'#94a3b8', fontWeight:500 }}>Docente: </span>
+                <span style={{ fontSize:'0.75rem', fontWeight:600, color:'#1e3a5f' }}>{DOCENTES_MATERIA[asigSelec]}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
