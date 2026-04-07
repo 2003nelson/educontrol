@@ -6,17 +6,18 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 const navPrincipal = [
-  { nombre: 'Inicio',      href: '/dashboard' },
-  { nombre: 'Docentes',    href: '/dashboard/docentes' },
-  { nombre: 'Seguimiento', href: '/dashboard/seguimiento' },
-  { nombre: 'Asignaturas', href: '/dashboard/asignaturas' },
-  { nombre: 'Grupos',      href: '/dashboard/grupos' },
+  { nombre: 'Inicio',               href: '/dashboard' },
+  { nombre: 'Docentes',             href: '/dashboard/docentes' },
+  { nombre: 'Seguimiento',          href: '/dashboard/seguimiento' },
+  { nombre: 'Asignaturas',          href: '/dashboard/asignaturas' },
+  { nombre: 'Grupos',               href: '/dashboard/grupos' },
 ]
 
 const navAvanzado = [
-  { nombre: 'Ciclo Escolar',     href: '/dashboard/ciclo' },
-  { nombre: 'Sistema',           href: '/dashboard/sistema' },
-  { nombre: 'Roles del sistema', href: '/dashboard/roles' },
+  { nombre: 'Ciclo Escolar',          href: '/dashboard/ciclo' },
+  { nombre: 'Servicios Escolares',    href: '/dashboard/servicios' },
+  { nombre: 'Sistema',               href: '/dashboard/sistema' },
+  { nombre: 'Roles del sistema',     href: '/dashboard/roles' },
 ]
 
 export default function Sidebar() {
