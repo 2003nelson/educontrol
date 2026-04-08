@@ -315,7 +315,7 @@ export default function ServiciosPage() {
           </div>
         </div>
 
-        {/* Vistaa Grupos */}
+        {/* Vista de Grupos */}
         {vista === 'grupos' && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'1rem', animation:'seIn 0.38s cubic-bezier(0.34,1.56,0.64,1)' }}>
             {gruposFiltrados.length === 0 ? (
