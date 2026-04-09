@@ -135,9 +135,9 @@ function SpringDropdown({ opciones, seleccionado, onSeleccionar, onCerrar, force
 }
 
 // ─── Modal Descargar Informe ──────────────────────────────────────────────────
-function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
-  const [grupo,      setGrupo]      = useState('')
-  const [parcial,    setParcial]    = useState('')
+function ModalInforme({ grupoInicial = '', parcialInicial = '', onCerrar }: { grupoInicial?: string; parcialInicial?: string; onCerrar: () => void }) {
+  const [grupo,      setGrupo]      = useState(grupoInicial)
+  const [parcial,    setParcial]    = useState(parcialInicial)
   const [alcance,    setAlcance]    = useState<'general'|'asignatura'>('general')
   const [asignatura, setAsignatura] = useState('')
   const [cerrando,   setCerrando]   = useState(false)
@@ -190,10 +190,9 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
                 style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.45rem 0.75rem', fontSize:'0.8rem', color: parcial ? '#1e3a5f' : '#94a3b8', outline:'none', background:'white', boxSizing:'border-box' }}
                 onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}>
                 <option value="">Selecciona</option>
-                <option value="1">1er Parcial</option>
-                <option value="2">2do Parcial</option>
-                <option value="3">3er Parcial</option>
-                <option value="final">Final</option>
+                <option value="1">Parcial 1</option>
+                <option value="2">Parcial 2</option>
+                <option value="semestre">Semestre</option>
               </select>
             </div>
           </div>
@@ -201,15 +200,22 @@ function ModalInforme({ onCerrar }: { onCerrar: () => void }) {
           {/* Alcance */}
           <div>
             <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Alcance</label>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.375rem' }}>
-              {[{key:'general',label:'General',desc:'Todo el grupo'},{key:'asignatura',label:'Por asignatura',desc:'Una materia'}].map(op=>(
-                <button key={op.key} onClick={()=>{ setAlcance(op.key as typeof alcance); setAsignatura('') }}
-                  style={{ padding:'0.5rem 0.75rem', borderRadius:'0.625rem', textAlign:'left', border: alcance===op.key ? '1.5px solid #2563eb' : '1px solid #e2e8f0', background: alcance===op.key ? '#eff6ff' : 'white', cursor:'pointer', transition:'all 0.15s' }}>
-                  <p style={{ fontSize:'0.775rem', fontWeight:700, color: alcance===op.key ? '#2563eb' : '#1e3a5f', margin:'0 0 0.1rem' }}>{op.label}</p>
-                  <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>{op.desc}</p>
-                </button>
-              ))}
-            </div>
+            {!grupo || !parcial ? (
+              <div style={{ padding:'0.625rem 0.875rem', borderRadius:'0.625rem', background:'#f8fafc', border:'1px dashed #e2e8f0', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:0 }}>Selecciona grupo y período para desbloquear</p>
+              </div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.375rem' }}>
+                {[{key:'general',label:'General',desc:'Todo el grupo'},{key:'asignatura',label:'Por asignatura',desc:'Una materia'}].map(op=>(
+                  <button key={op.key} onClick={()=>{ setAlcance(op.key as typeof alcance); setAsignatura('') }}
+                    style={{ padding:'0.5rem 0.75rem', borderRadius:'0.625rem', textAlign:'left', border: alcance===op.key ? '1.5px solid #2563eb' : '1px solid #e2e8f0', background: alcance===op.key ? '#eff6ff' : 'white', cursor:'pointer', transition:'all 0.15s' }}>
+                    <p style={{ fontSize:'0.775rem', fontWeight:700, color: alcance===op.key ? '#2563eb' : '#1e3a5f', margin:'0 0 0.1rem' }}>{op.label}</p>
+                    <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>{op.desc}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Asignaturas pills */}
@@ -778,7 +784,7 @@ export default function DashboardPage() {
         })()}
       </div>
 
-      {modalInforme && <ModalInforme onCerrar={() => setModalInforme(false)} />}
+      {modalInforme && <ModalInforme grupoInicial={grupoSelec !== 'general' ? grupoSelec : ''} parcialInicial={parcialSelec !== 'general' ? parcialSelec : ''} onCerrar={() => setModalInforme(false)} />}
     </div>
   )
 }
