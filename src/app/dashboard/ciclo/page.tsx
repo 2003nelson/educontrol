@@ -18,6 +18,13 @@ function diasEntre(a: string, b: string) {
   return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000) + 1)
 }
 
+const MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+function formatFechaLarga(iso: string) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-')
+  return `${parseInt(d)} de ${MESES_LARGO[parseInt(m)-1]} de ${y}`
+}
+
 // ─── Mini calendario ──────────────────────────────────────────────────────────
 function MiniCalendario({
   seleccionado, inicio, cierre, festivos, onChange, minDate, maxDate, ocupadas,
@@ -416,6 +423,8 @@ function WizardModal({
   )
 }
 
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 // ─── Modal confirmar eliminar ─────────────────────────────────────────────────
 function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCancelar: () => void }) {
   if (typeof window === 'undefined') return null
@@ -429,14 +438,12 @@ function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCan
           </svg>
         </div>
         <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.5rem', textAlign:'center' }}>¿Eliminar ciclo escolar?</h3>
-        <p style={{ fontSize:'0.8125rem', color:'#64748b', margin:'0 0 1.5rem', textAlign:'center', lineHeight:1.6 }}>
-          Se eliminarán todas las fechas configuradas y tendrás que crear un nuevo ciclo desde cero.
-        </p>
+        <p style={{ fontSize:'0.8125rem', color:'#94a3b8', margin:'0 0 1.5rem', textAlign:'center' }}>Esta acción no se puede deshacer.</p>
         <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
           <button onClick={onCancelar} style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#2563eb', color:'white', cursor:'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')} onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}>Cancelar</button>
+            onMouseEnter={e=>(e.currentTarget.style.background='#1d4ed8')} onMouseLeave={e=>(e.currentTarget.style.background='#2563eb')}>Cancelar</button>
           <button onClick={onAceptar} style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#dc2626', color:'white', cursor:'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')} onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}>Sí, eliminar</button>
+            onMouseEnter={e=>(e.currentTarget.style.background='#b91c1c')} onMouseLeave={e=>(e.currentTarget.style.background='#dc2626')}>Sí, eliminar</button>
         </div>
       </div>
     </div>,
@@ -444,7 +451,6 @@ function ModalEliminar({ onAceptar, onCancelar }: { onAceptar: () => void; onCan
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 // ─── Botón eliminar expandible ────────────────────────────────────────────────
 function EliminarCicloBtn({ borrando, onClick }: { borrando: boolean; onClick: () => void }) {
   const [hov, setHov] = useState(false)
@@ -517,9 +523,158 @@ function EliminarCicloBtn({ borrando, onClick }: { borrando: boolean; onClick: (
   )
 }
 
+// ─── Wizard Editar ciclo ──────────────────────────────────────────────────────
+function WizardEditar({
+  periodoActual,
+  onGuardar,
+  onCerrar,
+}: {
+  periodoActual: { inicio: string; cierre: string; vacIni: string; vacFin: string; parcial1: string; parcial2: string; festivos: string[] }
+  onGuardar: (data: typeof periodoActual) => void
+  onCerrar: () => void
+}) {
+  type Campo = 'inicio'|'cierre'|'vacIni'|'vacFin'|'parcial1'|'parcial2'
+  const [campoActivo, setCampoActivo] = useState<Campo|null>(null)
+  const [cerrando, setCerrando]       = useState(false)
+
+  const [inicio,   setInicio]   = useState(periodoActual.inicio)
+  const [cierre,   setCierre]   = useState(periodoActual.cierre)
+  const [vacIni,   setVacIni]   = useState(periodoActual.vacIni)
+  const [vacFin,   setVacFin]   = useState(periodoActual.vacFin)
+  const [parcial1, setParcial1] = useState(periodoActual.parcial1)
+  const [parcial2, setParcial2] = useState(periodoActual.parcial2)
+
+  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
+  function guardar() {
+    onGuardar({ inicio, cierre, vacIni, vacFin, parcial1, parcial2, festivos: periodoActual.festivos })
+    cerrar()
+  }
+
+  const campos: { key: Campo; label: string; valor: string; color: string; setter: (v:string)=>void }[] = [
+    { key:'inicio',   label:'Inicio del ciclo',    valor:inicio,   color:'#1e3a5f', setter:setInicio   },
+    { key:'cierre',   label:'Cierre del semestre',  valor:cierre,   color:'#dc2626', setter:setCierre   },
+    { key:'vacIni',   label:'Inicio de vacaciones', valor:vacIni,   color:'#d97706', setter:setVacIni   },
+    { key:'vacFin',   label:'Fin de vacaciones',    valor:vacFin,   color:'#d97706', setter:setVacFin   },
+    { key:'parcial1', label:'Cierre Parcial 1',     valor:parcial1, color:'#2563eb', setter:setParcial1 },
+    { key:'parcial2', label:'Cierre Parcial 2',     valor:parcial2, color:'#7c3aed', setter:setParcial2 },
+  ]
+
+  function nd(iso: string) { const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10) }
+  function pd(iso: string) { const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10) }
+
+  // Range rules per campo: minDate / maxDate
+  const rangeRules: Record<Campo, { minDate?: string; maxDate?: string }> = {
+    inicio:   { maxDate: [cierre,vacIni,vacFin,parcial1,parcial2].filter(Boolean).sort()[0] ? pd([cierre,vacIni,vacFin,parcial1,parcial2].filter(Boolean).sort()[0]) : undefined },
+    cierre:   { minDate: [inicio,vacIni,vacFin,parcial1,parcial2].filter(Boolean).sort().at(-1) ? nd([inicio,vacIni,vacFin,parcial1,parcial2].filter(Boolean).sort().at(-1)!) : undefined },
+    vacIni:   { minDate: inicio ? nd(inicio) : undefined, maxDate: vacFin ? pd(vacFin) : cierre ? pd(cierre) : undefined },
+    vacFin:   { minDate: vacIni ? nd(vacIni) : inicio ? nd(inicio) : undefined, maxDate: cierre ? pd(cierre) : undefined },
+    parcial1: { minDate: inicio ? nd(inicio) : undefined, maxDate: parcial2 ? pd(parcial2) : cierre ? pd(cierre) : undefined },
+    parcial2: { minDate: parcial1 ? nd(parcial1) : inicio ? nd(inicio) : undefined, maxDate: cierre ? pd(cierre) : undefined },
+  }
+
+  const campoSelec = campoActivo ? campos.find(c=>c.key===campoActivo) : null
+  const rango      = campoActivo ? rangeRules[campoActivo] : {}
+
+  if (typeof window === 'undefined') return null
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes weBackIn  { from{opacity:0} to{opacity:1} }
+        @keyframes weBackOut { from{opacity:1} to{opacity:0} }
+        @keyframes weIn  { from{opacity:0;transform:scale(0.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes weOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.9) translateY(16px)} }
+      `}</style>
+      <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation: cerrando ? 'weBackOut 0.38s ease forwards' : 'weBackIn 0.28s ease' }}/>
+      <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+        <div style={{ background:'white', borderRadius:'1.5rem', boxShadow:'0 32px 80px rgba(0,0,0,0.22)', width:'820px', maxWidth:'calc(100vw - 2rem)', maxHeight:'90vh', display:'flex', flexDirection:'column', overflow:'hidden', pointerEvents:'all', animation: cerrando ? 'weOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'weIn 0.46s cubic-bezier(0.34,1.56,0.64,1)' }}>
+
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.75rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+            <div>
+              <h2 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit,sans-serif' }}>Editar ciclo escolar</h2>
+              <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.15rem 0 0' }}>Selecciona una fecha para editarla</p>
+            </div>
+            <button onClick={cerrar} style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.9rem' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', height:'480px', overflow:'hidden' }}>
+
+            {/* Izquierda — tabla de fechas */}
+            <div style={{ borderRight:'1px solid #f1f5f9', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+              {/* Header fijo */}
+              <div style={{ padding:'1.75rem 1.75rem 0.75rem', flexShrink:0 }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:0 }}>Fechas del ciclo</p>
+              </div>
+              {/* Lista scrolleable */}
+              <div style={{ flex:'1 1 0', overflowY:'auto', padding:'0 1.75rem', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                {campos.map(c => (
+                  <button key={c.key} onClick={() => setCampoActivo(c.key)}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.875rem 1rem', borderRadius:'0.875rem', border: campoActivo===c.key ? `2px solid ${c.color}` : '1px solid #f1f5f9', background: campoActivo===c.key ? 'white' : '#fafbfc', cursor:'pointer', transition:'all 0.18s', textAlign:'left', boxShadow: campoActivo===c.key ? `0 2px 12px ${c.color}22` : 'none', flexShrink:0 }}
+                    onMouseEnter={e=>{ if(campoActivo!==c.key) e.currentTarget.style.background='white' }}
+                    onMouseLeave={e=>{ if(campoActivo!==c.key) e.currentTarget.style.background='#fafbfc' }}>
+                    <div>
+                      <p style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', margin:'0 0 0.2rem', textTransform:'uppercase', letterSpacing:'0.06em' }}>{c.label}</p>
+                      <p style={{ fontSize:'0.9375rem', fontWeight:700, color: campoActivo===c.key ? c.color : '#1e3a5f', margin:0, fontFamily:'Outfit,sans-serif' }}>{formatFecha(c.valor)}</p>
+                    </div>
+                    {campoActivo===c.key
+                      ? <svg width="16" height="16" fill="none" stroke={c.color} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" strokeLinecap="round"/></svg>
+                      : <svg width="14" height="14" fill="none" stroke="#cbd5e1" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    }
+                  </button>
+                ))}
+              </div>
+              {/* Botones siempre visibles */}
+              <div style={{ padding:'1rem 1.75rem 1.75rem', borderTop:'1px solid #f1f5f9', display:'flex', gap:'0.625rem', flexShrink:0 }}>
+                <button onClick={cerrar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', background:'white', color:'#64748b', cursor:'pointer' }}
+                  onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>Cancelar</button>
+                <button onClick={guardar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background:'#16a34a', color:'white', cursor:'pointer' }}
+                  onMouseEnter={e=>(e.currentTarget.style.background='#15803d')} onMouseLeave={e=>(e.currentTarget.style.background='#16a34a')}>✓ Guardar cambios</button>
+              </div>
+            </div>
+
+            {/* Derecha — calendario */}
+            <div style={{ padding:'1.75rem', background:'#fafbfc', display:'flex', flexDirection:'column', overflowY:'auto' }}>
+              {!campoActivo ? (
+                <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.75rem', textAlign:'center' }}>
+                  <div style={{ width:'48px', height:'48px', borderRadius:'1rem', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <svg width="22" height="22" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#475569', margin:0 }}>Selecciona una fecha</p>
+                  <p style={{ fontSize:'0.775rem', color:'#94a3b8', margin:0 }}>Haz clic en una fecha de la lista para editarla</p>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.25rem', flexShrink:0 }}>
+                    Editando: {campoSelec?.label}
+                  </p>
+                  <div style={{ transform:'scale(1.05)', transformOrigin:'top center', flexShrink:0 }}>
+                    <MiniCalendario
+                      seleccionado={campoSelec?.valor ?? ''}
+                      inicio={inicio} cierre={cierre} festivos={periodoActual.festivos}
+                      onChange={(iso) => { campoSelec?.setter(iso) }}
+                      minDate={rango?.minDate}
+                      maxDate={rango?.maxDate}
+                      ocupadas={campos.filter(c=>c.key!==campoActivo).map(c=>c.valor).filter(Boolean)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CicloPage() {
   const [wizardAbierto, setWizardAbierto] = useState(false)
   const [modalEliminar, setModalEliminar] = useState(false)
+  const [editandoCiclo, setEditandoCiclo] = useState(false)
   const [borrando, setBorrando]           = useState(false)
   const [borrado, setBorrado]             = useState(false)
   const [exitoVisible, setExitoVisible]   = useState(false)
@@ -548,6 +703,11 @@ export default function CicloPage() {
     setBorrando(true)
     setTimeout(() => { setBorrando(false); setBorrado(true) }, 1400)
     setTimeout(() => { setPeriodo(null); setBorrado(false) }, 2200)
+  }
+
+  function handleGuardarEdicion(data: NonNullable<typeof periodo>) {
+    setPeriodo(prev => prev ? { ...prev, ...data } : prev)
+    setEditandoCiclo(false)
   }
 
   const diasTotales = periodo ? diasEntre(periodo.inicio, periodo.cierre) : 0
@@ -648,7 +808,19 @@ export default function CicloPage() {
                   Ciclo borrado
                 </div>
               ) : (
-                <EliminarCicloBtn borrando={borrando} onClick={() => !borrando && setModalEliminar(true)} />
+                <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
+                  {/* Botón editar */}
+                  <button onClick={() => setEditandoCiclo(true)}
+                    style={{ width:'36px', height:'36px', borderRadius:'50%', background:'white', border:'2px solid #2563eb', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.18s' }}
+                    onMouseEnter={e=>{ e.currentTarget.style.background='#eff6ff' }}
+                    onMouseLeave={e=>{ e.currentTarget.style.background='white' }}>
+                    <svg width="14" height="14" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  <EliminarCicloBtn borrando={borrando} onClick={() => !borrando && setModalEliminar(true)} />
+                </div>
               )}
             </div>
 
@@ -656,6 +828,7 @@ export default function CicloPage() {
             <div style={{ background:'white', borderRadius:'1.25rem', padding:'2rem', border:'1px solid #e2e8f0', boxShadow:'0 2px 12px rgba(0,0,0,0.04)' }}>
               <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1.75rem' }}>Resumen del período</p>
               <div style={{ display:'flex', justifyContent:'space-around', alignItems:'flex-start' }}>
+                <CircleStat value={formatFecha(periodo.inicio)}    label="Inicio ciclo"      color="#475569" bg="#f8fafc" />
                 <CircleStat value={diasEfect}                      label="Días efectivos"   color="#2563eb" bg="#eff6ff" />
                 <CircleStat value={diasVac}                        label="Días vacaciones"  color="#d97706" bg="#fffbeb" />
                 <CircleStat value={formatFecha(periodo.parcial1)}  label="Cierre Parcial 1" color="#2563eb" bg="#eff6ff" />
@@ -665,16 +838,51 @@ export default function CicloPage() {
               </div>
             </div>
 
-            {/* Calendario de vista */}
-            <div style={{ background:'white', borderRadius:'1.25rem', padding:'1.5rem', border:'1px solid #e2e8f0', maxWidth:'340px' }}>
-              <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1rem' }}>Vista del calendario</p>
-              <MiniCalendario
-                seleccionado={periodo.inicio}
-                inicio={periodo.inicio} cierre={periodo.cierre}
-                festivos={periodo.festivos}
-                ocupadas={[periodo.parcial1, periodo.parcial2]}
-                onChange={() => {}}
-              />
+            {/* Fila inferior: calendario + resumen de fechas */}
+            <div style={{ display:'grid', gridTemplateColumns:'340px 1fr', gap:'1.25rem', alignItems:'start' }}>
+
+              {/* Calendario de vista */}
+              <div style={{ background:'white', borderRadius:'1.25rem', padding:'1.5rem', border:'1px solid #e2e8f0' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 1rem' }}>Vista del calendario</p>
+                <MiniCalendario
+                  seleccionado={periodo.inicio}
+                  inicio={periodo.inicio} cierre={periodo.cierre}
+                  festivos={periodo.festivos}
+                  ocupadas={[periodo.parcial1, periodo.parcial2]}
+                  onChange={() => {}}
+                />
+              </div>
+
+              {/* Resumen de fechas */}
+              <div style={{ background:'white', borderRadius:'1.25rem', border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+                {/* Header */}
+                <div style={{ background:'linear-gradient(135deg,#64748b,#94a3b8)', padding:'1.25rem 1.5rem' }}>
+                  <p style={{ fontSize:'0.65rem', fontWeight:700, color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.25rem' }}>Fechas del período</p>
+                  <p style={{ fontSize:'0.9rem', fontWeight:700, color:'white', margin:0 }}>Ciclo {formatFecha(periodo.inicio).split(' ').at(-1)} – {formatFecha(periodo.cierre).split(' ').at(-1)}</p>
+                </div>
+                {/* Filas */}
+                <div style={{ flex:1, padding:'0.5rem 0' }}>
+                  {[
+                    { label:'Inicio del ciclo',    valor:formatFechaLarga(periodo.inicio),   color:'#475569', accent:'#f8fafc' },
+                    { label:'Inicio vacaciones',   valor:formatFechaLarga(periodo.vacIni),   color:'#d97706', accent:'#fffbeb' },
+                    { label:'Fin de vacaciones',   valor:formatFechaLarga(periodo.vacFin),   color:'#d97706', accent:'#fffbeb' },
+                    { label:'Cierre Parcial 1',   valor:formatFechaLarga(periodo.parcial1), color:'#2563eb', accent:'#eff6ff' },
+                    { label:'Cierre Parcial 2',   valor:formatFechaLarga(periodo.parcial2), color:'#7c3aed', accent:'#f5f3ff' },
+                    { label:'Días festivos',       valor:`${diasFest} día${diasFest!==1?'s':''} no laborable${diasFest!==1?'s':''}`, color:'#be185d', accent:'#fce7f3' },
+                    { label:'Fin del ciclo',       valor:formatFechaLarga(periodo.cierre),   color:'#dc2626', accent:'#fef2f2' },
+                  ].map((f, i, arr) => (
+                    <div key={f.label} style={{ display:'flex', alignItems:'center', gap:'0.875rem', padding:'0.75rem 1.5rem', borderBottom: i < arr.length-1 ? '1px solid #f8fafc' : 'none', background:'white', transition:'background 0.12s' }}
+                      onMouseEnter={e=>(e.currentTarget.style.background=f.accent)}
+                      onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+                      <div style={{ width:'10px', height:'10px', borderRadius:'50%', background:f.color, flexShrink:0 }}/>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <p style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em', margin:'0 0 0.15rem' }}>{f.label}</p>
+                        <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>{f.valor}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -682,6 +890,9 @@ export default function CicloPage() {
 
       {wizardAbierto && <WizardModal onCrear={crearCiclo} onCerrar={() => setWizardAbierto(false)} />}
       {modalEliminar && <ModalEliminar onAceptar={eliminarCiclo} onCancelar={() => setModalEliminar(false)} />}
+      {editandoCiclo && periodo && (
+        <WizardEditar periodoActual={periodo} onGuardar={handleGuardarEdicion} onCerrar={() => setEditandoCiclo(false)} />
+      )}
     </div>
   )
 }

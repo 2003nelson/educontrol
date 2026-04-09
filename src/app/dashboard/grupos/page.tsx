@@ -171,6 +171,107 @@ function GrupoModal({
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Botón editar expandible ──────────────────────────────────────────────────
+function EditarGrupoBtn({ onClick }: { onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleEnter() {
+    if (leaveT.current) clearTimeout(leaveT.current)
+    enterT.current = setTimeout(() => setHov(true), 180)
+  }
+  function handleLeave() {
+    if (enterT.current) clearTimeout(enterT.current)
+    leaveT.current = setTimeout(() => setHov(false), 280)
+  }
+
+  return (
+    <button onClick={onClick} onMouseEnter={handleEnter} onMouseLeave={handleLeave}
+      style={{
+        display:'flex', alignItems:'center', justifyContent:'center',
+        gap: hov ? '0.4rem' : '0',
+        height:'28px',
+        width: hov ? 'auto' : '28px',
+        minWidth: hov ? '100px' : '28px',
+        padding: hov ? '0 0.75rem' : '0',
+        borderRadius: hov ? '0.5rem' : '50%',
+        background: hov ? '#eff6ff' : '#f1f5f9',
+        border: hov ? '1px solid #2563eb' : '1px solid #e2e8f0',
+        cursor:'pointer',
+        transition:'all 0.28s cubic-bezier(0.4,0,0.2,1)',
+        overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
+      }}>
+      <span style={{ fontSize:'0.7rem', fontWeight:700, color: hov ? '#2563eb' : '#64748b', flexShrink:0 }}>E</span>
+      {hov && <span style={{ fontSize:'0.75rem', fontWeight:600, color:'#2563eb' }}>Editar</span>}
+    </button>
+  )
+}
+
+// ─── Modal editar grupo ───────────────────────────────────────────────────────
+function ModalEditarGrupo({ grupo, onGuardar, onCerrar }: {
+  grupo: Grupo
+  onGuardar: (id: string, nombre: string, semestre: number) => void
+  onCerrar: () => void
+}) {
+  const [nombre,   setNombre]   = useState(grupo.nombre)
+  const [semestre, setSemestre] = useState(grupo.semestre)
+  const [cerrando, setCerrando] = useState(false)
+
+  function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
+  function guardar() {
+    if (!nombre.trim()) return
+    onGuardar(grupo.id, nombre.trim(), semestre)
+    cerrar()
+  }
+
+  if (typeof window === 'undefined') return null
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes egBackIn  { from{opacity:0} to{opacity:1} }
+        @keyframes egBackOut { from{opacity:1} to{opacity:0} }
+        @keyframes egIn  { from{opacity:0;transform:scale(0.93) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes egOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.93) translateY(12px)} }
+      `}</style>
+      <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: cerrando ? 'egBackOut 0.38s ease forwards' : 'egBackIn 0.25s ease' }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', width:'380px', boxShadow:'0 20px 60px rgba(0,0,0,0.18)', overflow:'hidden', animation: cerrando ? 'egOut 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'egIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1rem 1.25rem', borderBottom:'1px solid #f1f5f9' }}>
+            <div>
+              <h2 style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Editar grupo</h2>
+              <p style={{ fontSize:'0.72rem', color:'#94a3b8', margin:'0.15rem 0 0' }}>Grupo {grupo.nombre}</p>
+            </div>
+            <button onClick={cerrar} style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.85rem' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
+          </div>
+          <div style={{ padding:'1.25rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
+            <div>
+              <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Nombre del grupo</label>
+              <input value={nombre} onChange={e=>setNombre(e.target.value)}
+                style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.875rem', outline:'none', boxSizing:'border-box', color:'#1e3a5f' }}
+                onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}/>
+            </div>
+            <div>
+              <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Semestre</label>
+              <select value={semestre} onChange={e=>setSemestre(Number(e.target.value))}
+                style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.875rem', outline:'none', background:'white', color:'#1e3a5f', boxSizing:'border-box' }}>
+                {[1,2,3,4,5,6].map(s=><option key={s} value={s}>{s}° Semestre</option>)}
+              </select>
+            </div>
+            <div style={{ display:'flex', gap:'0.625rem', paddingTop:'0.25rem' }}>
+              <button onClick={cerrar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
+                onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>Cancelar</button>
+              <button onClick={guardar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e=>(e.currentTarget.style.background='#2563eb')} onMouseLeave={e=>(e.currentTarget.style.background='#1e3a5f')}>Guardar cambios</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
 // ─── Botón eliminar expandible ────────────────────────────────────────────────
 function EliminarGrupoBtn({ onClick }: { onClick: () => void }) {
   const [hov, setHov] = useState(false)
@@ -215,6 +316,7 @@ export default function GruposPage() {
   const [modalAbierto, setModalAbierto]       = useState(false)
   const [eliminando, setEliminando]           = useState<Grupo | null>(null)
   const [elimCerrando, setElimCerrando]       = useState(false)
+  const [editando, setEditando]               = useState<Grupo | null>(null)
   const [semestreFiltro, setSemestreFiltro]   = useState<number | 'todos'>('todos')
   const [busqueda, setBusqueda]               = useState('')
   const [agregado, setAgregado]               = useState(false)
@@ -232,6 +334,10 @@ export default function GruposPage() {
   }
 
 
+
+  function handleEditar(id: string, nombre: string, semestre: number) {
+    setGrupos(prev => prev.map(g => g.id === id ? { ...g, nombre, semestre } : g))
+  }
 
   function cerrarEliminar() {
     setElimCerrando(true)
@@ -407,7 +513,10 @@ export default function GruposPage() {
                             </td>
                             <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{g.creadoEl}</td>
                             <td style={{ padding:'0.75rem 1rem', overflow:'visible', position:'relative' }}>
-                              <EliminarGrupoBtn onClick={() => setEliminando(g)} />
+                              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                                <EditarGrupoBtn onClick={() => setEditando(g)} />
+                                <EliminarGrupoBtn onClick={() => setEliminando(g)} />
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -424,6 +533,9 @@ export default function GruposPage() {
       {/* Modal agregar */}
       {modalAbierto && (
         <GrupoModal onGuardar={handleGuardar} onCerrar={() => setModalAbierto(false)} />
+      )}
+      {editando && (
+        <ModalEditarGrupo grupo={editando} onGuardar={handleEditar} onCerrar={() => setEditando(null)} />
       )}
 
       {/* Modal eliminar */}
