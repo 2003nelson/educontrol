@@ -5,27 +5,34 @@ import Header from '@/components/Header'
 
 const SEMESTRES = [1, 2, 3, 4, 5, 6]
 
+type AlumnoFila = { id: string; matricula: string; nombre: string }
+
 type Grupo = {
   id: string
   nombre: string
   semestre: number
   creadoEl: string
+  totalAlumnos: number
 }
 
 const gruposIniciales: Grupo[] = [
-  { id:'1',  nombre:'101', semestre:1, creadoEl:'12 Ago 2025' },
-  { id:'2',  nombre:'102', semestre:1, creadoEl:'12 Ago 2025' },
-  { id:'3',  nombre:'103', semestre:1, creadoEl:'13 Ago 2025' },
-  { id:'4',  nombre:'201', semestre:2, creadoEl:'12 Ago 2025' },
-  { id:'5',  nombre:'202', semestre:2, creadoEl:'12 Ago 2025' },
-  { id:'6',  nombre:'203', semestre:2, creadoEl:'14 Ago 2025' },
-  { id:'7',  nombre:'301', semestre:3, creadoEl:'12 Ago 2025' },
-  { id:'8',  nombre:'302', semestre:3, creadoEl:'13 Ago 2025' },
-  { id:'9',  nombre:'401', semestre:4, creadoEl:'12 Ago 2025' },
-  { id:'10', nombre:'501', semestre:5, creadoEl:'12 Ago 2025' },
-  { id:'11', nombre:'502', semestre:5, creadoEl:'13 Ago 2025' },
-  { id:'12', nombre:'601', semestre:6, creadoEl:'12 Ago 2025' },
+  { id:'1',  nombre:'101', semestre:1, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'2',  nombre:'102', semestre:1, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'3',  nombre:'103', semestre:1, creadoEl:'13 Ago 2025', totalAlumnos: 0 },
+  { id:'4',  nombre:'201', semestre:2, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'5',  nombre:'202', semestre:2, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'6',  nombre:'203', semestre:2, creadoEl:'14 Ago 2025', totalAlumnos: 0 },
+  { id:'7',  nombre:'301', semestre:3, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'8',  nombre:'302', semestre:3, creadoEl:'13 Ago 2025', totalAlumnos: 0 },
+  { id:'9',  nombre:'401', semestre:4, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'10', nombre:'501', semestre:5, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
+  { id:'11', nombre:'502', semestre:5, creadoEl:'13 Ago 2025', totalAlumnos: 0 },
+  { id:'12', nombre:'601', semestre:6, creadoEl:'12 Ago 2025', totalAlumnos: 0 },
 ]
+
+function toTitleCase(str: string): string {
+  return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
 
 // ─── Botón agregar expandible ─────────────────────────────────────────────────
 function AgregarGrupoBtn({ onClick }: { onClick: () => void }) {
@@ -99,7 +106,7 @@ function GrupoModal({
               onMouseLeave={e => (e.currentTarget.style.background='white')}>
               ← Editar
             </button>
-            <button onClick={() => onGuardar({ nombre, semestre })}
+            <button onClick={() => onGuardar({ nombre, semestre, totalAlumnos: 0 })}
               style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer' }}
               onMouseEnter={e => (e.currentTarget.style.background='#2563eb')}
               onMouseLeave={e => (e.currentTarget.style.background='#1e3a5f')}>
@@ -272,6 +279,219 @@ function ModalEditarGrupo({ grupo, onGuardar, onCerrar }: {
   )
 }
 
+// ─── Modal cargar alumnos por pegado ─────────────────────────────────────────
+function ModalCargaAlumnos({ grupo, alumnosExistentes, onCargar, onCerrar }: {
+  grupo: { nombre: string }
+  alumnosExistentes: AlumnoFila[]
+  onCargar: (grupoNombre: string, filas: AlumnoFila[]) => void
+  onCerrar: () => void
+}) {
+  const modoEdicion = alumnosExistentes.length > 0
+  const [texto, setTexto]   = useState('')
+  const [cerrando, setCerrando] = useState(false)
+  const [cargado, setCargado]   = useState(false)
+
+  // Edit mode: editable list of existing alumnos
+  const [editList, setEditList] = useState<AlumnoFila[]>(alumnosExistentes.map(a => ({ ...a })))
+  const [nuevaNombre, setNuevaNombre]     = useState('')
+  const [nuevaMatricula, setNuevaMatricula] = useState('')
+
+  function cerrar() { setCerrando(true); setTimeout(onCerrar, 380) }
+
+  // Parse pasted text
+  type Fila = { matricula: string; nombre: string }
+  const filasPaste: Fila[] = texto.split('\n')
+    .map(l => l.trim()).filter(Boolean)
+    .map(l => {
+      const partes = l.split('\t')
+      if (partes.length >= 2) return { matricula: partes[0].trim(), nombre: toTitleCase(partes.slice(1).join(' ').trim()) }
+      return { matricula: '', nombre: toTitleCase(l) }
+    })
+  const tieneMatricula = filasPaste.some(f => f.matricula)
+  const listo = modoEdicion ? editList.length > 0 : filasPaste.length > 0
+
+  function cargarYCerrar() {
+    let resultado: AlumnoFila[]
+    if (modoEdicion) {
+      resultado = editList
+    } else {
+      resultado = filasPaste.map((f, i) => ({ id: `f-${Date.now()}-${i}`, matricula: f.matricula, nombre: f.nombre }))
+    }
+    onCargar(grupo.nombre, resultado)
+    setCargado(true)
+    setTimeout(() => cerrar(), 1200)
+  }
+
+  function agregarNuevo() {
+    if (!nuevaNombre.trim()) return
+    setEditList(prev => [...prev, { id: `new-${Date.now()}`, matricula: nuevaMatricula.trim(), nombre: toTitleCase(nuevaNombre.trim()) }])
+    setNuevaNombre(''); setNuevaMatricula('')
+  }
+
+  function editarAlumno(id: string, campo: 'nombre'|'matricula', val: string) {
+    setEditList(prev => prev.map(a => a.id === id ? { ...a, [campo]: val } : a))
+  }
+
+  function eliminarAlumno(id: string) {
+    setEditList(prev => prev.filter(a => a.id !== id))
+  }
+
+  if (typeof window === 'undefined') return null
+  return createPortal(
+    <>
+      <style>{`
+        @keyframes cgBI{from{opacity:0}to{opacity:1}} @keyframes cgBO{from{opacity:1}to{opacity:0}}
+        @keyframes cgI{from{opacity:0;transform:scale(0.9) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes cgO{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;transform:scale(0.9) translateY(16px)}}
+      `}</style>
+      <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation: cerrando?'cgBO 0.38s ease forwards':'cgBI 0.28s ease' }}/>
+      <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:'white', borderRadius:'1.5rem', width:'900px', maxWidth:'calc(100vw - 2rem)', height:'520px', display:'flex', flexDirection:'column', boxShadow:'0 32px 80px rgba(0,0,0,0.22)', pointerEvents:'all', overflow:'hidden', animation: cerrando?'cgO 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards':'cgI 0.46s cubic-bezier(0.34,1.56,0.64,1)' }}>
+
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.75rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+            <div>
+              <h2 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit,sans-serif' }}>
+                {modoEdicion ? `Editar alumnos — Grupo ${grupo.nombre}` : `Cargar alumnos — Grupo ${grupo.nombre}`}
+              </h2>
+              <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.2rem 0 0' }}>
+                {modoEdicion ? 'Edita nombres, matrículas o agrega alumnos nuevos' : 'Pega desde Excel — soporta matrícula + nombre en columnas separadas'}
+              </p>
+            </div>
+            <button onClick={cerrar} style={{ width:'32px', height:'32px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
+          </div>
+
+          {/* Body */}
+          <div style={{ display:'grid', gridTemplateColumns:'5fr 7fr', flex:'1 1 0', minHeight:0, overflow:'hidden' }}>
+
+            {/* Izquierda */}
+            <div style={{ padding:'1.25rem 1.5rem', borderRight:'1px solid #f1f5f9', display:'flex', flexDirection:'column', gap:'0.625rem' }}>
+              {modoEdicion ? (
+                // Edit mode: form to add new alumno
+                <>
+                  <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:0 }}>Agregar alumno</p>
+                  <input value={nuevaMatricula} onChange={e=>setNuevaMatricula(e.target.value)} placeholder="Matrícula (opcional)"
+                    style={{ border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.82rem', outline:'none', color:'#1e3a5f' }}
+                    onFocus={e=>(e.currentTarget.style.borderColor='#2563eb')} onBlur={e=>(e.currentTarget.style.borderColor='#e2e8f0')}/>
+                  <input value={nuevaNombre} onChange={e=>setNuevaNombre(e.target.value)} placeholder="Nombre completo *"
+                    style={{ border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.82rem', outline:'none', color:'#1e3a5f' }}
+                    onFocus={e=>(e.currentTarget.style.borderColor='#2563eb')} onBlur={e=>(e.currentTarget.style.borderColor='#e2e8f0')}
+                    onKeyDown={e=>{ if(e.key==='Enter') agregarNuevo() }}/>
+                  <button onClick={agregarNuevo} disabled={!nuevaNombre.trim()}
+                    style={{ padding:'0.5rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background: nuevaNombre.trim()?'#1e3a5f':'#e2e8f0', color: nuevaNombre.trim()?'white':'#94a3b8', cursor: nuevaNombre.trim()?'pointer':'not-allowed', transition:'background 0.15s' }}
+                    onMouseEnter={e=>{ if(nuevaNombre.trim()) e.currentTarget.style.background='#2563eb' }} onMouseLeave={e=>{ if(nuevaNombre.trim()) e.currentTarget.style.background='#1e3a5f' }}>
+                    + Agregar alumno
+                  </button>
+                  <div style={{ marginTop:'0.5rem', padding:'0.75rem', borderRadius:'0.875rem', background:'#f8fafc', border:'1px solid #f1f5f9', fontSize:'0.72rem', color:'#64748b' }}>
+                    <p style={{ margin:'0 0 0.25rem', fontWeight:600, color:'#475569' }}>Tip: también puedes pegar una lista nueva</p>
+                    <p style={{ margin:0 }}>Los cambios actuales se reemplazarán con lo que pegues.</p>
+                  </div>
+                </>
+              ) : (
+                // Paste mode
+                <>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:0 }}>Área de pegado</p>
+                    {texto && <button onClick={()=>setTexto('')} style={{ fontSize:'0.7rem', color:'#dc2626', background:'none', border:'none', cursor:'pointer', padding:0, fontWeight:600 }}>Limpiar</button>}
+                  </div>
+                  <textarea value={texto} onChange={e=>setTexto(e.target.value)}
+                    placeholder={'Una columna (solo nombre):\nGarcía López Ana\nMartínez Ruiz Carlos\n\nDos columnas (matrícula + nombre):\n12345\tGarcía López Ana\n12346\tMartínez Ruiz Carlos'}
+                    style={{ flex:1, border:'1px solid #e2e8f0', borderRadius:'0.875rem', padding:'0.875rem', fontSize:'0.8rem', outline:'none', resize:'none', color:'#1e3a5f', lineHeight:1.7, fontFamily:'monospace', boxSizing:'border-box', transition:'border-color 0.15s' }}
+                    onFocus={e=>(e.currentTarget.style.borderColor='#2563eb')} onBlur={e=>(e.currentTarget.style.borderColor='#e2e8f0')}/>
+                  <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>
+                    En Excel: selecciona columna(s) → <strong>Ctrl+C</strong> → pega aquí <strong>Ctrl+V</strong>
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Derecha — vista previa / lista editable */}
+            <div style={{ display:'flex', flexDirection:'column', minHeight:0 }}>
+              <div style={{ padding:'1.25rem 1.5rem 0.625rem', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:0 }}>
+                  {modoEdicion ? 'Lista de alumnos' : 'Vista previa'}
+                </p>
+                <span style={{ fontSize:'0.72rem', fontWeight:600, padding:'0.15rem 0.5rem', borderRadius:'9999px', background: listo?'#eff6ff':'#f1f5f9', color: listo?'#2563eb':'#94a3b8' }}>
+                  {modoEdicion ? editList.length : filasPaste.length} alumno{(modoEdicion?editList.length:filasPaste.length)!==1?'s':''}
+                </span>
+              </div>
+
+              {modoEdicion ? (
+                // Editable list
+                <div style={{ flex:'1 1 0', overflowY:'auto', minHeight:0 }}>
+                  {editList.length === 0 ? (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'0.5rem', color:'#94a3b8' }}>
+                      <p style={{ fontSize:'0.8rem', margin:0 }}>Sin alumnos — agrega uno desde la izquierda</p>
+                    </div>
+                  ) : editList.map((a) => (
+                    <div key={a.id} style={{ display:'grid', gridTemplateColumns:'76px 1fr 28px', gap:'0.375rem', alignItems:'center', padding:'0.375rem 1.5rem', borderBottom:'1px solid #f8fafc' }}>
+                      <input value={a.matricula} onChange={e=>editarAlumno(a.id,'matricula',e.target.value)} placeholder="—"
+                        style={{ border:'1px solid #e2e8f0', borderRadius:'0.375rem', padding:'0.25rem 0.375rem', fontSize:'0.72rem', outline:'none', color:'#475569', fontFamily:'monospace', textAlign:'center', width:'100%', boxSizing:'border-box' }}
+                        onFocus={e=>(e.currentTarget.style.borderColor='#2563eb')} onBlur={e=>(e.currentTarget.style.borderColor='#e2e8f0')}/>
+                      <input value={a.nombre} onChange={e=>editarAlumno(a.id,'nombre',e.target.value)}
+                        style={{ border:'1px solid #e2e8f0', borderRadius:'0.375rem', padding:'0.25rem 0.5rem', fontSize:'0.8rem', outline:'none', color:'#1e3a5f', fontWeight:500, width:'100%', boxSizing:'border-box' }}
+                        onFocus={e=>(e.currentTarget.style.borderColor='#2563eb')} onBlur={e=>(e.currentTarget.style.borderColor='#e2e8f0')}/>
+                      <button onClick={()=>eliminarAlumno(a.id)}
+                        style={{ width:'24px', height:'24px', borderRadius:'50%', background:'#fef2f2', border:'1px solid #fecaca', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#dc2626', fontSize:'0.65rem', flexShrink:0 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              ) : filasPaste.length === 0 ? (
+                <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.5rem', textAlign:'center', padding:'1.5rem' }}>
+                  <svg width="32" height="32" fill="none" stroke="#e2e8f0" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <p style={{ fontSize:'0.8rem', color:'#94a3b8', margin:0 }}>Los alumnos aparecerán aquí</p>
+                </div>
+              ) : (
+                <>
+                  {tieneMatricula && (
+                    <div style={{ display:'grid', gridTemplateColumns:'80px 1fr 24px', gap:'0.5rem', padding:'0.25rem 1.5rem', background:'#f8fafc', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+                      <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em' }}>Matrícula</span>
+                      <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em' }}>Nombre</span>
+                    </div>
+                  )}
+                  <div style={{ flex:'1 1 0', overflowY:'auto', minHeight:0 }}>
+                    {filasPaste.map((f, i) => (
+                      <div key={i} style={{ display:'grid', gridTemplateColumns: tieneMatricula ? '80px 1fr 24px' : '1fr 24px', gap:'0.5rem', alignItems:'center', padding:'0.4rem 1.5rem', borderBottom:'1px solid #f8fafc' }}>
+                        {tieneMatricula && (
+                          <span style={{ fontSize:'0.7rem', fontWeight:700, color:'#475569', fontFamily:'monospace', background:'#f1f5f9', padding:'0.15rem 0.375rem', borderRadius:'0.375rem', textAlign:'center' }}>{f.matricula}</span>
+                        )}
+                        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', minWidth:0 }}>
+                          <div style={{ width:'22px', height:'22px', borderRadius:'50%', background:'#1e3a5f', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', fontWeight:700, color:'white', flexShrink:0 }}>{f.nombre.charAt(0)}</div>
+                          <span style={{ fontSize:'0.78rem', color:'#1e3a5f', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.nombre}</span>
+                        </div>
+                        <span style={{ fontSize:'0.62rem', color:'#cbd5e1', textAlign:'right' }}>#{i+1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding:'0.875rem 1.75rem', borderTop:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:0 }}>
+              {modoEdicion
+                ? `${editList.length} alumnos en el grupo ${grupo.nombre}`
+                : listo ? `${filasPaste.length} alumnos${tieneMatricula?' con matrícula':''} listos para el grupo ${grupo.nombre}` : 'Pega los datos para continuar'}
+            </p>
+            <div style={{ display:'flex', gap:'0.625rem' }}>
+              <button onClick={cerrar} style={{ padding:'0.5rem 1.125rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.875rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}>Cancelar</button>
+              <button disabled={!listo} onClick={cargarYCerrar}
+                style={{ padding:'0.5rem 1.375rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.875rem', border:'none', background: cargado?'#16a34a':listo?'#1e3a5f':'#e2e8f0', color: listo?'white':'#94a3b8', cursor: listo?'pointer':'not-allowed', transition:'background 0.3s' }}
+                onMouseEnter={e=>{ if(listo&&!cargado) e.currentTarget.style.background='#2563eb' }} onMouseLeave={e=>{ if(listo&&!cargado) e.currentTarget.style.background='#1e3a5f' }}>
+                {cargado ? '✓ Guardado' : modoEdicion ? `✓ Guardar cambios` : `✓ Cargar ${listo?filasPaste.length:''} alumnos`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
 // ─── Botón eliminar expandible ────────────────────────────────────────────────
 function EliminarGrupoBtn({ onClick }: { onClick: () => void }) {
   const [hov, setHov] = useState(false)
@@ -317,6 +537,8 @@ export default function GruposPage() {
   const [eliminando, setEliminando]           = useState<Grupo | null>(null)
   const [elimCerrando, setElimCerrando]       = useState(false)
   const [editando, setEditando]               = useState<Grupo | null>(null)
+  const [cargandoGrupo, setCargandoGrupo]     = useState<Grupo | null>(null)
+  const [alumnosPorGrupo, setAlumnosPorGrupo] = useState<Record<string, AlumnoFila[]>>({})
   const [semestreFiltro, setSemestreFiltro]   = useState<number | 'todos'>('todos')
   const [busqueda, setBusqueda]               = useState('')
   const [agregado, setAgregado]               = useState(false)
@@ -337,6 +559,11 @@ export default function GruposPage() {
 
   function handleEditar(id: string, nombre: string, semestre: number) {
     setGrupos(prev => prev.map(g => g.id === id ? { ...g, nombre, semestre } : g))
+  }
+
+  function handleCarga(grupoNombre: string, filas: AlumnoFila[]) {
+    setAlumnosPorGrupo(prev => ({ ...prev, [grupoNombre]: filas }))
+    setGrupos(prev => prev.map(g => g.nombre === grupoNombre ? { ...g, totalAlumnos: filas.length } : g))
   }
 
   function cerrarEliminar() {
@@ -493,8 +720,9 @@ export default function GruposPage() {
                     <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
                       <thead>
                         <tr style={{ borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
-                          <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'40%' }}>Grupo</th>
-                          <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'40%' }}>Fecha de creación</th>
+                          <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'35%' }}>Grupo</th>
+                          <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'20%' }}>Fecha de creación</th>
+                          <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'25%' }}>Cargar alumnos</th>
                           <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', width:'20%' }}>Acciones</th>
                         </tr>
                       </thead>
@@ -512,6 +740,17 @@ export default function GruposPage() {
                               </div>
                             </td>
                             <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{g.creadoEl}</td>
+                            <td style={{ padding:'0.75rem 1rem', overflow:'visible' }}>
+                              <button onClick={() => setCargandoGrupo(g)}
+                                style={{ display:'flex', alignItems:'center', gap:'0.375rem', height:'28px', padding:'0 0.75rem', borderRadius:'9999px', border: g.totalAlumnos>0 ? '1px solid #16a34a' : '1px dashed #2563eb', background: g.totalAlumnos>0 ? '#f0fdf4' : '#eff6ff', cursor:'pointer', fontSize:'0.72rem', fontWeight:600, color: g.totalAlumnos>0 ? '#16a34a' : '#2563eb', transition:'all 0.15s', whiteSpace:'nowrap' }}
+                                onMouseEnter={e=>{ e.currentTarget.style.filter='brightness(0.95)' }}
+                                onMouseLeave={e=>{ e.currentTarget.style.filter='none' }}>
+                                {g.totalAlumnos > 0
+                                  ? <><svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>{g.totalAlumnos} alumnos</>
+                                  : <><svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round"/><polyline points="17 8 12 3 7 8" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round"/></svg>Pegar lista</>
+                                }
+                              </button>
+                            </td>
                             <td style={{ padding:'0.75rem 1rem', overflow:'visible', position:'relative' }}>
                               <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
                                 <EditarGrupoBtn onClick={() => setEditando(g)} />
@@ -536,6 +775,9 @@ export default function GruposPage() {
       )}
       {editando && (
         <ModalEditarGrupo grupo={editando} onGuardar={handleEditar} onCerrar={() => setEditando(null)} />
+      )}
+      {cargandoGrupo && (
+        <ModalCargaAlumnos grupo={cargandoGrupo} alumnosExistentes={alumnosPorGrupo[cargandoGrupo.nombre] ?? []} onCargar={handleCarga} onCerrar={() => setCargandoGrupo(null)} />
       )}
 
       {/* Modal eliminar */}

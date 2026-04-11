@@ -1,362 +1,145 @@
 'use client'
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 
-type Permisos = {
-  inicio:      boolean
-  docentes:    boolean
-  seguimiento: boolean
-  sistema:     boolean
-  roles:       boolean
-}
-
-type Usuario = {
-  id: string
-  nombre: string
-  email: string
-  permisos: Permisos
-  creadoEn: string
-}
-
-const PERMISOS_INFO: { key: keyof Permisos; label: string; desc: string }[] = [
-  { key: 'inicio',      label: 'Inicio estadístico', desc: 'Gráficas y estadísticas'   },
-  { key: 'docentes',    label: 'Docentes',            desc: 'Gestión de docentes'       },
-  { key: 'seguimiento', label: 'Seguimiento',         desc: 'Seguimiento académico'     },
-  { key: 'sistema',     label: 'Sistema',             desc: 'Configuración del sistema' },
-  { key: 'roles',       label: 'Roles',               desc: 'Usuarios y permisos'       },
+const SECCIONES = [
+  { key: 'inicio',      label: 'Inicio',        desc: 'Panel de estadísticas y gráficas'       },
+  { key: 'docentes',    label: 'Docentes',       desc: 'Gestión de docentes y asignaciones'     },
+  { key: 'seguimiento', label: 'Seguimiento',    desc: 'Seguimiento académico por grupo'        },
+  { key: 'asignaturas', label: 'Asignaturas',    desc: 'Administración de asignaturas'          },
+  { key: 'grupos',      label: 'Grupos',         desc: 'Gestión de grupos y carga de alumnos'   },
+  { key: 'ciclo',       label: 'Ciclo Escolar',  desc: 'Configuración del ciclo y fechas'       },
+  { key: 'sistema',     label: 'Sistema',        desc: 'Configuración general del sistema'      },
 ]
 
-const MAX_USUARIOS = 5
-
-const usuariosIniciales: Usuario[] = [
-  {
-    id: '1',
-    nombre: 'Ana González',
-    email: 'ana.gonzalez@cbta62.edu.mx',
-    permisos: { inicio: true, docentes: true, seguimiento: true, sistema: false, roles: false },
-    creadoEn: '12 Mar 2026',
-  },
-  {
-    id: '2',
-    nombre: 'Luis Ramírez',
-    email: 'luis.ramirez@cbta62.edu.mx',
-    permisos: { inicio: true, docentes: false, seguimiento: true, sistema: false, roles: false },
-    creadoEn: '14 Mar 2026',
-  },
-]
-
-function Switch({ activo, onChange }: { activo: boolean; onChange: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      className="relative inline-flex items-center rounded-full transition-all duration-300 shrink-0"
-      style={{ width: '40px', height: '22px', background: activo ? '#16a34a' : '#d1d5db' }}
-    >
-      <span
-        className="inline-block rounded-full bg-white shadow-sm transition-all duration-300"
-        style={{ width: '16px', height: '16px', transform: activo ? 'translateX(20px)' : 'translateX(3px)' }}
-      />
-    </button>
+export default function SecretariaPage() {
+  const [mostrarPass, setMostrarPass] = useState(false)
+  const [permisos, setPermisos]       = useState<Record<string, boolean>>(
+    Object.fromEntries(SECCIONES.map(s => [s.key, true]))
   )
-}
+  const [guardado, setGuardado] = useState(false)
 
-function Avatar({ nombre }: { nombre: string }) {
-  const iniciales = nombre.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
-  const colores   = ['#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b']
-  const color     = colores[nombre.charCodeAt(0) % colores.length]
-  return (
-    <div className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0"
-      style={{ background: color }}>
-      {iniciales}
-    </div>
-  )
-}
-
-function Portal({ children, onCerrar }: { children: React.ReactNode; onCerrar: () => void }) {
-  if (typeof window === 'undefined') return null
-  return createPortal(
-    <div
-      onClick={onCerrar}
-      style={{
-        position:             'fixed',
-        inset:                0,
-        zIndex:               9999,
-        display:              'flex',
-        alignItems:           'center',
-        justifyContent:       'center',
-        background:           'rgba(0,0,0,0.5)',
-        backdropFilter:       'blur(3px)',
-        WebkitBackdropFilter: 'blur(3px)',
-      }}
-    >
-      <div onClick={e => e.stopPropagation()} style={{ width: 'fit-content' }}>
-        {children}
-      </div>
-    </div>,
-    document.body
-  )
-}
-
-export default function RolesPage() {
-  const [usuarios, setUsuarios]               = useState<Usuario[]>(usuariosIniciales)
-  const [modalAbierto, setModalAbierto]       = useState(false)
-  const [editando, setEditando]               = useState<Usuario | null>(null)
-  const [confirmEliminar, setConfirmEliminar] = useState<Usuario | null>(null)
-  const [form, setForm]                       = useState({ nombre: '', email: '' })
-  const [permisos, setPermisos]               = useState<Permisos>({
-    inicio: false, docentes: false, seguimiento: false, sistema: false, roles: false,
-  })
-
-  const puedeAgregar = usuarios.length < MAX_USUARIOS
-
-  function abrirNuevo() {
-    setEditando(null)
-    setForm({ nombre: '', email: '' })
-    setPermisos({ inicio: false, docentes: false, seguimiento: false, sistema: false, roles: false })
-    setModalAbierto(true)
-  }
-
-  function abrirEditar(u: Usuario) {
-    setEditando(u)
-    setForm({ nombre: u.nombre, email: u.email })
-    setPermisos({ ...u.permisos })
-    setModalAbierto(true)
+  function togglePermiso(key: string) {
+    setPermisos(prev => ({ ...prev, [key]: !prev[key] }))
+    setGuardado(false)
   }
 
   function guardar() {
-    if (!form.nombre.trim() || !form.email.trim()) return
-    if (editando) {
-      setUsuarios(prev => prev.map(u =>
-        u.id === editando.id ? { ...u, nombre: form.nombre, email: form.email, permisos } : u
-      ))
-    } else {
-      setUsuarios(prev => [...prev, {
-        id:       Date.now().toString(),
-        nombre:   form.nombre,
-        email:    form.email,
-        permisos,
-        creadoEn: new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-      }])
-    }
-    setModalAbierto(false)
-  }
-
-  function eliminar() {
-    if (!confirmEliminar) return
-    setUsuarios(prev => prev.filter(u => u.id !== confirmEliminar.id))
-    setConfirmEliminar(null)
-  }
-
-  function togglePermiso(key: keyof Permisos) {
-    setPermisos(prev => ({ ...prev, [key]: !prev[key] }))
+    setGuardado(true)
+    setTimeout(() => setGuardado(false), 2200)
   }
 
   return (
     <div className="flex flex-col h-full">
-      <Header titulo="Roles del Sistema" />
+      <style>{`
+        @keyframes scIn { from{opacity:0;transform:translateY(10px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+      `}</style>
+      <Header titulo="Secretaría" />
 
-      <div className="p-6 space-y-4">
+      <div className="px-4 pb-4 pt-3" style={{ flex:'1 1 0', minHeight:0, overflowY:'auto', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
 
-        {/* Contador */}
-        <div>
-          <p className="text-sm" style={{ color: '#64748b' }}>
-            {usuarios.length} de {MAX_USUARIOS} perfiles creados
-          </p>
-          <div className="mt-1.5 w-48 h-1.5 rounded-full overflow-hidden" style={{ background: '#e2e8f0' }}>
-            <div className="h-full rounded-full transition-all"
-              style={{
-                width:      `${(usuarios.length / MAX_USUARIOS) * 100}%`,
-                background: usuarios.length >= MAX_USUARIOS ? '#dc2626' : '#3b82f6',
-              }} />
+        {/* ── Card datos secretaria ── */}
+        <div style={{ background:'white', borderRadius:'1.25rem', border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.04)', animation:'cardIn 0.38s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          {/* Header degradado */}
+          <div style={{ background:'linear-gradient(135deg,#64748b 0%,#94a3b8 100%)', padding:'1.25rem 1.5rem', display:'flex', alignItems:'center', gap:'1rem' }}>
+            <div style={{ width:'46px', height:'46px', borderRadius:'50%', background:'rgba(255,255,255,0.92)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', fontWeight:800, color:'#475569', fontFamily:'Outfit,sans-serif', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)' }}>
+              A
+            </div>
+            <div>
+              <p style={{ fontSize:'0.62rem', fontWeight:600, color:'rgba(255,255,255,0.65)', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.15rem' }}>Rol del sistema</p>
+              <p style={{ fontSize:'1rem', fontWeight:700, color:'white', margin:0, fontFamily:'Outfit,sans-serif' }}>Secretaria escolar</p>
+            </div>
+            <span style={{ marginLeft:'auto', fontSize:'0.68rem', fontWeight:600, padding:'0.25rem 0.75rem', borderRadius:'9999px', background:'rgba(255,255,255,0.18)', color:'rgba(255,255,255,0.9)', border:'1px solid rgba(255,255,255,0.25)' }}>
+              Activa
+            </span>
+          </div>
+
+          {/* Campos */}
+          <div style={{ padding:'1.25rem 1.5rem', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1.25rem' }}>
+            {/* Nombre */}
+            <div>
+              <label style={{ fontSize:'0.62rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', display:'block', marginBottom:'0.4rem' }}>Nombre completo</label>
+              <p style={{ fontSize:'0.9rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Alma Rodríguez Pérez</p>
+            </div>
+            {/* Correo */}
+            <div>
+              <label style={{ fontSize:'0.62rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', display:'block', marginBottom:'0.4rem' }}>Correo electrónico</label>
+              <p style={{ fontSize:'0.9rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>secretaria@cbta62.edu.mx</p>
+            </div>
+            {/* Contraseña */}
+            <div>
+              <label style={{ fontSize:'0.62rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', display:'block', marginBottom:'0.4rem' }}>Contraseña</label>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                <span style={{ fontSize:'0.9rem', fontWeight:600, color:'#1e3a5f', letterSpacing: mostrarPass ? 'normal' : '0.18em' }}>
+                  {mostrarPass ? 'Cbta62#2025' : '••••••••••'}
+                </span>
+                <button onClick={() => setMostrarPass(p => !p)}
+                  style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', padding:'0 0.25rem', display:'flex', alignItems:'center', transition:'color 0.15s' }}
+                  onMouseEnter={e=>(e.currentTarget.style.color='#2563eb')} onMouseLeave={e=>(e.currentTarget.style.color='#94a3b8')}>
+                  {mostrarPass
+                    ? <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-4">
-          {usuarios.map(u => (
-            <div key={u.id} className="bg-white rounded-2xl shadow-sm overflow-hidden"
-              style={{ border: '1px solid #f1f5f9' }}>
-              <div className="h-16 w-full"
-                style={{ background: 'linear-gradient(135deg, #dce8f5, #eff6ff)' }} />
-              <div className="px-5 pb-5">
-                <div className="flex justify-center -mt-8 mb-3">
-                  <div style={{ border: '3px solid white', borderRadius: '9999px' }}>
-                    <Avatar nombre={u.nombre} />
-                  </div>
-                </div>
-                <div className="text-center mb-4">
-                  <h3 className="text-base font-bold" style={{ color: '#1e3a5f' }}>{u.nombre}</h3>
-                  <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{u.email}</p>
-                  <p className="text-xs mt-1" style={{ color: '#cbd5e1' }}>Creado el {u.creadoEn}</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5 justify-center mb-4">
-                  {PERMISOS_INFO.filter(p => u.permisos[p.key]).map(p => (
-                    <span key={p.key}
-                      className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                      {p.label}
-                    </span>
-                  ))}
-                  {PERMISOS_INFO.filter(p => u.permisos[p.key]).length === 0 && (
-                    <span className="text-xs" style={{ color: '#94a3b8' }}>Sin permisos asignados</span>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => abrirEditar(u)}
-                    className="flex-1 py-2 text-xs font-semibold rounded-xl transition"
-                    style={{ background: '#eff6ff', color: '#2563eb' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#dbeafe')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#eff6ff')}>
-                    Editar
-                  </button>
-                  <button onClick={() => setConfirmEliminar(u)}
-                    className="flex-1 py-2 text-xs font-semibold rounded-xl transition"
-                    style={{ background: '#fef2f2', color: '#dc2626' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}>
-                    Eliminar
-                  </button>
-                </div>
+        {/* ── Card permisos ── */}
+        <div style={{ background:'white', borderRadius:'1.25rem', border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.04)', animation:'cardIn 0.44s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          {/* Header */}
+          <div style={{ padding:'1.125rem 1.5rem', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <p style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit,sans-serif' }}>Permisos de acceso</p>
+              <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.15rem 0 0' }}>Elige qué secciones puede ver y usar la secretaria</p>
+            </div>
+            <button onClick={guardar}
+              style={{ display:'flex', alignItems:'center', gap:'0.4rem', height:'36px', padding:'0 1.125rem', borderRadius:'0.875rem', border:'none', background: guardado ? '#16a34a' : '#1e3a5f', color:'white', fontSize:'0.8rem', fontWeight:600, cursor:'pointer', transition:'background 0.22s' }}
+              onMouseEnter={e=>{ if(!guardado) e.currentTarget.style.background='#2563eb' }}
+              onMouseLeave={e=>{ if(!guardado) e.currentTarget.style.background='#1e3a5f' }}>
+              {guardado
+                ? <><svg width="13" height="13" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>Guardado</>
+                : 'Guardar cambios'}
+            </button>
+          </div>
+
+          {/* Lista secciones */}
+          {SECCIONES.map((s, i) => (
+            <div key={s.key}
+              style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.9rem 1.5rem', borderBottom:'1px solid #f8fafc' }}
+              onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')}
+              onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+              <div>
+                <p style={{ fontSize:'0.875rem', fontWeight:600, color: permisos[s.key] ? '#1e3a5f' : '#94a3b8', margin:'0 0 0.1rem', transition:'color 0.2s' }}>{s.label}</p>
+                <p style={{ fontSize:'0.73rem', color:'#94a3b8', margin:0 }}>{s.desc}</p>
               </div>
+              {/* Toggle */}
+              <button onClick={() => togglePermiso(s.key)}
+                style={{ width:'44px', height:'24px', borderRadius:'9999px', border:'none', cursor:'pointer', position:'relative', flexShrink:0, background: permisos[s.key] ? '#1e3a5f' : '#e2e8f0', transition:'background 0.22s', padding:0 }}>
+                <div style={{ position:'absolute', top:'3px', left: permisos[s.key] ? '23px' : '3px', width:'18px', height:'18px', borderRadius:'50%', background:'white', boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.22s cubic-bezier(0.4,0,0.2,1)' }}/>
+              </button>
             </div>
           ))}
 
-          {puedeAgregar && (
-            <button onClick={abrirNuevo}
-              className="bg-white rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 transition-all hover:shadow-md"
-              style={{ border: '2px dashed #e2e8f0', minHeight: '280px' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ background: '#eff6ff' }}>
-                <span className="text-2xl font-bold" style={{ color: '#3b82f6' }}>+</span>
+          {/* Servicios Escolares — siempre bloqueado */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.9rem 1.5rem', background:'#fafbfc', borderTop:'1px solid #f1f5f9' }}>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.1rem' }}>
+                <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#cbd5e1', margin:0 }}>Servicios Escolares</p>
+                <span style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', padding:'0.1rem 0.45rem', borderRadius:'9999px', background:'#f1f5f9', border:'1px solid #e2e8f0' }}>Bloqueado</span>
               </div>
-              <p className="text-sm font-semibold" style={{ color: '#3b82f6' }}>Agregar perfil</p>
-              <p className="text-xs" style={{ color: '#94a3b8' }}>
-                {MAX_USUARIOS - usuarios.length} espacio{MAX_USUARIOS - usuarios.length !== 1 ? 's' : ''} disponible{MAX_USUARIOS - usuarios.length !== 1 ? 's' : ''}
-              </p>
-            </button>
-          )}
+              <p style={{ fontSize:'0.73rem', color:'#cbd5e1', margin:0 }}>Carga y administración de alumnos — exclusivo de la dirección</p>
+            </div>
+            {/* Toggle deshabilitado */}
+            <div style={{ width:'44px', height:'24px', borderRadius:'9999px', background:'#e2e8f0', position:'relative', flexShrink:0, opacity:0.45, pointerEvents:'none' }}>
+              <div style={{ position:'absolute', top:'3px', left:'3px', width:'18px', height:'18px', borderRadius:'50%', background:'white', boxShadow:'0 1px 4px rgba(0,0,0,0.15)' }}/>
+            </div>
+          </div>
         </div>
+
       </div>
-
-      {/* Modal crear / editar */}
-      {modalAbierto && (
-        <Portal onCerrar={() => setModalAbierto(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b"
-              style={{ borderColor: '#f1f5f9' }}>
-              <div>
-                <h2 className="text-base font-bold" style={{ color: '#1e3a5f' }}>
-                  {editando ? 'Editar perfil' : 'Nuevo perfil'}
-                </h2>
-                <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
-                  Configura los datos y permisos del usuario
-                </p>
-              </div>
-              <button onClick={() => setModalAbierto(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">✕</button>
-            </div>
-            <div className="px-6 py-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: '#475569' }}>
-                    Nombre completo
-                  </label>
-                  <input type="text" placeholder="Nombre del usuario"
-                    value={form.nombre}
-                    onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
-                    className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    style={{ borderColor: '#e2e8f0' }} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium block mb-1" style={{ color: '#475569' }}>
-                    Correo electrónico
-                  </label>
-                  <input type="email" placeholder="correo@escuela.edu.mx"
-                    value={form.email}
-                    onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    style={{ borderColor: '#e2e8f0' }} />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold mb-2" style={{ color: '#475569' }}>
-                  Permisos de acceso
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {PERMISOS_INFO.map(p => (
-                    <div key={p.key}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl transition"
-                      style={{
-                        background: permisos[p.key] ? '#f0fdf4' : '#f8fafc',
-                        border:     `1px solid ${permisos[p.key] ? '#bbf7d0' : '#f1f5f9'}`,
-                      }}>
-                      <div className="mr-2 min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: '#1e3a5f' }}>{p.label}</p>
-                        <p className="text-xs truncate" style={{ color: '#94a3b8' }}>{p.desc}</p>
-                      </div>
-                      <Switch activo={permisos[p.key]} onChange={() => togglePermiso(p.key)} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button onClick={() => setModalAbierto(false)}
-                  className="flex-1 py-2.5 text-sm font-medium rounded-xl border transition"
-                  style={{ borderColor: '#e2e8f0', color: '#64748b' }}>
-                  Cancelar
-                </button>
-                <button onClick={guardar}
-                  className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
-                  style={{ background: '#1e3a5f' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-                  {editando ? 'Guardar cambios' : 'Crear perfil'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
-
-      {/* Modal confirmar eliminar */}
-      {confirmEliminar && (
-        <Portal onCerrar={() => setConfirmEliminar(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8">
-            <div className="flex justify-center mb-5">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center"
-                style={{ background: '#fef2f2' }}>
-                <svg width="28" height="28" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                </svg>
-              </div>
-            </div>
-            <h3 className="text-base font-bold text-center mb-2" style={{ color: '#1e3a5f' }}>¿Estás seguro?</h3>
-            <p className="text-sm text-center mb-1" style={{ color: '#475569' }}>Estás a punto de eliminar a</p>
-            <p className="text-sm font-bold text-center mb-4" style={{ color: '#1e3a5f' }}>{confirmEliminar.nombre}</p>
-            <p className="text-xs text-center mb-6" style={{ color: '#94a3b8' }}>No podrás recuperarlo si lo borras.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmEliminar(null)}
-                className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
-                style={{ background: '#2563eb' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#1d4ed8')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#2563eb')}>
-                Regresar
-              </button>
-              <button onClick={eliminar}
-                className="flex-1 py-2.5 text-sm font-semibold text-white rounded-xl transition"
-                style={{ background: '#dc2626' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}>
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </Portal>
-      )}
     </div>
   )
 }

@@ -15,10 +15,68 @@ const navPrincipal = [
 
 const navAvanzado = [
   { nombre: 'Ciclo Escolar',          href: '/dashboard/ciclo' },
-  { nombre: 'Servicios Escolares',    href: '/dashboard/servicios' },
   { nombre: 'Sistema',               href: '/dashboard/sistema' },
-  { nombre: 'Roles del sistema',     href: '/dashboard/roles' },
+  { nombre: 'Secretaría',            href: '/dashboard/roles' },
 ]
+
+// ─── Botón cerrar sesión — dots macOS ────────────────────────────────────────
+function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function onEnter() {
+    if (leaveT.current) clearTimeout(leaveT.current)
+    enterT.current = setTimeout(() => setHov(true), 80)
+  }
+  function onLeave() {
+    if (enterT.current) clearTimeout(enterT.current)
+    leaveT.current = setTimeout(() => setHov(false), 220)
+  }
+
+  const dots = [
+    { color: '#ef4444', delay: '0ms'   },
+    { color: '#f59e0b', delay: '80ms'  },
+    { color: '#22c55e', delay: '160ms' },
+  ]
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        width: '100%', padding: '0.625rem 0.75rem',
+        borderRadius: '0.75rem', border: 'none', background: 'transparent',
+        cursor: 'pointer', gap: '0.375rem', overflow: 'hidden',
+      }}>
+      {/* Tres círculos centrados */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
+        {dots.map((d, i) => (
+          <div key={i} style={{
+            width: '12px', height: '12px', borderRadius: '50%',
+            background: d.color,
+            boxShadow: `0 1px 3px ${d.color}55`,
+            animation: hov ? `dotBounce 0.55s cubic-bezier(0.34,1.56,0.64,1) ${d.delay} both` : 'none',
+          }}/>
+        ))}
+      </div>
+      {/* Texto — solo visible con hover, no empuja layout */}
+      <span style={{
+        fontSize: '0.72rem', fontWeight: 600, color: '#c0392b',
+        maxHeight: hov ? '1.2rem' : '0',
+        opacity: hov ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'max-height 0.25s ease, opacity 0.22s ease',
+        transitionDelay: hov ? '0.18s' : '0s',
+        whiteSpace: 'nowrap',
+      }}>
+        Cerrar esta sesión
+      </span>
+    </button>
+  )
+}
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -63,8 +121,8 @@ export default function Sidebar() {
           background:           'rgba(99, 130, 180, 0.18)',
           backdropFilter:       'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          border:               '1px solid rgba(255,255,255,0.22)',
-          boxShadow:            '0 4px 32px rgba(60,80,120,0.10)',
+          border:               '1px solid rgba(255,255,255,0.32)',
+          boxShadow:            '0 4px 32px rgba(60,80,120,0.12), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.08), inset 1px 0 0 rgba(255,255,255,0.18), inset -1px 0 0 rgba(255,255,255,0.10)',
           minHeight:            'calc(100vh - 2rem)',
         }}
       >
@@ -158,16 +216,16 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Cerrar sesión */}
+        {/* Cerrar sesión — dots estilo macOS */}
         <div className="pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.15)' }}>
-          <button onClick={handleCerrarSesion}
-            className="flex items-center w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-            style={{ color: '#c0392b' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(192,57,43,0.10)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            Cerrar sesión
-          </button>
+          <style>{`
+            @keyframes dotBounce {
+              0%, 100% { transform: translateY(0) }
+              40%       { transform: translateY(-5px) }
+              60%       { transform: translateY(-2px) }
+            }
+          `}</style>
+          <CerrarSesionBtn onClick={handleCerrarSesion} />
         </div>
       </aside>
     </div>

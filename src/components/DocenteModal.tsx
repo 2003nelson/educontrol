@@ -83,7 +83,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   if (typeof window === 'undefined') return null
 
   return createPortal(
-    <div onClick={onCerrar} style={{
+    <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.5)',
@@ -215,7 +215,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                       </svg>
                     </button>
                     {mostrarMaterias && (
-                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', maxHeight: '180px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', maxHeight: '252px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
                           <div style={{ position: 'relative' }}>
                             <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>

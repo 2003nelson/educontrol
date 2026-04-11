@@ -787,4 +787,4 @@ export default function DashboardPage() {
       {modalInforme && <ModalInforme grupoInicial={grupoSelec !== 'general' ? grupoSelec : ''} parcialInicial={parcialSelec !== 'general' ? parcialSelec : ''} onCerrar={() => setModalInforme(false)} />}
     </div>
   )
-}
+} 
