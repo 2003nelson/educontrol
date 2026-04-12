@@ -52,10 +52,10 @@ function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
         cursor: 'pointer', gap: '0.375rem', overflow: 'hidden',
       }}>
       {/* Tres círculos centrados */}
-      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'center' }}>
         {dots.map((d, i) => (
           <div key={i} style={{
-            width: '12px', height: '12px', borderRadius: '50%',
+            width: '16px', height: '16px', borderRadius: '50%',
             background: d.color,
             boxShadow: `0 1px 3px ${d.color}55`,
             animation: hov ? `dotBounce 0.55s cubic-bezier(0.34,1.56,0.64,1) ${d.delay} both` : 'none',

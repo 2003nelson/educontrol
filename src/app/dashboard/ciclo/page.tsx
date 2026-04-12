@@ -151,24 +151,62 @@ function CrearCicloBtn({ onClick }: { onClick: () => void }) {
 
 // ─── Círculo stat ─────────────────────────────────────────────────────────────
 function CircleStat({ value, label, color, bg }: { value: number|string; label: string; color: string; bg: string }) {
+  const [hov, setHov] = useState(false)
   const isDate = typeof value === 'string' && value.includes(' ')
   // For dates like "15 Dic 2025" split into parts
   const parts = isDate ? (value as string).split(' ') : null
 
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem' }}>
-      <div style={{ width:'64px', height:'64px', borderRadius:'50%', background:bg, border:`2.5px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, flexDirection:'column', gap:'1px' }}>
+      <div 
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{ 
+          width:'64px', 
+          height:'64px', 
+          borderRadius:'50%', 
+          background: hov 
+            ? `linear-gradient(135deg, ${bg} 0%, ${color}15 100%)`
+            : bg,
+          border: hov ? `3px solid ${color}` : `2.5px solid ${color}`,
+          display:'flex', 
+          alignItems:'center', 
+          justifyContent:'center', 
+          flexShrink:0, 
+          flexDirection:'column', 
+          gap:'1px',
+          cursor:'pointer',
+          position:'relative',
+          // Efecto metálico con múltiples sombras
+          boxShadow: hov 
+            ? `0 8px 24px ${color}35, inset 0 2px 0 rgba(255,255,255,0.6), inset 1px 0 0 rgba(255,255,255,0.25), inset -1px 0 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.08)`
+            : `0 2px 8px ${color}20, inset 0 1px 0 rgba(255,255,255,0.5), inset 1px 0 0 rgba(255,255,255,0.2), inset -1px 0 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.06)`,
+          // Elevación con spring
+          transform: hov ? 'translateY(-6px) scale(1.12)' : 'translateY(0) scale(1)',
+          transition: hov
+            ? 'all 0.42s cubic-bezier(0.34,1.56,0.64,1)'
+            : 'all 0.32s cubic-bezier(0.4,0,0.2,1)',
+          zIndex: hov ? 10 : 1,
+        }}>
         {isDate && parts ? (
           <>
-            <span style={{ fontSize:'0.8rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif', lineHeight:1 }}>{parts[0]}</span>
-            <span style={{ fontSize:'0.6rem', fontWeight:700, color, fontFamily:'Outfit, sans-serif', lineHeight:1 }}>{parts[1]}</span>
-            <span style={{ fontSize:'0.55rem', fontWeight:600, color, opacity:0.75, lineHeight:1 }}>{parts[2]}</span>
+            <span style={{ fontSize:'0.8rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif', lineHeight:1, transition:'color 0.2s' }}>{parts[0]}</span>
+            <span style={{ fontSize:'0.6rem', fontWeight:700, color, fontFamily:'Outfit, sans-serif', lineHeight:1, transition:'color 0.2s' }}>{parts[1]}</span>
+            <span style={{ fontSize:'0.55rem', fontWeight:600, color, opacity:0.75, lineHeight:1, transition:'color 0.2s, opacity 0.2s' }}>{parts[2]}</span>
           </>
         ) : (
-          <span style={{ fontSize:'1.25rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif' }}>{value}</span>
+          <span style={{ fontSize:'1.25rem', fontWeight:800, color, fontFamily:'Outfit, sans-serif', transition:'color 0.2s' }}>{value}</span>
         )}
       </div>
-      <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textAlign:'center', maxWidth:'72px', lineHeight:1.3 }}>{label}</span>
+      <span style={{ 
+        fontSize:'0.68rem', 
+        fontWeight:600, 
+        color: hov ? color : '#64748b', 
+        textAlign:'center', 
+        maxWidth:'72px', 
+        lineHeight:1.3,
+        transition:'color 0.25s ease',
+      }}>{label}</span>
     </div>
   )
 }
