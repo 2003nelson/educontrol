@@ -6,23 +6,24 @@ export async function middleware(request: NextRequest) {
   const path = url.pathname
   const hostname = request.headers.get('host') || ''
   
-  // Extraer subdomain o usar dominio base
-  const parts = hostname.split('.')
   let subdomain = 'localhost' // Default para desarrollo
   
-  // En producción con dinoti.xyz
+  // Extraer subdomain real
   if (hostname.includes('dinoti.xyz')) {
-    if (parts.length >= 3) {
-      // Subdominio: cbta62.dinoti.xyz → 'cbta62'
-      subdomain = parts[0].toLowerCase()
+    const parts = hostname.split('.')
+    
+    // www.dinoti.xyz o dinoti.xyz → usar 'cbta62' como default
+    if (parts.length <= 2 || parts[0] === 'www') {
+      subdomain = 'cbta62' // Plantel por defecto
     } else {
-      // Dominio base: dinoti.xyz → 'dinoti'
-      subdomain = 'dinoti'
+      // cbta62.dinoti.xyz → usar 'cbta62'
+      subdomain = parts[0].toLowerCase()
     }
   }
-  // En Vercel preview: something.vercel.app
+  // Vercel preview URLs
   else if (hostname.includes('vercel.app')) {
-    subdomain = parts[0].toLowerCase()
+    // Para preview, usar un slug fijo
+    subdomain = 'localhost'
   }
 
   // ─────────────────────────────────────────────────────────────
