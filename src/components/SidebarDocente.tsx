@@ -1,8 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 const navDocente = [
   { nombre: 'Mis Aulas',    href: '/docente' },
@@ -13,6 +12,7 @@ const navDocente = [
 export default function SidebarDocente() {
   const pathname = usePathname()
   const router   = useRouter()
+  const supabase = createClient() // ← CORRECCIÓN
 
   async function handleCerrarSesion() {
     await supabase.auth.signOut()

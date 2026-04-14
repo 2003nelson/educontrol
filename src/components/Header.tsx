@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import Mensajeria from './Mensajeria'
 
 type Notificacion = {
   id: string
@@ -244,6 +245,7 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
 export default function Header({ titulo }: { titulo: string }) {
   const [notifs, setNotifs]                   = useState<Notificacion[]>(notificacionesMock)
   const [panelAbierto, setPanelAbierto]       = useState(false)
+  const [mensajesAbierto, setMensajesAbierto] = useState(false)
   const [busqueda, setBusqueda]               = useState('')
   const [sugerencias, setSugerencias]         = useState<Alumno[]>([])
   const [alumnoSelec, setAlumnoSelec]         = useState<Alumno | null>(null)
@@ -371,6 +373,27 @@ export default function Header({ titulo }: { titulo: string }) {
 
           {/* Ayuda — expandible */}
           <AyudaBtn />
+
+          {/* Mensajes — botón verde estilo iPhone */}
+          <button onClick={() => setMensajesAbierto(true)}
+            className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={{ 
+              background: 'rgba(34,197,94,0.12)', 
+              border: '1px solid rgba(34,197,94,0.25)',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(34,197,94,0.18)'
+              e.currentTarget.style.borderColor = 'rgba(34,197,94,0.35)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(34,197,94,0.12)'
+              e.currentTarget.style.borderColor = 'rgba(34,197,94,0.25)'
+            }}>
+            <svg width="16" height="16" fill="none" stroke="#16a34a" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
 
           {/* Notificaciones */}
           <div className="relative">
@@ -501,6 +524,11 @@ export default function Header({ titulo }: { titulo: string }) {
           </div>
         </>,
         document.body
+      )}
+
+      {/* Modal de Mensajería */}
+      {mensajesAbierto && typeof window !== 'undefined' && (
+        <Mensajeria onCerrar={() => setMensajesAbierto(false)} />
       )}
     </div>
   )

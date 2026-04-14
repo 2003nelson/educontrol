@@ -1,13 +1,12 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { useEffect, useRef, useState } from 'react'
 
 const navPrincipal = [
-  { nombre: 'Inicio',               href: '/dashboard' },
-  { nombre: 'Docentes',             href: '/dashboard/docentes' },
+  { nombre: 'Inicio',           href: '/dashboard' },
+  { nombre: 'Docentes',            href: '/dashboard/docentes' },
   { nombre: 'Seguimiento',          href: '/dashboard/seguimiento' },
   { nombre: 'Asignaturas',          href: '/dashboard/asignaturas' },
   { nombre: 'Grupos',               href: '/dashboard/grupos' },
@@ -79,6 +78,7 @@ function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
 }
 
 export default function Sidebar() {
+  const supabase = createClient() // <--- Se añade la inicialización del cliente
   const pathname = usePathname()
   const router   = useRouter()
 
@@ -94,8 +94,8 @@ export default function Sidebar() {
       const parentRect = parent?.getBoundingClientRect()
       const elRect = activeEl.getBoundingClientRect()
       setPillStyle({
-        top:     elRect.top - (parentRect?.top ?? 0) + (parent?.scrollTop ?? 0),
-        height:  elRect.height,
+        top:      elRect.top - (parentRect?.top ?? 0) + (parent?.scrollTop ?? 0),
+        height:   elRect.height,
         opacity: 1,
       })
     }
@@ -150,7 +150,7 @@ export default function Sidebar() {
             <div style={{
               position: 'absolute',
               left: 0, right: 0,
-              top:    pillStyle.top,
+              top:     pillStyle.top,
               height: pillStyle.height,
               background: 'rgba(255,255,255,0.55)',
               backdropFilter: 'blur(12px)',
