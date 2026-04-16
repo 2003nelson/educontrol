@@ -6,6 +6,76 @@ import { createClient } from '@/lib/supabase/client'
 // Forzar dynamic rendering para esta página
 export const dynamic = 'force-dynamic'
 
+// ═════════════════════════════════════════════════════════════════
+// 🔒 CONFIGURACIÓN DE SEGURIDAD
+// ═════════════════════════════════════════════════════════════════
+
+const MAX_INTENTOS = 5
+const TIEMPO_BLOQUEO = 15 * 60 * 1000 // 15 minutos
+
+const ALLOWED_ORIGINS = [
+  'https://dinoti.xyz',
+  'https://www.dinoti.xyz',
+  'http://localhost:3000',
+]
+
+// Rate limiting simple en memoria (cliente)
+const loginLimiter = {
+  intentos: 0,
+  bloqueadoHasta: 0,
+  
+  puedeIntentar(): { permitido: boolean; minutosRestantes?: number } {
+    const ahora = Date.now()
+    if (this.bloqueadoHasta > ahora) {
+      const minutosRestantes = Math.ceil((this.bloqueadoHasta - ahora) / 60000)
+      return { permitido: false, minutosRestantes }
+    }
+    return { permitido: this.intentos < MAX_INTENTOS }
+  },
+  
+  registrarIntento(exitoso: boolean) {
+    if (exitoso) {
+      this.intentos = 0
+      this.bloqueadoHasta = 0
+    } else {
+      this.intentos++
+      if (this.intentos >= MAX_INTENTOS) {
+        this.bloqueadoHasta = Date.now() + TIEMPO_BLOQUEO
+      }
+    }
+  },
+
+  getIntentosRestantes(): number {
+    return Math.max(0, MAX_INTENTOS - this.intentos)
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════
+// 🛡️ FUNCIONES DE VALIDACIÓN Y SANITIZACIÓN
+// ═════════════════════════════════════════════════════════════════
+
+function validarEmail(email: string): boolean {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return regex.test(email)
+}
+
+function sanitizeEmail(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function validarPassword(password: string): boolean {
+  return password.length >= 6
+}
+
+function validarOrigin(): boolean {
+  if (typeof window === 'undefined') return true
+  return ALLOWED_ORIGINS.includes(window.location.origin)
+}
+
+// ═════════════════════════════════════════════════════════════════
+// 📝 COMPONENTE PRINCIPAL
+// ═════════════════════════════════════════════════════════════════
+
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -23,45 +93,130 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
 
   async function handleLogin() {
-    if (!email || !password) { setError('Completa todos los campos'); return }
-    setLoading(true)
-    setError('')
-
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError('Correo o contraseña incorrectos')
-      setLoading(false)
+    // 🔒 VERIFICAR RATE LIMITING
+    const { permitido, minutosRestantes } = loginLimiter.puedeIntentar()
+    if (!permitido) {
+      setError(`Demasiados intentos fallidos. Intenta en ${minutosRestantes} minuto${minutosRestantes! > 1 ? 's' : ''}.`)
       return
     }
 
-    setSplash(true)
-    await new Promise(r => setTimeout(r, 2000))
+    // 🔒 VALIDACIÓN DE INPUTS
+    if (!email || !password) {
+      setError('Completa todos los campos')
+      return
+    }
 
-    const meta = data.user?.user_metadata
-    if (meta?.primer_login === true) { router.push('/cambiar-password'); return }
-    const rol = meta?.rol
-    
-    if (rol === 'super_admin') {
-      router.push('/super-admin')
-    } else if (rol === 'docente') {
-      router.push('/docente')
-    } else {
-      router.push('/dashboard')
+    if (!validarEmail(email)) {
+      setError('Formato de correo electrónico inválido')
+      return
+    }
+
+    if (!validarPassword(password)) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: sanitizeEmail(email),
+        password,
+      })
+
+      if (authError) {
+        // 🔒 REGISTRAR INTENTO FALLIDO
+        loginLimiter.registrarIntento(false)
+        
+        const intentosRestantes = loginLimiter.getIntentosRestantes()
+        if (intentosRestantes > 0 && intentosRestantes <= 2) {
+          setError(`Correo o contraseña incorrectos. Te quedan ${intentosRestantes} intento${intentosRestantes > 1 ? 's' : ''}.`)
+        } else {
+          setError('Correo o contraseña incorrectos')
+        }
+        
+        setLoading(false)
+        return
+      }
+
+      // 🔒 REGISTRAR INTENTO EXITOSO
+      loginLimiter.registrarIntento(true)
+
+      // Mostrar splash
+      setSplash(true)
+      await new Promise(r => setTimeout(r, 2000))
+
+      // Redirigir según rol
+      const meta = data.user?.user_metadata
+      if (meta?.primer_login === true) {
+        router.push('/cambiar-password')
+        return
+      }
+
+      const rol = meta?.rol
+      if (rol === 'super_admin') {
+        router.push('/super-admin')
+      } else if (rol === 'docente') {
+        router.push('/docente')
+      } else {
+        router.push('/dashboard')
+      }
+    } catch (err) {
+      console.error('Error en login:', err)
+      setError('Error al iniciar sesión. Intenta de nuevo.')
+      setLoading(false)
     }
   }
 
   async function handleReset() {
-    if (!resetEmail) return
+    // 🔒 VALIDAR ORIGEN
+    if (!validarOrigin()) {
+      setError('Dominio no autorizado')
+      return
+    }
+
+    // 🔒 VALIDAR EMAIL
+    if (!resetEmail) {
+      setError('Ingresa tu correo electrónico')
+      return
+    }
+
+    if (!validarEmail(resetEmail)) {
+      setError('Formato de correo electrónico inválido')
+      return
+    }
+
     setResetLoading(true)
-    await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/cambiar-password`,
-    })
-    setResetSent(true)
-    setResetLoading(false)
+    setError('')
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        sanitizeEmail(resetEmail),
+        {
+          redirectTo: `${window.location.origin}/cambiar-password`,
+        }
+      )
+
+      if (resetError) {
+        setError('Error al enviar el correo. Intenta de nuevo.')
+        setResetLoading(false)
+        return
+      }
+
+      setResetSent(true)
+      setResetLoading(false)
+    } catch (err) {
+      console.error('Error en reset:', err)
+      setError('Error al enviar el correo. Intenta de nuevo.')
+      setResetLoading(false)
+    }
   }
 
-  // ── Splash ──
+  // ═════════════════════════════════════════════════════════════════
+  // 🎨 RENDER - SPLASH SCREEN
+  // ═════════════════════════════════════════════════════════════════
+
   if (splash) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center"
@@ -151,7 +306,10 @@ export default function LoginPage() {
     )
   }
 
-  // ── Login Split Screen ──
+  // ═════════════════════════════════════════════════════════════════
+  // 🎨 RENDER - LOGIN SPLIT SCREEN (RESPONSIVE)
+  // ═════════════════════════════════════════════════════════════════
+
   return (
     <div className="min-h-screen flex" style={{ background:'#0f172a' }}>
       <style>{`
@@ -163,18 +321,33 @@ export default function LoginPage() {
           from { opacity:0; transform:translateX(40px); }
           to   { opacity:1; transform:translateX(0); }
         }
-        @keyframes fadeIn {
-          from { opacity:0; }
-          to   { opacity:1; }
+        @keyframes fadeInUp {
+          from { opacity:0; transform:translateY(20px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+
+        /* Mobile: ocultar imagen lateral */
+        @media (max-width: 768px) {
+          .login-left-panel {
+            display: none !important;
+          }
+          .login-right-panel {
+            flex: 1 !important;
+            padding: 2rem 1.5rem !important;
+          }
+          .login-card {
+            animation: fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) !important;
+          }
         }
       `}</style>
 
-      {/* ══ IZQUIERDA - Imagen ══ */}
-      <div style={{
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* ══ IZQUIERDA - Imagen (línea divisoria PERPENDICULAR) ══ */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      <div className="login-left-panel" style={{
         flex: '1',
         position: 'relative',
         overflow: 'hidden',
-        clipPath: 'polygon(0 0, 100% 0, 95% 100%, 0 100%)', // Diagonal sutil
         animation: 'slideInLeft 0.8s cubic-bezier(0.22,1,0.36,1)',
       }}>
         {/* Imagen de fondo */}
@@ -297,8 +470,10 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ══ DERECHA - Login Card ══ */}
-      <div style={{
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* ══ DERECHA - Login Card                                 ══ */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      <div className="login-right-panel" style={{
         flex: '1',
         display: 'flex',
         alignItems: 'center',
@@ -307,7 +482,56 @@ export default function LoginPage() {
         background: '#0f172a',
         animation: 'slideInRight 0.8s cubic-bezier(0.22,1,0.36,1)',
       }}>
+        
+        {/* Logo mobile (solo visible en móvil) */}
         <div style={{
+          position: 'absolute',
+          top: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'none',
+        }}
+        className="mobile-logo">
+          <style>{`
+            @media (max-width: 768px) {
+              .mobile-logo {
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+              }
+              .login-card {
+                margin-top: 6rem !important;
+              }
+            }
+          `}</style>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(59,130,246,0.4)',
+          }}>
+            <span style={{
+              fontSize: '1.75rem',
+              fontWeight: 700,
+              color: 'white',
+              fontFamily: 'Outfit, sans-serif',
+            }}>E</span>
+          </div>
+          <p style={{
+            fontSize: '1.125rem',
+            fontWeight: 700,
+            color: 'white',
+            fontFamily: 'Outfit, sans-serif',
+            margin: 0,
+          }}>EduControl</p>
+        </div>
+
+        <div className="login-card" style={{
           width: '100%',
           maxWidth: '420px',
           background: 'white',
@@ -359,7 +583,7 @@ export default function LoginPage() {
                     Revisa tu bandeja de entrada
                   </p>
                   <button
-                    onClick={() => { setOlvidé(false); setResetSent(false); setResetEmail('') }}
+                    onClick={() => { setOlvidé(false); setResetSent(false); setResetEmail(''); setError('') }}
                     style={{
                       fontSize: '0.875rem',
                       fontWeight: 600,
@@ -387,7 +611,7 @@ export default function LoginPage() {
                     <input
                       type="email"
                       value={resetEmail}
-                      onChange={e => setResetEmail(e.target.value)}
+                      onChange={e => setResetEmail(sanitizeEmail(e.target.value))}
                       placeholder="correo@escuela.edu.mx"
                       style={{
                         width: '100%',
@@ -405,6 +629,22 @@ export default function LoginPage() {
                       onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
                     />
                   </div>
+
+                  {/* Error en reset */}
+                  {error && (
+                    <div style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      marginBottom: '1.25rem',
+                    }}>
+                      <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
                   <button
                     onClick={handleReset}
                     disabled={!resetEmail || resetLoading}
@@ -413,20 +653,20 @@ export default function LoginPage() {
                       padding: '0.875rem',
                       borderRadius: '0.75rem',
                       border: 'none',
-                      background: resetEmail ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : '#e2e8f0',
-                      color: resetEmail ? 'white' : '#94a3b8',
+                      background: resetEmail && validarEmail(resetEmail) ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : '#e2e8f0',
+                      color: resetEmail && validarEmail(resetEmail) ? 'white' : '#94a3b8',
                       fontSize: '0.9375rem',
                       fontWeight: 600,
-                      cursor: resetEmail ? 'pointer' : 'not-allowed',
+                      cursor: resetEmail && validarEmail(resetEmail) ? 'pointer' : 'not-allowed',
                       marginBottom: '1rem',
-                      boxShadow: resetEmail ? '0 4px 16px rgba(59,130,246,0.3)' : 'none',
+                      boxShadow: resetEmail && validarEmail(resetEmail) ? '0 4px 16px rgba(59,130,246,0.3)' : 'none',
                       transition: 'all 0.2s',
                     }}
                   >
                     {resetLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
                   </button>
                   <button
-                    onClick={() => setOlvidé(false)}
+                    onClick={() => { setOlvidé(false); setError('') }}
                     style={{
                       width: '100%',
                       fontSize: '0.875rem',
@@ -460,8 +700,9 @@ export default function LoginPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={e => setEmail(sanitizeEmail(e.target.value))}
                   placeholder="correo@escuela.edu.mx"
+                  autoComplete="email"
                   style={{
                     width: '100%',
                     background: '#f8fafc',
@@ -496,6 +737,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     onKeyDown={e => e.key === 'Enter' && handleLogin()}
                     style={{
                       width: '100%',
@@ -554,7 +796,7 @@ export default function LoginPage() {
                   marginBottom: '1.25rem',
                 }}>
                   <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>
-                    {error}
+                    ⚠️ {error}
                   </p>
                 </div>
               )}
@@ -590,7 +832,7 @@ export default function LoginPage() {
 
               {/* Olvidé contraseña */}
               <button
-                onClick={() => { setOlvidé(true); setResetEmail(email) }}
+                onClick={() => { setOlvidé(true); setResetEmail(email); setError('') }}
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
