@@ -4,10 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 
-// ═════════════════════════════════════════════════════════════════
-// 🎯 INTERFACES
-// ═════════════════════════════════════════════════════════════════
-
 export interface Grupo {
   id: string
   grado: number
@@ -19,11 +15,6 @@ export interface Grupo {
   activo: boolean
   created_at: string
   updated_at: string
-  docentes?: {
-    id: string
-    nombre_completo: string
-    activo: boolean
-  } | null
 }
 
 export interface NuevoGrupo {
@@ -42,10 +33,6 @@ export interface ActualizarGrupo {
   docente_id?: string | null
 }
 
-// ═════════════════════════════════════════════════════════════════
-// 🪝 HOOK
-// ═════════════════════════════════════════════════════════════════
-
 export function useGrupos() {
   const { plantelId, isSuperAdmin } = useAuth()
   const supabase = createClient()
@@ -54,9 +41,6 @@ export function useGrupos() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ─────────────────────────────────────────────────────────────────
-  // 📥 CARGAR GRUPOS
-  // ─────────────────────────────────────────────────────────────────
   const cargarGrupos = useCallback(async () => {
     if (!plantelId && !isSuperAdmin) return
     
@@ -66,19 +50,11 @@ export function useGrupos() {
     try {
       let query = supabase
         .from('grupos')
-        .select(`
-          *,
-          docentes!grupos_docente_id_fkey (
-            id,
-            nombre_completo,
-            activo
-          )
-        `)
+        .select('*')  // ✅ SIN JOIN
         .eq('activo', true)
         .order('grado', { ascending: true })
         .order('numero', { ascending: true })
 
-      // Super admin ve todos los grupos, otros solo su plantel
       if (!isSuperAdmin && plantelId) {
         query = query.eq('plantel_id', plantelId)
       }
@@ -86,7 +62,7 @@ export function useGrupos() {
       const { data, error: fetchError } = await query
 
       if (fetchError) throw fetchError
-      setGrupos((data as unknown) as Grupo[])
+      setGrupos(data as Grupo[])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido'
       setError(message)
@@ -96,9 +72,6 @@ export function useGrupos() {
     }
   }, [plantelId, isSuperAdmin, supabase])
 
-  // ─────────────────────────────────────────────────────────────────
-  // ➕ AGREGAR GRUPO
-  // ─────────────────────────────────────────────────────────────────
   const agregarGrupo = useCallback(async (datos: NuevoGrupo): Promise<boolean> => {
     if (!plantelId) {
       setError('No se encontró el plantel del usuario')
@@ -131,9 +104,6 @@ export function useGrupos() {
     }
   }, [plantelId, cargarGrupos, supabase])
 
-  // ─────────────────────────────────────────────────────────────────
-  // ✏️ ACTUALIZAR GRUPO
-  // ─────────────────────────────────────────────────────────────────
   const actualizarGrupo = useCallback(async (
     id: string,
     cambios: ActualizarGrupo
@@ -164,9 +134,6 @@ export function useGrupos() {
     }
   }, [cargarGrupos, supabase])
 
-  // ─────────────────────────────────────────────────────────────────
-  // 🗑️ ELIMINAR GRUPO (soft delete)
-  // ─────────────────────────────────────────────────────────────────
   const eliminarGrupo = useCallback(async (id: string): Promise<boolean> => {
     setLoading(true)
     setError(null)
@@ -191,9 +158,6 @@ export function useGrupos() {
     }
   }, [cargarGrupos, supabase])
 
-  // ─────────────────────────────────────────────────────────────────
-  // 🔄 CARGAR AL MONTAR
-  // ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (plantelId || isSuperAdmin) {
       cargarGrupos()
