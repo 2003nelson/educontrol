@@ -13,7 +13,7 @@ type Alumno       = { id: string; nombre: string; bimestres: DatoBimestre[]; sem
 const MATERIAS = ['Matemáticas','Español','Historia','Física','Química','Inglés','Biología','Informática']
 
 const DOCENTES_MATERIA: Record<string, string> = {
-  'Matemáticas': 'Prof. Ramírez Torres',
+  'Matemáticas': 'prof. Mario de la Mora',
   'Español':     'Prof. López Herrera',
   'Historia':    'Prof. Gutiérrez Paz',
   'Física':      'Prof. Mendoza Ríos',
