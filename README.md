@@ -34,3 +34,36 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# EduControl
+
+EduControl es un sistema de gestión escolar desarrollado con Next.js, React, TypeScript y Supabase. Está diseñado para el control de asistencia, gestión de usuarios y reportes escolares con roles diferenciados como `super_admin`, `director` y `docente`.
+
+## Tecnologías
+
+- Next.js 16
+- React 19
+- TypeScript
+- Supabase (Autenticación y base de datos)
+- Tailwind CSS
+- Prisma / ORMs (según implementación)
+- Zod / validación de datos (recomendado)
+- GitHub Actions (recomendado para CI/CD)
+
+## Descripción
+
+EduControl permite:
+
+- Iniciar sesión con control de acceso
+- Gestión de roles y permisos
+- Registro y seguimiento de asistencia
+- Paneles de control con filtros y reportes
+- Interfaz responsive y moderna
+
+## Características principales
+
+- Autenticación de usuarios con Supabase
+- Dashboard para supervisión de asistencia
+- Roles definidos: `super_admin`, `director`, `docente`
+- Generación básica de reportes
+- Interfaz con animaciones y experiencia de usuario mejorada
+
