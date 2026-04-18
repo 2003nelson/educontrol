@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 export interface Grupo {
   id: string
   grado: number
-  numero: number
+  numero: string  // Alfanumérico (letras + números, max 5 caracteres)
   turno: 'matutino' | 'vespertino'
   ciclo_escolar: string
   docente_id: string | null
@@ -19,7 +19,7 @@ export interface Grupo {
 
 export interface NuevoGrupo {
   grado: number
-  numero: number
+  numero: string  // Alfanumérico
   turno: 'matutino' | 'vespertino'
   ciclo_escolar: string
   docente_id: string | null
@@ -27,7 +27,7 @@ export interface NuevoGrupo {
 
 export interface ActualizarGrupo {
   grado?: number
-  numero?: number
+  numero?: string  // Alfanumérico
   turno?: 'matutino' | 'vespertino'
   ciclo_escolar?: string
   docente_id?: string | null
@@ -50,7 +50,7 @@ export function useGrupos() {
     try {
       let query = supabase
         .from('grupos')
-        .select('*')  // ✅ SIN JOIN
+        .select('*')
         .eq('activo', true)
         .order('grado', { ascending: true })
         .order('numero', { ascending: true })
@@ -86,6 +86,7 @@ export function useGrupos() {
         .from('grupos')
         .insert({
           ...datos,
+          numero: datos.numero.toUpperCase(), // Convertir a mayúsculas
           plantel_id: plantelId,
           activo: true,
         })
@@ -112,12 +113,16 @@ export function useGrupos() {
     setError(null)
 
     try {
+      // Convertir numero a mayúsculas si existe
+      const cambiosFormateados = {
+        ...cambios,
+        ...(cambios.numero && { numero: cambios.numero.toUpperCase() }),
+        updated_at: new Date().toISOString(),
+      }
+
       const { error: updateError } = await supabase
         .from('grupos')
-        .update({
-          ...cambios,
-          updated_at: new Date().toISOString(),
-        })
+        .update(cambiosFormateados)
         .eq('id', id)
 
       if (updateError) throw updateError
@@ -158,6 +163,42 @@ export function useGrupos() {
     }
   }, [cargarGrupos, supabase])
 
+  const asignarEstudiantes = useCallback(async (
+    grupoId: string,
+    estudiantesIds: string[]
+  ): Promise<boolean> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Actualizar estudiantes seleccionados
+      const { error: updateError } = await supabase
+        .from('estudiantes')
+        .update({ grupo_id: grupoId, updated_at: new Date().toISOString() })
+        .in('id', estudiantesIds)
+
+      if (updateError) throw updateError
+
+      // Desvincular estudiantes que ya no están seleccionados
+      const { error: clearError } = await supabase
+        .from('estudiantes')
+        .update({ grupo_id: null, updated_at: new Date().toISOString() })
+        .eq('grupo_id', grupoId)
+        .not('id', 'in', `(${estudiantesIds.join(',')})`)
+
+      if (clearError) throw clearError
+
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al asignar estudiantes'
+      setError(message)
+      console.error('Error:', err)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
   useEffect(() => {
     if (plantelId || isSuperAdmin) {
       cargarGrupos()
@@ -172,5 +213,6 @@ export function useGrupos() {
     agregarGrupo,
     actualizarGrupo,
     eliminarGrupo,
+    asignarEstudiantes,
   }
 }

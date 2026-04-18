@@ -4,7 +4,10 @@ import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 import { useGrupos } from '@/hooks/useGrupos'
 import { useAuth } from '@/lib/hooks/useAuth'
-import type { Grupo as GrupoType } from '@/hooks/useGrupos'
+import type { Grupo as GrupoType, ActualizarGrupo } from '@/hooks/useGrupos'
+import BotonesAccionGrupo from '@/components/grupos/BotonesAccionGrupo'
+import ModalEditarGrupo from '@/components/grupos/ModalEditarGrupo'
+import ModalAsignarEstudiantes from '@/components/grupos/ModalAsignarEstudiantes'
 
 // ═════════════════════════════════════════════════════════════════
 // 🔒 CONFIGURACIÓN DE SEGURIDAD
@@ -13,18 +16,13 @@ import type { Grupo as GrupoType } from '@/hooks/useGrupos'
 const GRADOS_VALIDOS = [1, 2, 3, 4, 5, 6] as const
 const TURNOS_VALIDOS = ['matutino', 'vespertino'] as const
 const MAX_OPERACIONES_POR_MINUTO = 10
-const NUMERO_MIN = 1
-const NUMERO_MAX = 999
 
-// Rate limiting simple en memoria (cliente)
 const rateLimiter = {
   operaciones: [] as number[],
   puedeOperar(): boolean {
     const ahora = Date.now()
     this.operaciones = this.operaciones.filter(t => ahora - t < 60000)
-    if (this.operaciones.length >= MAX_OPERACIONES_POR_MINUTO) {
-      return false
-    }
+    if (this.operaciones.length >= MAX_OPERACIONES_POR_MINUTO) return false
     this.operaciones.push(ahora)
     return true
   }
@@ -35,25 +33,20 @@ const rateLimiter = {
 // ═════════════════════════════════════════════════════════════════
 
 function sanitizeNumero(value: string): string {
-  // Solo permite números
-  return value.replace(/[^0-9]/g, '')
+  return value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5)
 }
 
 function validarGrado(grado: number): boolean {
   return GRADOS_VALIDOS.includes(grado as typeof GRADOS_VALIDOS[number])
 }
 
-function validarNumero(numero: number): boolean {
-  return numero >= NUMERO_MIN && numero <= NUMERO_MAX && Number.isInteger(numero)
+function validarNumero(numero: string): boolean {
+  return numero.length >= 1 && numero.length <= 5
 }
 
 function validarTurno(turno: string): turno is 'matutino' | 'vespertino' {
   return TURNOS_VALIDOS.includes(turno as typeof TURNOS_VALIDOS[number])
 }
-
-// ═════════════════════════════════════════════════════════════════
-// 🎨 TIPOS
-// ═════════════════════════════════════════════════════════════════
 
 type Grupo = GrupoType & { creadoEl: string }
 
@@ -69,7 +62,7 @@ function formatFecha(dateString: string): string {
 }
 
 // ═════════════════════════════════════════════════════════════════
-// 🔘 BOTÓN AGREGAR EXPANDIBLE
+// 🔘 BOTÓN AGREGAR
 // ═════════════════════════════════════════════════════════════════
 
 function AgregarGrupoBtn({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
@@ -108,7 +101,7 @@ function GrupoModal({
   onCerrar,
   guardando,
 }: {
-  onGuardar: (grado: number, numero: number, turno: 'matutino' | 'vespertino') => Promise<void>
+  onGuardar: (grado: number, numero: string, turno: 'matutino' | 'vespertino') => Promise<void>
   onCerrar: () => void
   guardando: boolean
 }) {
@@ -121,28 +114,26 @@ function GrupoModal({
 
   function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
 
-  const numeroValido = numero !== '' && validarNumero(parseInt(numero))
+  const numeroValido = numero !== '' && validarNumero(numero)
 
   async function handleConfirmar() {
-    // 🔒 VALIDACIÓN DE SEGURIDAD
     if (!rateLimiter.puedeOperar()) {
       setError('Demasiadas operaciones. Espera un momento.')
       return
     }
 
     if (!numeroValido) {
-      setError('Número de grupo inválido')
+      setError('Número de grupo inválido (1-5 caracteres)')
       return
     }
 
-    const num = parseInt(numero)
-    if (!validarGrado(grado) || !validarNumero(num) || !validarTurno(turno)) {
+    if (!validarGrado(grado) || !validarNumero(numero) || !validarTurno(turno)) {
       setError('Datos inválidos')
       return
     }
 
     try {
-      await onGuardar(grado, num, turno)
+      await onGuardar(grado, numero.toUpperCase(), turno)
       cerrar()
     } catch (err) {
       setError('Error al guardar')
@@ -170,7 +161,7 @@ function GrupoModal({
             </svg>
           </div>
           <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 0.75rem', textAlign:'center' }}>¿Confirmar nuevo grupo?</h3>
-          <p style={{ fontSize:'0.875rem', color:'#475569', margin:'0 0 0.25rem', textAlign:'center' }}>Grado {grado} - Grupo {numero}</p>
+          <p style={{ fontSize:'0.875rem', color:'#475569', margin:'0 0 0.25rem', textAlign:'center' }}>Grado {grado} - Grupo {numero.toUpperCase()}</p>
           <p style={{ fontSize:'0.875rem', color:'#94a3b8', margin:'0 0 1.5rem', textAlign:'center' }}>Turno {turno}</p>
           
           {error && (
@@ -207,7 +198,6 @@ function GrupoModal({
 
         <div style={{ padding:'0 1.75rem 1.75rem', display:'flex', flexDirection:'column', gap:'1.25rem' }}>
           
-          {/* Grado */}
           <div>
             <label style={{ fontSize:'0.875rem', fontWeight:500, color:'#475569', display:'block', marginBottom:'0.5rem' }}>Grado</label>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:'0.5rem' }}>
@@ -220,21 +210,19 @@ function GrupoModal({
             </div>
           </div>
 
-          {/* Número de grupo */}
           <div>
             <label style={{ fontSize:'0.875rem', fontWeight:500, color:'#475569', display:'block', marginBottom:'0.375rem' }}>Número de grupo</label>
-            <input type="text" placeholder="Ej: 101, 201"
+            <input type="text" placeholder="Ej: 101, 1A, 1B"
               value={numero}
-              onChange={e => setNumero(sanitizeNumero(e.target.value).slice(0, 3))}
-              maxLength={3}
+              onChange={e => setNumero(sanitizeNumero(e.target.value))}
+              maxLength={5}
               autoFocus
-              style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.75rem', padding:'0.75rem 1rem', fontSize:'0.875rem', outline:'none', boxSizing:'border-box' }}
+              style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.75rem', padding:'0.75rem 1rem', fontSize:'0.875rem', outline:'none', boxSizing:'border-box', textTransform:'uppercase' }}
               onFocus={e => (e.currentTarget.style.boxShadow='0 0 0 2px #93c5fd')}
               onBlur={e => (e.currentTarget.style.boxShadow='none')} />
-            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.375rem 0 0' }}>Número del 1 al 999</p>
+            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'0.375rem 0 0' }}>Letras y números (1-5 caracteres)</p>
           </div>
 
-          {/* Turno */}
           <div>
             <label style={{ fontSize:'0.875rem', fontWeight:500, color:'#475569', display:'block', marginBottom:'0.5rem' }}>Turno</label>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.5rem' }}>
@@ -266,53 +254,32 @@ function GrupoModal({
 }
 
 // ═════════════════════════════════════════════════════════════════
-// 🗑️ BOTÓN ELIMINAR
-// ═════════════════════════════════════════════════════════════════
-
-function EliminarGrupoBtn({ onClick }: { onClick: () => void }) {
-  const [hov, setHov] = useState(false)
-  return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{
-        display:'flex', alignItems:'center', justifyContent:'center', gap: hov ? '0.4rem' : '0',
-        height:'28px', width: hov ? 'auto' : '28px', minWidth: hov ? '130px' : '28px',
-        padding: hov ? '0 0.75rem' : '0', borderRadius: hov ? '0.5rem' : '50%',
-        background: hov ? '#fee2e2' : '#fef2f2', border: hov ? '1px solid #dc2626' : '1px solid #fecaca',
-        cursor:'pointer', transition:'all 0.28s cubic-bezier(0.4,0,0.2,1)', overflow:'hidden', whiteSpace:'nowrap'
-      }}>
-      <svg width="11" height="11" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24">
-        <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round"/>
-      </svg>
-      {hov && <span style={{ fontSize:'0.75rem', fontWeight:600, color:'#dc2626' }}>Eliminar grupo</span>}
-    </button>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════════
 // 📄 PÁGINA PRINCIPAL
 // ═════════════════════════════════════════════════════════════════
 
 export default function GruposPage() {
-  // 🔒 HOOKS PRIMERO (antes de cualquier return condicional)
-  const { isDirector, isSuperAdmin, loading: authLoading } = useAuth()
+  const { isDirector, isSuperAdmin, plantelId, loading: authLoading } = useAuth()
   const {
     grupos: gruposData,
     loading,
     error,
     agregarGrupo,
+    actualizarGrupo,
     eliminarGrupo,
+    asignarEstudiantes,
   } = useGrupos()
 
   const [modalAbierto, setModalAbierto] = useState(false)
   const [eliminando, setEliminando] = useState<Grupo | null>(null)
+  const [editando, setEditando] = useState<Grupo | null>(null)
+  const [asignandoEstudiantes, setAsignandoEstudiantes] = useState<Grupo | null>(null)
   const [gradoFiltro, setGradoFiltro] = useState<number | 'todos'>('todos')
   const [busqueda, setBusqueda] = useState('')
   const [agregado, setAgregado] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [gradosContraidos, setGradosContraidos] = useState<Set<number>>(new Set())
 
-  // useCallback ANTES de los returns condicionales
-  const handleGuardar = useCallback(async (grado: number, numero: number, turno: 'matutino' | 'vespertino') => {
+  const handleGuardar = useCallback(async (grado: number, numero: string, turno: 'matutino' | 'vespertino') => {
     if (!rateLimiter.puedeOperar()) {
       alert('⚠️ Demasiadas operaciones. Espera un momento.')
       return
@@ -337,6 +304,23 @@ export default function GruposPage() {
     }
   }, [agregarGrupo])
 
+  const handleEditar = useCallback(async (id: string, cambios: ActualizarGrupo) => {
+    try {
+      setGuardando(true)
+      const exito = await actualizarGrupo(id, cambios)
+      if (exito) {
+        setEditando(null)
+      } else {
+        alert('❌ Error al editar el grupo')
+      }
+    } catch (err) {
+      console.error('Error:', err)
+      alert('❌ Error al guardar cambios')
+    } finally {
+      setGuardando(false)
+    }
+  }, [actualizarGrupo])
+
   const confirmarEliminar = useCallback(async () => {
     if (!eliminando || !rateLimiter.puedeOperar()) return
 
@@ -353,7 +337,20 @@ export default function GruposPage() {
     }
   }, [eliminando, eliminarGrupo])
 
-  // 🔒 CONTROL DE ACCESO (después de los hooks)
+  const handleAsignarEstudiantes = useCallback(async (grupoId: string, estudiantesIds: string[]) => {
+    try {
+      const exito = await asignarEstudiantes(grupoId, estudiantesIds)
+      if (exito) {
+        setAsignandoEstudiantes(null)
+      } else {
+        alert('❌ Error al asignar estudiantes')
+      }
+    } catch (err) {
+      console.error('Error:', err)
+      alert('❌ Error al asignar')
+    }
+  }, [asignarEstudiantes])
+
   if (authLoading) {
     return (
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
@@ -371,7 +368,6 @@ export default function GruposPage() {
     )
   }
 
-  // Convertir formato
   const grupos: Grupo[] = gruposData.map(g => ({
     ...g,
     creadoEl: formatFecha(g.created_at)
@@ -414,7 +410,6 @@ export default function GruposPage() {
 
         {!loading && !error && (
           <>
-            {/* Barra superior */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                 <input type="text" placeholder="Buscar grupo..."
@@ -453,7 +448,6 @@ export default function GruposPage() {
               </div>
             </div>
 
-            {/* Lista de grupos */}
             <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
               {porGrado.length === 0 ? (
                 <div style={{ padding:'3rem', textAlign:'center', background:'white', borderRadius:'1rem', border:'1px solid #e2e8f0' }}>
@@ -501,9 +495,11 @@ export default function GruposPage() {
                                 <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b', textTransform:'capitalize' }}>{g.turno}</td>
                                 <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{g.creadoEl}</td>
                                 <td style={{ padding:'0.75rem 1rem' }}>
-                                  <div style={{ display:'flex', gap:'0.5rem' }}>
-                                    <EliminarGrupoBtn onClick={() => setEliminando(g)} />
-                                  </div>
+                                  <BotonesAccionGrupo
+                                    onAsignarEstudiantes={() => setAsignandoEstudiantes(g)}
+                                    onEditar={() => setEditando(g)}
+                                    onEliminar={() => setEliminando(g)}
+                                  />
                                 </td>
                               </tr>
                             ))}
@@ -524,7 +520,24 @@ export default function GruposPage() {
         <GrupoModal onGuardar={handleGuardar} onCerrar={() => setModalAbierto(false)} guardando={guardando} />
       )}
 
-      {/* Modal eliminar */}
+      {editando && (
+        <ModalEditarGrupo
+          grupo={editando}
+          onGuardar={handleEditar}
+          onCerrar={() => setEditando(null)}
+          guardando={guardando}
+        />
+      )}
+
+      {asignandoEstudiantes && plantelId && (
+        <ModalAsignarEstudiantes
+          grupo={asignandoEstudiantes}
+          plantelId={plantelId}
+          onCerrar={() => setAsignandoEstudiantes(null)}
+          onAsignar={handleAsignarEstudiantes}
+        />
+      )}
+
       {eliminando && typeof window !== 'undefined' && createPortal(
         <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)' }}>
           <div style={{ background:'white', borderRadius:'1rem', width:'400px', padding:'2rem', display:'flex', flexDirection:'column', alignItems:'center', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
