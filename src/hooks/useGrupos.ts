@@ -15,6 +15,7 @@ export interface Grupo {
   activo: boolean
   created_at: string
   updated_at: string
+  total_estudiantes?: number  // Contador de estudiantes
 }
 
 export interface NuevoGrupo {
@@ -33,8 +34,16 @@ export interface ActualizarGrupo {
   docente_id?: string | null
 }
 
+export interface EstudianteInput {
+  plantel_id: string
+  grupo_id: string
+  matricula: string | null
+  nombre_completo: string
+  activo: boolean
+}
+
 export function useGrupos() {
-  const { plantelId, isSuperAdmin } = useAuth()
+  const { user, plantelId } = useAuth()
   const supabase = createClient()
   
   const [grupos, setGrupos] = useState<Grupo[]>([])
@@ -42,27 +51,44 @@ export function useGrupos() {
   const [error, setError] = useState<string | null>(null)
 
   const cargarGrupos = useCallback(async () => {
-    if (!plantelId && !isSuperAdmin) return
+    if (!plantelId) return
     
     setLoading(true)
     setError(null)
 
     try {
-      let query = supabase
+      // Cargar grupos con contador de estudiantes
+      const { data: gruposData, error: fetchError } = await supabase
         .from('grupos')
-        .select('*')
+        .select(`
+          *,
+          estudiantes:estudiantes(count)
+        `)
+        .eq('plantel_id', plantelId)
         .eq('activo', true)
         .order('grado', { ascending: true })
         .order('numero', { ascending: true })
 
-      if (!isSuperAdmin && plantelId) {
-        query = query.eq('plantel_id', plantelId)
-      }
-
-      const { data, error: fetchError } = await query
-
       if (fetchError) throw fetchError
-      setGrupos(data as Grupo[])
+
+      // Formatear datos con contador
+      const gruposConContador = (gruposData || []).map((grupo) => {
+        // Extraer el contador de estudiantes del objeto anidado
+        const estudiantesData = grupo.estudiantes as unknown
+        const estudiantesArray = Array.isArray(estudiantesData) ? estudiantesData : []
+        const totalEstudiantes = estudiantesArray[0]?.count || 0
+        
+        // Crear objeto sin la propiedad 'estudiantes'
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { estudiantes: _estudiantes, ...grupoSinEstudiantes } = grupo
+        
+        return {
+          ...grupoSinEstudiantes,
+          total_estudiantes: totalEstudiantes,
+        } as unknown as Grupo
+      })
+
+      setGrupos(gruposConContador)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error desconocido'
       setError(message)
@@ -70,7 +96,7 @@ export function useGrupos() {
     } finally {
       setLoading(false)
     }
-  }, [plantelId, isSuperAdmin, supabase])
+  }, [plantelId, supabase])
 
   const agregarGrupo = useCallback(async (datos: NuevoGrupo): Promise<boolean> => {
     if (!plantelId) {
@@ -163,47 +189,58 @@ export function useGrupos() {
     }
   }, [cargarGrupos, supabase])
 
-  const asignarEstudiantes = useCallback(async (
-    grupoId: string,
-    estudiantesIds: string[]
-  ): Promise<boolean> => {
-    setLoading(true)
-    setError(null)
+  async function guardarEstudiantes(estudiantes: EstudianteInput[]): Promise<boolean> {
+    if (!user) {
+      console.error('Usuario no autenticado')
+      return false
+    }
 
     try {
-      // Actualizar estudiantes seleccionados
-      const { error: updateError } = await supabase
-        .from('estudiantes')
-        .update({ grupo_id: grupoId, updated_at: new Date().toISOString() })
-        .in('id', estudiantesIds)
+      const grupoId = estudiantes[0]?.grupo_id
+      if (!grupoId) {
+        console.error('No se proporcionó grupo_id')
+        return false
+      }
 
-      if (updateError) throw updateError
-
-      // Desvincular estudiantes que ya no están seleccionados
-      const { error: clearError } = await supabase
+      // Paso 1: Eliminar estudiantes anteriores del grupo
+      const { error: deleteError } = await supabase
         .from('estudiantes')
-        .update({ grupo_id: null, updated_at: new Date().toISOString() })
+        .delete()
         .eq('grupo_id', grupoId)
-        .not('id', 'in', `(${estudiantesIds.join(',')})`)
 
-      if (clearError) throw clearError
+      if (deleteError) {
+        console.error('Error al eliminar estudiantes anteriores:', deleteError)
+        return false
+      }
 
+      // Paso 2: Insertar nuevos estudiantes
+      const { error: insertError } = await supabase
+        .from('estudiantes')
+        .insert(estudiantes)
+
+      if (insertError) {
+        console.error('Error al insertar estudiantes:', insertError)
+        return false
+      }
+
+      console.log(`✅ ${estudiantes.length} estudiantes guardados exitosamente`)
+      
+      // Recargar grupos para actualizar contador
+      await cargarGrupos()
+      
       return true
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al asignar estudiantes'
-      setError(message)
-      console.error('Error:', err)
+
+    } catch (error) {
+      console.error('Error en guardarEstudiantes:', error)
       return false
-    } finally {
-      setLoading(false)
     }
-  }, [supabase])
+  }
 
   useEffect(() => {
-    if (plantelId || isSuperAdmin) {
+    if (plantelId) {
       cargarGrupos()
     }
-  }, [plantelId, isSuperAdmin, cargarGrupos])
+  }, [plantelId, cargarGrupos])
 
   return {
     grupos,
@@ -213,6 +250,6 @@ export function useGrupos() {
     agregarGrupo,
     actualizarGrupo,
     eliminarGrupo,
-    asignarEstudiantes,
+    guardarEstudiantes,
   }
 }

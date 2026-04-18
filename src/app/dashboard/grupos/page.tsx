@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
-import { useGrupos } from '@/hooks/useGrupos'
+import { useGrupos, type EstudianteInput } from '@/hooks/useGrupos'
 import { useAuth } from '@/lib/hooks/useAuth'
 import type { Grupo as GrupoType, ActualizarGrupo } from '@/hooks/useGrupos'
 import BotonesAccionGrupo from '@/components/grupos/BotonesAccionGrupo'
@@ -266,7 +266,7 @@ export default function GruposPage() {
     agregarGrupo,
     actualizarGrupo,
     eliminarGrupo,
-    asignarEstudiantes,
+    guardarEstudiantes,
   } = useGrupos()
 
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -337,19 +337,20 @@ export default function GruposPage() {
     }
   }, [eliminando, eliminarGrupo])
 
-  const handleAsignarEstudiantes = useCallback(async (grupoId: string, estudiantesIds: string[]) => {
+  const handleAsignarEstudiantes = useCallback(async (estudiantesData: EstudianteInput[]) => {
     try {
-      const exito = await asignarEstudiantes(grupoId, estudiantesIds)
+      const exito = await guardarEstudiantes(estudiantesData)
       if (exito) {
         setAsignandoEstudiantes(null)
+        console.log('✅ Estudiantes guardados exitosamente')
       } else {
-        alert('❌ Error al asignar estudiantes')
+        alert('❌ Error al guardar estudiantes')
       }
     } catch (err) {
       console.error('Error:', err)
-      alert('❌ Error al asignar')
+      alert('❌ Error al guardar')
     }
-  }, [asignarEstudiantes])
+  }, [guardarEstudiantes])
 
   if (authLoading) {
     return (
@@ -477,6 +478,7 @@ export default function GruposPage() {
                             <tr style={{ borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
                               <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>Grupo</th>
                               <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>Turno</th>
+                              <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>Alumnos</th>
                               <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>Creado</th>
                               <th style={{ textAlign:'left', padding:'0.625rem 1rem', fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase' }}>Acciones</th>
                             </tr>
@@ -493,6 +495,16 @@ export default function GruposPage() {
                                   </div>
                                 </td>
                                 <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b', textTransform:'capitalize' }}>{g.turno}</td>
+                                <td style={{ padding:'0.75rem 1rem' }}>
+                                  <div style={{ display:'inline-flex', alignItems:'center', gap:'0.5rem', padding:'0.375rem 0.75rem', background: g.total_estudiantes ? '#eff6ff' : '#f1f5f9', borderRadius:'0.5rem' }}>
+                                    <span style={{ fontSize:'0.875rem', fontWeight:700, color: g.total_estudiantes ? '#1e3a5f' : '#94a3b8' }}>
+                                      {g.total_estudiantes || 0}
+                                    </span>
+                                    <span style={{ fontSize:'0.7rem', color: g.total_estudiantes ? '#64748b' : '#94a3b8' }}>
+                                      alumno{g.total_estudiantes !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                </td>
                                 <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{g.creadoEl}</td>
                                 <td style={{ padding:'0.75rem 1rem' }}>
                                   <BotonesAccionGrupo
@@ -534,7 +546,7 @@ export default function GruposPage() {
           grupo={asignandoEstudiantes}
           plantelId={plantelId}
           onCerrar={() => setAsignandoEstudiantes(null)}
-          onAsignar={handleAsignarEstudiantes}
+          onGuardar={handleAsignarEstudiantes}
         />
       )}
 
