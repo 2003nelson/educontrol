@@ -523,7 +523,7 @@ export default function ModalAsignarEstudiantes({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Foooter */}
         <div style={{ 
           padding: '1rem 1.75rem 1.5rem',
           borderTop: '1px solid #f1f5f9',
