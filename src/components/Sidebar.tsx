@@ -6,17 +6,20 @@ import { useEffect, useRef, useState } from 'react'
 
 const navPrincipal = [
   { nombre: 'Inicio',           href: '/dashboard' },
-  { nombre: 'Docentes',            href: '/dashboard/docentes' },
-  { nombre: 'Seguimiento',          href: '/dashboard/seguimiento' },
-  { nombre: 'Asignaturas',          href: '/dashboard/asignaturas' },
-  { nombre: 'Grupos',               href: '/dashboard/grupos' },
+  { nombre: 'Docentes',         href: '/dashboard/docentes' },
+  { nombre: 'Seguimiento',      href: '/dashboard/seguimiento' },
+  { nombre: 'Asignaturas',      href: '/dashboard/asignaturas' },
+  { nombre: 'Grupos',           href: '/dashboard/grupos' },
 ]
 
+// TEMPORALMENTE COMENTADO - Se activará cuando implementemos estas páginas
+/*
 const navAvanzado = [
-  { nombre: 'Ciclo Escolar',          href: '/dashboard/ciclo' },
-  { nombre: 'Sistema',               href: '/dashboard/sistema' },
-  { nombre: 'Secretaría',            href: '/dashboard/roles' },
+  { nombre: 'Ciclo Escolar',    href: '/dashboard/ciclo' },
+  { nombre: 'Sistema',          href: '/dashboard/sistema' },
+  { nombre: 'Secretaría',       href: '/dashboard/roles' },
 ]
+*/
 
 // ─── Botón cerrar sesión — dots macOS ────────────────────────────────────────
 function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
@@ -78,7 +81,7 @@ function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
 }
 
 export default function Sidebar() {
-  const supabase = createClient() // <--- Se añade la inicialización del cliente
+  const supabase = createClient()
   const pathname = usePathname()
   const router   = useRouter()
 
@@ -186,7 +189,8 @@ export default function Sidebar() {
             )
           })}
 
-          {/* Avanzado */}
+          {/* TEMPORALMENTE COMENTADO - Sección Avanzado */}
+          {/*
           <div className="pt-4 pb-1">
             <p className="px-3 text-xs font-semibold uppercase"
               style={{ color: 'rgba(61,90,128,0.5)', letterSpacing: '0.1em' }}>
@@ -214,6 +218,7 @@ export default function Sidebar() {
               </Link>
             )
           })}
+          */}
         </nav>
 
         {/* Cerrar sesión — dots estilo macOS */}

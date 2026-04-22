@@ -1,41 +1,12 @@
+// src/app/dashboard/asignaturas/page.tsx
 'use client'
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
-
-type Asignatura = {
-  id: string
-  nombre: string
-  semestre: number
-  creadoEl: string
-}
+import { useAsignaturas, type Asignatura } from '@/hooks/useAsignaturas'
+import { usePlantel } from '@/contexts/PlantelContext'
 
 const SEMESTRES = [1, 2, 3, 4, 5, 6]
-
-const asignaturasIniciales: Asignatura[] = [
-  { id: '1',  nombre: 'Matemáticas I',       semestre: 1, creadoEl: '12 Ago 2025' },
-  { id: '2',  nombre: 'Español I',            semestre: 1, creadoEl: '12 Ago 2025' },
-  { id: '3',  nombre: 'Historia de México I', semestre: 1, creadoEl: '12 Ago 2025' },
-  { id: '4',  nombre: 'Química I',            semestre: 1, creadoEl: '13 Ago 2025' },
-  { id: '5',  nombre: 'Inglés I',             semestre: 1, creadoEl: '13 Ago 2025' },
-  { id: '6',  nombre: 'Informática I',        semestre: 1, creadoEl: '14 Ago 2025' },
-  { id: '7',  nombre: 'Matemáticas II',       semestre: 2, creadoEl: '12 Ago 2025' },
-  { id: '8',  nombre: 'Español II',           semestre: 2, creadoEl: '12 Ago 2025' },
-  { id: '9',  nombre: 'Física I',             semestre: 2, creadoEl: '13 Ago 2025' },
-  { id: '10', nombre: 'Biología I',           semestre: 2, creadoEl: '13 Ago 2025' },
-  { id: '11', nombre: 'Inglés II',            semestre: 2, creadoEl: '14 Ago 2025' },
-  { id: '12', nombre: 'Cálculo I',            semestre: 3, creadoEl: '12 Ago 2025' },
-  { id: '13', nombre: 'Historia Universal',   semestre: 3, creadoEl: '12 Ago 2025' },
-  { id: '14', nombre: 'Química II',           semestre: 3, creadoEl: '13 Ago 2025' },
-  { id: '15', nombre: 'Inglés III',           semestre: 3, creadoEl: '14 Ago 2025' },
-  { id: '16', nombre: 'Física II',            semestre: 4, creadoEl: '12 Ago 2025' },
-  { id: '17', nombre: 'Literatura',           semestre: 4, creadoEl: '12 Ago 2025' },
-  { id: '18', nombre: 'Administración',       semestre: 4, creadoEl: '13 Ago 2025' },
-  { id: '19', nombre: 'Geografía',            semestre: 5, creadoEl: '12 Ago 2025' },
-  { id: '20', nombre: 'Educación Física',     semestre: 5, creadoEl: '13 Ago 2025' },
-  { id: '21', nombre: 'Contabilidad',         semestre: 6, creadoEl: '12 Ago 2025' },
-  { id: '22', nombre: 'Inglés VI',            semestre: 6, creadoEl: '13 Ago 2025' },
-]
 
 // ─── Botón + expandible ───────────────────────────────────────────────────────
 function AgregarBtn({ onClick }: { onClick: () => void }) {
@@ -79,17 +50,25 @@ function AsignaturaModal({
   onGuardar,
   onCerrar,
 }: {
-  onGuardar: (data: Omit<Asignatura, 'id' | 'creadoEl'>) => void
+  onGuardar: (data: { nombre: string; semestre: number }) => Promise<void>
   onCerrar: () => void
 }) {
   const [nombre, setNombre]           = useState('')
   const [semestre, setSemestre]       = useState(1)
   const [confirmando, setConfirmando] = useState(false)
   const [cerrando, setCerrando]       = useState(false)
+  const [guardando, setGuardando]     = useState(false)
 
   function cerrar() {
     setCerrando(true)
     setTimeout(() => onCerrar(), 380)
+  }
+
+  async function confirmarGuardar() {
+    setGuardando(true)
+    await onGuardar({ nombre, semestre })
+    setGuardando(false)
+    cerrar()
   }
 
   if (typeof window === 'undefined') return null
@@ -127,17 +106,21 @@ function AsignaturaModal({
             al {semestre}° Semestre
           </p>
           <div style={{ display:'flex', gap:'0.75rem', width:'100%' }}>
-            <button onClick={() => setConfirmando(false)}
-              style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+            <button 
+              onClick={() => setConfirmando(false)}
+              disabled={guardando}
+              style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.5 : 1 }}
+              onMouseEnter={e => !guardando && (e.currentTarget.style.background = '#f8fafc')}
               onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
               ← Editar
             </button>
-            <button onClick={() => onGuardar({ nombre, semestre })}
-              style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#2563eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#1e3a5f')}>
-              Sí, agregar
+            <button 
+              onClick={confirmarGuardar}
+              disabled={guardando}
+              style={{ flex:1, padding:'0.625rem', fontSize:'0.875rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background: guardando ? '#cbd5e1' : '#1e3a5f', color:'white', cursor: guardando ? 'not-allowed' : 'pointer' }}
+              onMouseEnter={e => !guardando && (e.currentTarget.style.background = '#2563eb')}
+              onMouseLeave={e => !guardando && (e.currentTarget.style.background = '#1e3a5f')}>
+              {guardando ? 'Guardando...' : 'Sí, agregar'}
             </button>
           </div>
         </div>
@@ -168,14 +151,14 @@ function AsignaturaModal({
               Nombre de la asignatura
             </label>
             <input type="text" placeholder="Ej. MATEMÁTICAS I"
-              value={nombre} onChange={e => setNombre(e.target.value.toUpperCase().slice(0, 40))}
-              maxLength={40}
+              value={nombre} onChange={e => setNombre(e.target.value.toUpperCase().slice(0, 100))}
+              maxLength={100}
               autoFocus
               style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.75rem', padding:'0.75rem 1rem', fontSize:'0.875rem', outline:'none', boxSizing:'border-box', textTransform:'uppercase' }}
               onFocus={e => (e.currentTarget.style.boxShadow = '0 0 0 2px #93c5fd')}
               onBlur={e => (e.currentTarget.style.boxShadow = 'none')} />
-            <p style={{ fontSize:'0.7rem', color: nombre.length >= 40 ? '#dc2626' : '#94a3b8', margin:'0.375rem 0 0', textAlign:'right' }}>
-              {nombre.length}/40
+            <p style={{ fontSize:'0.7rem', color: nombre.length >= 100 ? '#dc2626' : '#94a3b8', margin:'0.375rem 0 0', textAlign:'right' }}>
+              {nombre.length}/100
             </p>
           </div>
 
@@ -224,7 +207,6 @@ function AsignaturaModal({
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 // ─── Botón editar expandible ──────────────────────────────────────────────────
 function EditarAsigBtn({ onClick }: { onClick: () => void }) {
   const [hov, setHov] = useState(false)
@@ -265,17 +247,20 @@ function EditarAsigBtn({ onClick }: { onClick: () => void }) {
 // ─── Modal editar asignatura ──────────────────────────────────────────────────
 function ModalEditarAsig({ asig, onGuardar, onCerrar }: {
   asig: Asignatura
-  onGuardar: (id: string, nombre: string, semestre: number) => void
+  onGuardar: (id: string, nombre: string, semestre: number) => Promise<void>
   onCerrar: () => void
 }) {
   const [nombre,   setNombre]   = useState(asig.nombre)
   const [semestre, setSemestre] = useState(asig.semestre)
   const [cerrando, setCerrando] = useState(false)
+  const [guardando, setGuardando] = useState(false)
 
   function cerrar() { setCerrando(true); setTimeout(() => onCerrar(), 380) }
-  function guardar() {
+  async function guardar() {
     if (!nombre.trim()) return
-    onGuardar(asig.id, nombre.trim(), semestre)
+    setGuardando(true)
+    await onGuardar(asig.id, nombre.trim(), semestre)
+    setGuardando(false)
     cerrar()
   }
 
@@ -295,28 +280,30 @@ function ModalEditarAsig({ asig, onGuardar, onCerrar }: {
               <h2 style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Editar asignatura</h2>
               <p style={{ fontSize:'0.72rem', color:'#94a3b8', margin:'0.15rem 0 0' }}>{asig.nombre}</p>
             </div>
-            <button onClick={cerrar} style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.85rem' }}
-              onMouseEnter={e=>(e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e=>(e.currentTarget.style.background='#f1f5f9')}>✕</button>
+            <button onClick={cerrar} disabled={guardando} style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor: guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.85rem', opacity: guardando ? 0.5 : 1 }}
+              onMouseEnter={e => !guardando && (e.currentTarget.style.background='#e2e8f0')} onMouseLeave={e => (e.currentTarget.style.background='#f1f5f9')}>✕</button>
           </div>
           <div style={{ padding:'1.25rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
             <div>
               <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Nombre de la asignatura</label>
-              <input value={nombre} onChange={e=>setNombre(e.target.value)}
+              <input value={nombre} onChange={e=>setNombre(e.target.value)} maxLength={100} disabled={guardando}
                 style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.875rem', outline:'none', boxSizing:'border-box', color:'#1e3a5f' }}
-                onFocus={e=>(e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}/>
+                onFocus={e=>!guardando && (e.currentTarget.style.boxShadow='0 0 0 2px #bfdbfe')} onBlur={e=>(e.currentTarget.style.boxShadow='none')}/>
             </div>
             <div>
               <label style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:'0.35rem' }}>Semestre</label>
-              <select value={semestre} onChange={e=>setSemestre(Number(e.target.value))}
+              <select value={semestre} onChange={e=>setSemestre(Number(e.target.value))} disabled={guardando}
                 style={{ width:'100%', border:'1px solid #e2e8f0', borderRadius:'0.625rem', padding:'0.5rem 0.75rem', fontSize:'0.875rem', outline:'none', background:'white', color:'#1e3a5f', boxSizing:'border-box' }}>
                 {[1,2,3,4,5,6].map(s=><option key={s} value={s}>{s}° Semestre</option>)}
               </select>
             </div>
             <div style={{ display:'flex', gap:'0.625rem', paddingTop:'0.25rem' }}>
-              <button onClick={cerrar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor:'pointer' }}
-                onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>Cancelar</button>
-              <button onClick={guardar} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background:'#1e3a5f', color:'white', cursor:'pointer', transition:'background 0.15s' }}
-                onMouseEnter={e=>(e.currentTarget.style.background='#2563eb')} onMouseLeave={e=>(e.currentTarget.style.background='#1e3a5f')}>Guardar cambios</button>
+              <button onClick={cerrar} disabled={guardando} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:500, borderRadius:'0.75rem', border:'1px solid #e2e8f0', color:'#64748b', background:'white', cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.5 : 1 }}
+                onMouseEnter={e=>!guardando && (e.currentTarget.style.background='#f8fafc')} onMouseLeave={e=>(e.currentTarget.style.background='white')}>Cancelar</button>
+              <button onClick={guardar} disabled={guardando} style={{ flex:1, padding:'0.625rem', fontSize:'0.8rem', fontWeight:600, borderRadius:'0.75rem', border:'none', background: guardando ? '#cbd5e1' : '#1e3a5f', color:'white', cursor: guardando ? 'not-allowed' : 'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e=>!guardando && (e.currentTarget.style.background='#2563eb')} onMouseLeave={e=>!guardando && (e.currentTarget.style.background='#1e3a5f')}>
+                {guardando ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
@@ -366,7 +353,15 @@ function EliminarAsigBtn({ onClick }: { onClick: () => void }) {
 }
 
 export default function AsignaturasPage() {
-  const [asignaturas, setAsignaturas]       = useState<Asignatura[]>(asignaturasIniciales)
+  const { plantelId, loading: plantelLoading } = usePlantel()
+  
+  const { 
+    asignaturas, 
+    crearAsignatura, 
+    editarAsignatura, 
+    eliminarAsignatura 
+  } = useAsignaturas()
+
   const [modalAbierto, setModalAbierto]     = useState(false)
   const [eliminando, setEliminando]         = useState<Asignatura | null>(null)
   const [editando, setEditando]             = useState<Asignatura | null>(null)
@@ -403,24 +398,41 @@ export default function AsignaturasPage() {
     items: asignaturasFiltradas.filter(a => a.semestre === s),
   })).filter(g => g.items.length > 0)
 
-  function handleGuardar(data: Omit<Asignatura, 'id' | 'creadoEl'>) {
-    const hoy = new Date()
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-    const creadoEl = `${hoy.getDate()} ${meses[hoy.getMonth()]} ${hoy.getFullYear()}`
-    setAsignaturas(prev => [...prev, { ...data, id: Date.now().toString(), creadoEl }])
-    setModalAbierto(false)
-    setAgregada(true)
-    setTimeout(() => setAgregada(false), 2500)
+  async function handleGuardar(data: { nombre: string; semestre: number }) {
+    const exito = await crearAsignatura(data)
+    if (exito) {
+      setModalAbierto(false)
+      setAgregada(true)
+      setTimeout(() => setAgregada(false), 2500)
+    }
   }
 
-  function handleEditar(id: string, nombre: string, semestre: number) {
-    setAsignaturas(prev => prev.map(a => a.id === id ? { ...a, nombre, semestre } : a))
+  async function handleEditar(id: string, nombre: string, semestre: number) {
+    await editarAsignatura(id, { nombre, semestre })
   }
 
-  function confirmarEliminar() {
+  async function confirmarEliminar() {
     if (!eliminando) return
-    setAsignaturas(prev => prev.filter(a => a.id !== eliminando.id))
+    await eliminarAsignatura(eliminando.id)
     cerrarEliminar()
+  }
+
+  function formatearFecha(isoString: string): string {
+    const fecha = new Date(isoString)
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    return `${fecha.getDate()} ${meses[fecha.getMonth()]} ${fecha.getFullYear()}`
+  }
+
+  // Mostrar loading solo si el plantel aún no está listo
+  if (plantelLoading || !plantelId) {
+    return (
+      <div className="flex flex-col h-full">
+        <Header titulo="Asignaturas" />
+        <div className="px-4 pb-4 pt-3 flex items-center justify-center" style={{ flex:'1 1 0' }}>
+          <p style={{ color:'#94a3b8', fontSize:'0.875rem' }}>Cargando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -438,7 +450,7 @@ export default function AsignaturasPage() {
         {/* Barra superior */}
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            {/* Buscador — colapsable estilo Apple */}
+            {/* Buscador */}
             <div
               onMouseEnter={() => { setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
               onMouseLeave={() => { if (!localBusqueda) setSearchExpanded(false) }}
@@ -476,7 +488,7 @@ export default function AsignaturasPage() {
               )}
             </div>
 
-            {/* Filtro semestre — Apple style sliding pill */}
+            {/* Filtro semestre */}
             <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px', gap:0, minWidth:'420px' }}>
               {(() => {
                 const opciones = ['todos', ...SEMESTRES.map(String)]
@@ -517,7 +529,7 @@ export default function AsignaturasPage() {
               <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:0 }}>asignaturas en la retícula</p>
             </div>
 
-            {/* Botón agregar — animación guardado */}
+            {/* Botón agregar */}
             {agregada ? (
               <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', height:'40px', padding:'0 1.25rem', borderRadius:'0.875rem', background:'#16a34a', color:'white', fontSize:'0.875rem', fontWeight:600 }}>
                 <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -549,7 +561,6 @@ export default function AsignaturasPage() {
                   {items.length} asignatura{items.length !== 1 ? 's' : ''}
                 </p>
                 <div style={{ flex:1, height:'1px', background:'#f1f5f9' }}/>
-                {/* Botón contraer */}
                 <button onClick={() => toggleSemestre(semestre)}
                   style={{ display:'flex', alignItems:'center', gap:'0.3rem', background:'none', border:'none', cursor:'pointer', padding:'0.2rem 0.5rem', borderRadius:'0.5rem', color:'#94a3b8', fontSize:'0.7rem', fontWeight:600, transition:'all 0.15s', flexShrink:0 }}
                   onMouseEnter={e => { e.currentTarget.style.color = '#1e3a5f'; e.currentTarget.style.background = '#f1f5f9' }}
@@ -562,7 +573,7 @@ export default function AsignaturasPage() {
                 </button>
               </div>
 
-              {/* Tabla de asignaturas */}
+              {/* Tabla */}
               <div style={{
                 overflow:'hidden',
                 maxHeight: contraido ? '0' : '2000px',
@@ -589,7 +600,7 @@ export default function AsignaturasPage() {
                               <span style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f' }}>{a.nombre}</span>
                             </div>
                           </td>
-                          <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{a.creadoEl}</td>
+                          <td style={{ padding:'0.75rem 1rem', fontSize:'0.8rem', color:'#64748b' }}>{formatearFecha(a.created_at)}</td>
                           <td style={{ padding:'0.75rem 1rem', overflow:'visible', position:'relative' }}>
                             <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
                               <EditarAsigBtn onClick={() => setEditando(a)} />
@@ -608,7 +619,7 @@ export default function AsignaturasPage() {
         </div>
       </div>
 
-      {/* Modal agregar */}
+      {/* Modales */}
       {modalAbierto && (
         <AsignaturaModal
           onGuardar={handleGuardar}
@@ -620,7 +631,6 @@ export default function AsignaturasPage() {
         <ModalEditarAsig asig={editando} onGuardar={handleEditar} onCerrar={() => setEditando(null)} />
       )}
 
-      {/* Modal confirmar eliminar */}
       {eliminando && typeof window !== 'undefined' && createPortal(
         <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation: elimCerrando ? 'elimBackdropOut 0.36s ease forwards' : 'elimBackdropIn 0.25s ease' }}>
           <style>{`

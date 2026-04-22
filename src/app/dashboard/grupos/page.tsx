@@ -2,9 +2,8 @@
 import { useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
-import { useGrupos, type EstudianteInput } from '@/hooks/useGrupos'
-import { useAuth } from '@/lib/hooks/useAuth'
-import type { Grupo as GrupoType, ActualizarGrupo } from '@/hooks/useGrupos'
+import { useGrupos, type EstudianteInput, type Grupo as GrupoType } from '@/hooks/useGrupos'
+import { usePlantel } from '@/contexts/PlantelContext'
 import BotonesAccionGrupo from '@/components/grupos/BotonesAccionGrupo'
 import ModalEditarGrupo from '@/components/grupos/ModalEditarGrupo'
 import ModalAsignarEstudiantes from '@/components/grupos/ModalAsignarEstudiantes'
@@ -258,13 +257,13 @@ function GrupoModal({
 // ═════════════════════════════════════════════════════════════════
 
 export default function GruposPage() {
-  const { isDirector, isSuperAdmin, plantelId, loading: authLoading } = useAuth()
+  const { plantelId, loading: plantelLoading } = usePlantel()
   const {
     grupos: gruposData,
     loading,
     error,
-    agregarGrupo,
-    actualizarGrupo,
+    crearGrupo,
+    editarGrupo,
     eliminarGrupo,
     guardarEstudiantes,
   } = useGrupos()
@@ -287,7 +286,7 @@ export default function GruposPage() {
 
     try {
       setGuardando(true)
-      const exito = await agregarGrupo({ grado, numero, turno, ciclo_escolar: '2025-2026', docente_id: null })
+      const exito = await crearGrupo({ grado, numero, turno, ciclo_escolar: '2025-2026', docente_id: null })
       
       if (exito) {
         setModalAbierto(false)
@@ -302,12 +301,18 @@ export default function GruposPage() {
     } finally {
       setGuardando(false)
     }
-  }, [agregarGrupo])
+  }, [crearGrupo])
 
-  const handleEditar = useCallback(async (id: string, cambios: ActualizarGrupo) => {
+  const handleEditar = useCallback(async (id: string, cambios: Partial<{
+    grado: number
+    numero: string
+    turno: 'matutino' | 'vespertino'
+    ciclo_escolar: string
+    docente_id?: string | null
+  }>) => {
     try {
       setGuardando(true)
-      const exito = await actualizarGrupo(id, cambios)
+      const exito = await editarGrupo(id, cambios)
       if (exito) {
         setEditando(null)
       } else {
@@ -319,7 +324,7 @@ export default function GruposPage() {
     } finally {
       setGuardando(false)
     }
-  }, [actualizarGrupo])
+  }, [editarGrupo])
 
   const confirmarEliminar = useCallback(async () => {
     if (!eliminando || !rateLimiter.puedeOperar()) return
@@ -352,19 +357,14 @@ export default function GruposPage() {
     }
   }, [guardarEstudiantes])
 
-  if (authLoading) {
+  // Mostrar loading solo si el plantel aún no está listo
+  if (plantelLoading || !plantelId) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
-        <p style={{ color:'#94a3b8' }}>Cargando...</p>
-      </div>
-    )
-  }
-
-  if (!isDirector && !isSuperAdmin) {
-    return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', flexDirection:'column', gap:'1rem' }}>
-        <p style={{ fontSize:'1.5rem', color:'#dc2626', fontWeight:700 }}>⚠️ Acceso Denegado</p>
-        <p style={{ color:'#64748b' }}>No tienes permisos para acceder a esta sección</p>
+      <div className="flex flex-col h-full">
+        <Header titulo="Grupos" />
+        <div className="px-4 pb-4 pt-3 flex items-center justify-center" style={{ flex:'1 1 0' }}>
+          <p style={{ color:'#94a3b8', fontSize:'0.875rem' }}>Cargando...</p>
+        </div>
       </div>
     )
   }
@@ -419,14 +419,34 @@ export default function GruposPage() {
                   style={{ padding:'0.625rem 1rem', borderRadius:'0.75rem', border:'1px solid #e2e8f0', fontSize:'0.875rem', width:'200px' }}
                 />
 
-                <div style={{ display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px' }}>
+                {/* Filtro grado con pill animada */}
+                <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'1rem', padding:'4px', gap:0, minWidth:'360px' }}>
+                  {(() => {
+                    const opciones = ['todos', ...GRADOS_VALIDOS.map(String)]
+                    const idx = opciones.indexOf(String(gradoFiltro))
+                    const total = opciones.length
+                    const pillW = `calc(${100/total}%)`
+                    const pillL = `calc(${idx * (100/total)}% + 4px)`
+                    return (
+                      <div style={{
+                        position:'absolute', top:'4px', bottom:'4px',
+                        width: pillW,
+                        left: pillL,
+                        background:'white',
+                        borderRadius:'0.75rem',
+                        boxShadow:'0 1px 6px rgba(0,0,0,0.13)',
+                        transition:'left 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+                        pointerEvents:'none',
+                      }}/>
+                    )
+                  })()}
                   <button onClick={() => setGradoFiltro('todos')}
-                    style={{ padding:'0.5rem 1rem', fontSize:'0.8rem', fontWeight: gradoFiltro==='todos' ? 600 : 500, color: gradoFiltro==='todos' ? '#1e3a5f' : '#64748b', background: gradoFiltro==='todos' ? 'white' : 'transparent', border:'none', borderRadius:'0.75rem', cursor:'pointer' }}>
+                    style={{ position:'relative', zIndex:1, flex:1, padding:'0.5rem 0', fontSize:'0.8rem', fontWeight: gradoFiltro==='todos' ? 600 : 500, color: gradoFiltro==='todos' ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.75rem', transition:'color 0.2s', whiteSpace:'nowrap', textAlign:'center' }}>
                     Todos
                   </button>
                   {GRADOS_VALIDOS.map(g => (
                     <button key={g} onClick={() => setGradoFiltro(g)}
-                      style={{ padding:'0.5rem 1rem', fontSize:'0.8rem', fontWeight: gradoFiltro===g ? 600 : 500, color: gradoFiltro===g ? '#1e3a5f' : '#64748b', background: gradoFiltro===g ? 'white' : 'transparent', border:'none', borderRadius:'0.75rem', cursor:'pointer' }}>
+                      style={{ position:'relative', zIndex:1, flex:1, padding:'0.5rem 0', fontSize:'0.8rem', fontWeight: gradoFiltro===g ? 600 : 500, color: gradoFiltro===g ? '#1e3a5f' : '#64748b', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.75rem', transition:'color 0.2s', whiteSpace:'nowrap', textAlign:'center' }}>
                       {g}°
                     </button>
                   ))}
