@@ -98,13 +98,18 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 5. Registrar fecha de invitación ──────────────────────────────────
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('usuarios')
       .update({
         invitacion_enviada: true,
         invitacion_enviada_at: new Date().toISOString(),
       })
       .eq('id', docente.id)
+      .eq('plantel_id', caller.plantel_id)
+
+    if (updateError) {
+      console.error('Update invitacion_enviada error:', updateError.message)
+    }
 
     return new Response(
       JSON.stringify({ ok: true, message: `Invitación enviada a ${docente.email}` }),
