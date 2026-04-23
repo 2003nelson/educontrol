@@ -25,6 +25,9 @@ export default function PrimeraVezPage() {
       const type = params.get('type')
 
       if (accessToken && refreshToken && type === 'invite') {
+        // Limpiar el hash de la URL para evitar reprocesamiento
+        window.history.replaceState(null, '', window.location.pathname)
+
         // Establecer la sesión manualmente con el token del email
         const { data, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
