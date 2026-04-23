@@ -106,10 +106,12 @@ export default function PrimeraVezPage() {
 
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        // Actualizar por email para asegurar que encuentra el registro correcto
+        // independientemente del auth_id que haya quedado
         await supabase
           .from('usuarios')
-          .update({ cuenta_activada: true })
-          .eq('auth_id', user.id)
+          .update({ cuenta_activada: true, auth_id: user.id })
+          .eq('email', user.email)
       }
 
       setSuccess(true)
