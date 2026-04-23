@@ -44,7 +44,7 @@ export default function PrimeraVezPage() {
           .single()
 
         if (userData?.cuenta_activada) {
-          router.push('/docente/(autenticado)/grupos')
+          router.push('/docente/grupos')
           return
         }
 
@@ -68,7 +68,7 @@ export default function PrimeraVezPage() {
         .single()
 
       if (userData?.cuenta_activada) {
-        router.push('/docente/(autenticado)/grupos')
+        router.push('/docente/grupos')
         return
       }
 
@@ -110,7 +110,7 @@ export default function PrimeraVezPage() {
       }
 
       setSuccess(true)
-      setTimeout(() => router.push('/docente/(autenticado)/grupos'), 2000)
+      setTimeout(() => router.push('/docente/grupos'), 2000)
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar la contraseña')
