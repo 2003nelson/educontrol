@@ -1,4 +1,4 @@
-// src/app/docente/layout.tsx
+// src/app/docente/(autenticado)/layout.tsx
 'use client'
 import HeaderDocente from '@/components/docente/HeaderDocente'
 import { DocenteProvider, useDocente } from '@/contexts/DocenteContext'
@@ -27,11 +27,7 @@ function DocenteLayoutContent({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function DocenteLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DocenteLayout({ children }: { children: React.ReactNode }) {
   return (
     <DocenteProvider>
       <DocenteLayoutContent>{children}</DocenteLayoutContent>

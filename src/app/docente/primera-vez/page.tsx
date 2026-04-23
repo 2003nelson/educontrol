@@ -16,60 +16,68 @@ export default function PrimeraVezPage() {
   const [formData, setFormData] = useState({ password: '', confirmPassword: '' })
 
   useEffect(() => {
-    // onAuthStateChange procesa el hash #access_token automáticamente
-    // cuando el docente llega desde el link del email
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          if (!session) return
+    async function init() {
+      // Leer el hash del URL y extraer el access_token
+      const hash = window.location.hash
+      const params = new URLSearchParams(hash.replace('#', ''))
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      const type = params.get('type')
 
-          const { data } = await supabase
-            .from('usuarios')
-            .select('nombre_completo, email, cuenta_activada')
-            .eq('auth_id', session.user.id)
-            .single()
+      if (accessToken && refreshToken && type === 'invite') {
+        // Establecer la sesión manualmente con el token del email
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
 
-          if (data?.cuenta_activada) {
-            router.push('/docente/grupos')
-            return
-          }
-
-          setNombre(data?.nombre_completo ?? session.user.email ?? '')
-          setEmail(data?.email ?? session.user.email ?? '')
-          setLoading(false)
+        if (sessionError || !data.session) {
+          router.push('/login?error=link-invalido')
+          return
         }
 
-        if (event === 'SIGNED_OUT' || (!session && event === 'INITIAL_SESSION')) {
-          // Verificar si hay sesión activa (usuario ya logueado)
-          const { data: { session: currentSession } } = await supabase.auth.getSession()
-          if (!currentSession) {
-            router.push('/login?error=link-invalido')
-          }
-        }
-      }
-    )
-
-    // También verificar sesión existente por si el usuario ya tiene una
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        supabase
+        // Obtener datos del docente
+        const { data: userData } = await supabase
           .from('usuarios')
           .select('nombre_completo, email, cuenta_activada')
-          .eq('auth_id', session.user.id)
+          .eq('auth_id', data.session.user.id)
           .single()
-          .then(({ data }) => {
-            if (data?.cuenta_activada) {
-              router.push('/docente/grupos')
-              return
-            }
-            setNombre(data?.nombre_completo ?? session.user.email ?? '')
-            setEmail(data?.email ?? session.user.email ?? '')
-            setLoading(false)
-          })
-      }
-    })
 
-    return () => subscription.unsubscribe()
+        if (userData?.cuenta_activada) {
+          router.push('/docente/(autenticado)/grupos')
+          return
+        }
+
+        setNombre(userData?.nombre_completo ?? data.session.user.email ?? '')
+        setEmail(userData?.email ?? data.session.user.email ?? '')
+        setLoading(false)
+        return
+      }
+
+      // Si no hay token en el hash, verificar sesión existente
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/login?error=link-invalido')
+        return
+      }
+
+      const { data: userData } = await supabase
+        .from('usuarios')
+        .select('nombre_completo, email, cuenta_activada')
+        .eq('auth_id', session.user.id)
+        .single()
+
+      if (userData?.cuenta_activada) {
+        router.push('/docente/(autenticado)/grupos')
+        return
+      }
+
+      setNombre(userData?.nombre_completo ?? session.user.email ?? '')
+      setEmail(userData?.email ?? session.user.email ?? '')
+      setLoading(false)
+    }
+
+    init()
   }, [router, supabase])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,7 +110,7 @@ export default function PrimeraVezPage() {
       }
 
       setSuccess(true)
-      setTimeout(() => router.push('/docente/grupos'), 2000)
+      setTimeout(() => router.push('/docente/(autenticado)/grupos'), 2000)
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar la contraseña')
@@ -144,10 +152,8 @@ export default function PrimeraVezPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8" style={{ border: '1px solid #e2e8f0' }}>
 
           <div className="text-center mb-6">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)' }}
-            >
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)' }}>
               <svg width="32" height="32" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -163,53 +169,33 @@ export default function PrimeraVezPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>
-                TU EMAIL
-              </label>
-              <input
-                type="email"
-                value={email}
-                disabled
+              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>TU EMAIL</label>
+              <input type="email" value={email} disabled
                 className="w-full px-4 py-3 rounded-xl text-sm"
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }}
-              />
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#94a3b8' }} />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>
-                NUEVA CONTRASEÑA
-              </label>
-              <input
-                type="password"
-                value={formData.password}
+              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>NUEVA CONTRASEÑA</label>
+              <input type="password" value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Mínimo 8 caracteres"
-                required
+                placeholder="Mínimo 8 caracteres" required
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ border: '1px solid #e2e8f0', color: '#1e3a5f' }}
-              />
+                style={{ border: '1px solid #e2e8f0', color: '#1e3a5f' }} />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>
-                CONFIRMAR CONTRASEÑA
-              </label>
-              <input
-                type="password"
-                value={formData.confirmPassword}
+              <label className="block text-xs font-semibold mb-2" style={{ color: '#64748b' }}>CONFIRMAR CONTRASEÑA</label>
+              <input type="password" value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                placeholder="Repite tu contraseña"
-                required
+                placeholder="Repite tu contraseña" required
                 className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                style={{ border: '1px solid #e2e8f0', color: '#1e3a5f' }}
-              />
+                style={{ border: '1px solid #e2e8f0', color: '#1e3a5f' }} />
             </div>
 
             {error && (
-              <div
-                className="px-4 py-3 rounded-xl text-sm flex items-center gap-2"
-                style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}
-              >
+              <div className="px-4 py-3 rounded-xl text-sm flex items-center gap-2"
+                style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10"/>
                   <line x1="12" y1="8" x2="12" y2="12"/>
@@ -219,15 +205,12 @@ export default function PrimeraVezPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={guardando}
+            <button type="submit" disabled={guardando}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all"
               style={{
                 background: guardando ? '#94a3b8' : 'linear-gradient(135deg, #1e3a5f, #2563eb)',
                 cursor: guardando ? 'not-allowed' : 'pointer',
-              }}
-            >
+              }}>
               {guardando ? 'Guardando...' : 'Crear contraseña y continuar'}
             </button>
           </form>
