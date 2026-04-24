@@ -49,31 +49,22 @@ function AsistenciaView({
   useEffect(() => {
     async function cargar() {
       setLoading(true)
-      // Primero obtener los estudiante_ids del grupo
-      const { data: inscData, error: inscError } = await supabase
+      // Query directa con JOIN via RPC para evitar URLs largas
+      const { data, error } = await supabase
         .from('inscripciones')
-        .select('estudiante_id')
+        .select('estudiante_id, estudiantes(id, nombre_completo, numero_control)')
         .eq('grupo_id', grupoId)
         .eq('activo', true)
 
-      if (inscError) { setLoading(false); return }
-
-      const estudianteIds = (inscData || []).map(r => r.estudiante_id).filter(Boolean)
-
-      if (estudianteIds.length === 0) {
-        setAlumnos([])
-        setLoading(false)
-        return
-      }
-
-      // Luego obtener los datos de los estudiantes
-      const { data, error } = await supabase
-        .from('estudiantes')
-        .select('id, nombre_completo, numero_control')
-        .in('id', estudianteIds)
-
       if (!error && data) {
-        const lista: Alumno[] = [...data].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
+        const lista: Alumno[] = data
+          .map((row: { estudiante_id: string; estudiantes: Alumno | Alumno[] | null }) => {
+            const e = row.estudiantes
+            if (!e) return null
+            return Array.isArray(e) ? e[0] : e
+          })
+          .filter((a): a is Alumno => a !== null)
+          .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
         setAlumnos(lista)
         const init: Asistencia = {}
         lista.forEach(a => { init[a.id] = 'P' })
