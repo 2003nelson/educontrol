@@ -71,10 +71,9 @@ function AsistenciaView({
         .from('estudiantes')
         .select('id, nombre_completo, numero_control')
         .in('id', estudianteIds)
-        .order('nombre_completo', { ascending: true })
 
       if (!error && data) {
-        const lista: Alumno[] = data
+        const lista: Alumno[] = [...data].sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
         setAlumnos(lista)
         const init: Asistencia = {}
         lista.forEach(a => { init[a.id] = 'P' })
