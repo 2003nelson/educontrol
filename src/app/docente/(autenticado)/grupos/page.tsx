@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 interface AsignaturaItem { id: string; nombre: string }
 interface GrupoAgrupado { id: string; numero: string; grado: number; asignaturas: AsignaturaItem[] }
-interface Alumno { id: string; nombre_completo: string; numero_control?: string }
+interface Alumno { id: string; nombre_completo: string; matricula?: string }
 type Asistencia = Record<string, 'P' | 'A' | 'J'>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,21 +50,12 @@ function AsistenciaView({
     async function cargar() {
       setLoading(true)
       // Query directa con JOIN via RPC para evitar URLs largas
+      // Usar RPC para evitar problemas de RLS con .in()
       const { data, error } = await supabase
-        .from('inscripciones')
-        .select('estudiante_id, estudiantes(id, nombre_completo, numero_control)')
-        .eq('grupo_id', grupoId)
-        .eq('activo', true)
+        .rpc('get_estudiantes_grupo', { p_grupo_id: grupoId })
 
       if (!error && data) {
         const lista: Alumno[] = data
-          .map((row: { estudiante_id: string; estudiantes: Alumno | Alumno[] | null }) => {
-            const e = row.estudiantes
-            if (!e) return null
-            return Array.isArray(e) ? e[0] : e
-          })
-          .filter((a): a is Alumno => a !== null)
-          .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
         setAlumnos(lista)
         const init: Asistencia = {}
         lista.forEach(a => { init[a.id] = 'P' })
@@ -247,8 +238,8 @@ function AsistenciaView({
                   <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>
                     {alumno.nombre_completo}
                   </p>
-                  {alumno.numero_control && (
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>{alumno.numero_control}</p>
+                  {alumno.matricula && (
+                    <p className="text-xs" style={{ color: '#94a3b8' }}>{alumno.matricula}</p>
                   )}
                 </div>
               </div>

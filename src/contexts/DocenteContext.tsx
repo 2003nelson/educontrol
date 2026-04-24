@@ -30,6 +30,22 @@ type DocenteContextType = {
   recargar: () => Promise<void>
 }
 
+// Supabase puede devolver joins como objeto o array
+type GrupoRaw = { numero: string; grado: number } | { numero: string; grado: number }[] | null
+type AsignaturaRaw = { nombre: string } | { nombre: string }[] | null
+
+function resolveGrupo(raw: GrupoRaw): { numero: string; grado: number } | null {
+  if (!raw) return null
+  if (Array.isArray(raw)) return raw[0] ?? null
+  return raw
+}
+
+function resolveAsignatura(raw: AsignaturaRaw): { nombre: string } | null {
+  if (!raw) return null
+  if (Array.isArray(raw)) return raw[0] ?? null
+  return raw
+}
+
 const DocenteContext = createContext<DocenteContextType | null>(null)
 
 export function DocenteProvider({ children }: { children: ReactNode }) {
@@ -44,14 +60,9 @@ export function DocenteProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      // Obtener usuario actual
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      if (!user) { router.push('/login'); return }
 
-      // Obtener datos del docente
       const { data: docenteData, error: docenteError } = await supabase
         .from('usuarios')
         .select('id, nombre_completo, email, email_institucional, plantel_id, cuenta_activada')
@@ -60,18 +71,13 @@ export function DocenteProvider({ children }: { children: ReactNode }) {
         .single()
 
       if (docenteError) throw docenteError
-      if (!docenteData) {
-        router.push('/login')
-        return
-      }
+      if (!docenteData) { router.push('/login'); return }
 
-      // Si no tiene cuenta activada, redirigir a crear contraseña
       if (!docenteData.cuenta_activada) {
         router.push('/docente/primera-vez')
         return
       }
 
-      // Obtener asignaciones con grupos y asignaturas
       const { data: asignacionesData, error: asignacionesError } = await supabase
         .from('asignaciones_docentes')
         .select(`
@@ -85,20 +91,20 @@ export function DocenteProvider({ children }: { children: ReactNode }) {
 
       if (asignacionesError) throw asignacionesError
 
-      // Mapear asignaciones
-      const asignaciones: AsignacionDocente[] = (asignacionesData || []).map((a) => ({
-        id: a.id,
-        grupo_id: a.grupo_id,
-        grupo_numero: Array.isArray(a.grupos) && a.grupos[0]?.numero || '',
-        grupo_grado: Array.isArray(a.grupos) && a.grupos[0]?.grado || 0,
-        asignatura_id: a.asignatura_id,
-        asignatura_nombre: Array.isArray(a.asignaturas) && a.asignaturas[0]?.nombre || '',
-      }))
-
-      setDocente({
-        ...docenteData,
-        asignaciones,
+      const asignaciones: AsignacionDocente[] = (asignacionesData || []).map((a) => {
+        const grupo = resolveGrupo(a.grupos as GrupoRaw)
+        const asignatura = resolveAsignatura(a.asignaturas as AsignaturaRaw)
+        return {
+          id: a.id,
+          grupo_id: a.grupo_id,
+          grupo_numero: grupo?.numero ?? '',
+          grupo_grado: grupo?.grado ?? 0,
+          asignatura_id: a.asignatura_id,
+          asignatura_nombre: asignatura?.nombre ?? '',
+        }
       })
+
+      setDocente({ ...docenteData, asignaciones })
     } catch (err) {
       console.error('Error al cargar datos del docente:', err)
       setError(err instanceof Error ? err.message : 'Error al cargar datos')
@@ -121,8 +127,6 @@ export function DocenteProvider({ children }: { children: ReactNode }) {
 
 export function useDocente() {
   const context = useContext(DocenteContext)
-  if (!context) {
-    throw new Error('useDocente debe usarse dentro de DocenteProvider')
-  }
+  if (!context) throw new Error('useDocente debe usarse dentro de DocenteProvider')
   return context
 }
