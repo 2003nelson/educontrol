@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 interface AsignaturaItem { id: string; nombre: string }
 interface GrupoAgrupado  { id: string; numero: string; grado: number; asignaturas: AsignaturaItem[] }
 interface Alumno         { id: string; nombre_completo: string; matricula?: string }
-type Asistencia = Record<string, 'P' | 'A' | 'J'>
+type Asistencia = Record<string, 'P' | 'A' | 'J' | 'R'>
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatFechaHoy() {
@@ -218,12 +218,13 @@ function AsistenciaView({
           .eq('asignatura_id', asignatura.id)
           .eq('fecha', hoy)
         const init: Asistencia = {}
-        data.forEach((a: Alumno) => { init[a.id] = 'P' })
+        data.forEach((a: Alumno) => { init[a.id] = 'P' as 'P' | 'A' | 'J' | 'R' })
         // Invertir el mapa al leer: 'presente'→'P', 'falta'→'A', 'justificado'→'J'
-        const estadoInverso: Record<string, 'P' | 'A' | 'J'> = {
+        const estadoInverso: Record<string, 'P' | 'A' | 'J' | 'R'> = {
           presente: 'P',
           falta: 'A',
-          justificado: 'J',
+          justificada: 'J',
+          retardo: 'R',
         }
         if (prevData) {
           prevData.forEach((r: { estudiante_id: string; estado: string }) => {
@@ -237,13 +238,13 @@ function AsistenciaView({
     cargar()
   }, [grupoId, asignatura.id, supabase])
 
-  function marcarTodos(estado: 'P' | 'A' | 'J') {
+  function marcarTodos(estado: 'P' | 'A' | 'J' | 'R') {
     const nuevo: Asistencia = {}
     alumnos.forEach(a => { nuevo[a.id] = estado })
     setAsistencia(nuevo)
   }
 
-  function marcar(id: string, estado: 'P' | 'A' | 'J') {
+  function marcar(id: string, estado: 'P' | 'A' | 'J' | 'R') {
     setAsistencia(prev => ({ ...prev, [id]: estado }))
   }
 
@@ -265,10 +266,11 @@ function AsistenciaView({
 
       // Mapa para respetar el check constraint "asistencias_estado_check"
       // Si tu constraint usa otros valores (ej. 'P','A','J') ajusta este mapa
-      const estadoMap: Record<'P' | 'A' | 'J', string> = {
+      const estadoMap: Record<'P' | 'A' | 'J' | 'R', string> = {
         P: 'presente',
         A: 'falta',
-        J: 'justificado',
+        J: 'justificada',
+        R: 'retardo',
       }
 
       const registros = alumnos.map(a => ({
@@ -302,13 +304,15 @@ function AsistenciaView({
   const presentes = Object.values(asistencia).filter(v => v === 'P').length
   const ausentes  = Object.values(asistencia).filter(v => v === 'A').length
   const justif    = Object.values(asistencia).filter(v => v === 'J').length
+  const retardos  = Object.values(asistencia).filter(v => v === 'R').length
 
-  const BtnEstado = ({ estado, alumnoId }: { estado: 'P' | 'A' | 'J'; alumnoId: string }) => {
+  const BtnEstado = ({ estado, alumnoId }: { estado: 'P' | 'A' | 'J' | 'R'; alumnoId: string }) => {
     const activo = asistencia[alumnoId] === estado
     const cfg = {
       P: { bg: activo ? '#dcfce7' : '#f8fafc', color: activo ? '#16a34a' : '#94a3b8', border: activo ? '#86efac' : '#e2e8f0' },
       A: { bg: activo ? '#fee2e2' : '#f8fafc', color: activo ? '#dc2626' : '#94a3b8', border: activo ? '#fca5a5' : '#e2e8f0' },
       J: { bg: activo ? '#fef3c7' : '#f8fafc', color: activo ? '#d97706' : '#94a3b8', border: activo ? '#fcd34d' : '#e2e8f0' },
+      R: { bg: activo ? '#f3e8ff' : '#f8fafc', color: activo ? '#7c3aed' : '#94a3b8', border: activo ? '#c4b5fd' : '#e2e8f0' },
     }[estado]
     return (
       <button onClick={() => marcar(alumnoId, estado)}
@@ -343,6 +347,7 @@ function AsistenciaView({
               { label: 'Presentes', val: presentes, color: '#16a34a', dot: '#22c55e' },
               { label: 'Ausentes',  val: ausentes,  color: '#dc2626', dot: '#ef4444' },
               { label: 'Justif.',   val: justif,    color: '#d97706', dot: '#f59e0b' },
+              { label: 'Retardo',   val: retardos,  color: '#7c3aed', dot: '#a78bfa' },
             ].map(s => (
               <div key={s.label} className="flex items-center gap-1.5">
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, flexShrink: 0 }}/>
@@ -352,11 +357,12 @@ function AsistenciaView({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Todos:</span>
-            {(['P', 'A', 'J'] as const).map(e => {
+            {(['P', 'A', 'J', 'R'] as const).map(e => {
               const cfg = {
                 P: { bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
                 A: { bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
                 J: { bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
+                R: { bg: '#f3e8ff', color: '#7c3aed', border: '#c4b5fd' },
               }[e]
               return (
                 <button key={e} onClick={() => marcarTodos(e)}
@@ -394,6 +400,7 @@ function AsistenciaView({
                 <BtnEstado estado="P" alumnoId={alumno.id}/>
                 <BtnEstado estado="A" alumnoId={alumno.id}/>
                 <BtnEstado estado="J" alumnoId={alumno.id}/>
+                <BtnEstado estado="R" alumnoId={alumno.id}/>
               </div>
             </div>
           ))}
