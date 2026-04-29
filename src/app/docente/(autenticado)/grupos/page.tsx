@@ -1,35 +1,177 @@
 // src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useDocente } from '@/contexts/DocenteContext'
 import { createClient } from '@/lib/supabase/client'
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 interface AsignaturaItem { id: string; nombre: string }
-interface GrupoAgrupado { id: string; numero: string; grado: number; asignaturas: AsignaturaItem[] }
-interface Alumno { id: string; nombre_completo: string; matricula?: string }
+interface GrupoAgrupado  { id: string; numero: string; grado: number; asignaturas: AsignaturaItem[] }
+interface Alumno         { id: string; nombre_completo: string; matricula?: string }
 type Asistencia = Record<string, 'P' | 'A' | 'J'>
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatFechaHoy() {
   return new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 }
-function formatFechaCorta() {
-  return new Date().toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+function formatFechaISO() {
+  return new Date().toISOString().split('T')[0]
+}
+function formatFechaLegible(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('es-MX', {
+    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+  })
 }
 
-// ─── Colores del sistema principal ────────────────────────────────────────────
-// Recuadro gris igual al sistema principal
-const BADGE_STYLE = {
-  background: '#f1f5f9',
-  color: '#475569',
-  border: '1px solid #e2e8f0',
+
+// ─── Vista: Confirmar fecha + historial ──────────────────────────────────────
+function ConfirmarFechaView({
+  asignatura,
+  grupo,
+  onConfirmar,
+  onBack,
+}: {
+  asignatura: AsignaturaItem
+  grupo: GrupoAgrupado
+  onConfirmar: () => void
+  onBack: () => void
+}) {
+  const supabase = createClient()
+  const [historial, setHistorial] = useState<string[]>([])
+  const [loadingHist, setLoadingHist] = useState(true)
+
+  useEffect(() => {
+    async function cargar() {
+      const { data } = await supabase
+        .from('asistencias')
+        .select('fecha')
+        .eq('grupo_id', grupo.id)
+        .eq('asignatura_id', asignatura.id)
+        .order('fecha', { ascending: false })
+        .limit(10)
+      if (data) {
+        const fechas = [...new Set(data.map(r => r.fecha as string))]
+        setHistorial(fechas)
+      }
+      setLoadingHist(false)
+    }
+    cargar()
+  }, [grupo.id, asignatura.id, supabase])
+
+  const hoy = formatFechaISO()
+  const yaHayHoy = historial.includes(hoy)
+
+  return (
+    <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
+
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <div>
+          <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>{asignatura.nombre}</h1>
+          <p className="text-xs" style={{ color: '#94a3b8' }}>Grupo {grupo.numero} · {grupo.grado}° Semestre</p>
+        </div>
+      </div>
+
+      {/* Card fecha de hoy */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}
+      >
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: yaHayHoy ? '#fbbf24' : '#4ade80' }}/>
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {yaHayHoy ? 'Ya tomada hoy' : 'Lista para tomar'}
+            </span>
+          </div>
+          <p className="text-white text-2xl font-bold capitalize mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            {new Date().getFullYear()} · {asignatura.nombre}
+          </p>
+        </div>
+        <div className="px-6 pb-6">
+          <button
+            onClick={onConfirmar}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+            style={{
+              background: yaHayHoy ? 'rgba(255,255,255,0.15)' : 'white',
+              color: yaHayHoy ? 'white' : '#1e3a5f',
+              border: yaHayHoy ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
+            }}
+          >
+            {yaHayHoy ? 'Editar asistencia de hoy' : 'Tomar asistencia ahora →'}
+          </button>
+        </div>
+      </div>
+
+      {/* Historial */}
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
+        <div className="px-5 py-4 border-b" style={{ borderColor: '#f1f5f9' }}>
+          <p className="text-sm font-bold" style={{ color: '#1e3a5f' }}>Historial de asistencias</p>
+          <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>Últimas 10 sesiones registradas</p>
+        </div>
+        {loadingHist ? (
+          <div className="flex justify-center py-8">
+            <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
+          </div>
+        ) : historial.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-sm" style={{ color: '#94a3b8' }}>Sin registros aún</p>
+          </div>
+        ) : (
+          <div>
+            {historial.map((fecha, idx) => {
+              const esHoy = fecha === hoy
+              return (
+                <div
+                  key={fecha}
+                  className="flex items-center justify-between px-5 py-3"
+                  style={{ borderBottom: idx < historial.length - 1 ? '1px solid #f8fafc' : 'none' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                      background: esHoy ? '#eff6ff' : '#f8fafc',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="14" height="14" fill="none" stroke={esHoy ? '#2563eb' : '#94a3b8'} strokeWidth="2" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold capitalize" style={{ color: esHoy ? '#2563eb' : '#1e3a5f' }}>
+                        {formatFechaLegible(fecha)}
+                      </p>
+                      {esHoy && <p className="text-xs" style={{ color: '#2563eb' }}>Hoy</p>}
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: '#f0fdf4', color: '#16a34a' }}>
+                    ✓ Registrada
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
-// ─── Componente: Lista de asistencia ─────────────────────────────────────────
-
+// ─── Vista: Lista de asistencia ───────────────────────────────────────────────
 function AsistenciaView({
   asignatura,
   grupoId,
@@ -40,31 +182,39 @@ function AsistenciaView({
   onBack: () => void
 }) {
   const supabase = createClient()
-  const [alumnos, setAlumnos] = useState<Alumno[]>([])
+  const [alumnos, setAlumnos]     = useState<Alumno[]>([])
   const [asistencia, setAsistencia] = useState<Asistencia>({})
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]     = useState(true)
   const [guardando, setGuardando] = useState(false)
-  const [guardado, setGuardado] = useState(false)
+  const [guardado, setGuardado]   = useState(false)
 
   useEffect(() => {
     async function cargar() {
       setLoading(true)
-      // Query directa con JOIN via RPC para evitar URLs largas
-      // Usar RPC para evitar problemas de RLS con .in()
-      const { data, error } = await supabase
-        .rpc('get_estudiantes_grupo', { p_grupo_id: grupoId })
-
+      const { data, error } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: grupoId })
       if (!error && data) {
-        const lista: Alumno[] = data
-        setAlumnos(lista)
+        setAlumnos(data)
+        // Intentar cargar asistencia previa de hoy
+        const hoy = formatFechaISO()
+        const { data: prevData } = await supabase
+          .from('asistencias')
+          .select('estudiante_id, estado')
+          .eq('grupo_id', grupoId)
+          .eq('asignatura_id', asignatura.id)
+          .eq('fecha', hoy)
         const init: Asistencia = {}
-        lista.forEach(a => { init[a.id] = 'P' })
+        data.forEach((a: Alumno) => { init[a.id] = 'P' })
+        if (prevData) {
+          prevData.forEach((r: { estudiante_id: string; estado: string }) => {
+            init[r.estudiante_id] = r.estado as 'P' | 'A' | 'J'
+          })
+        }
         setAsistencia(init)
       }
       setLoading(false)
     }
     cargar()
-  }, [grupoId, supabase])
+  }, [grupoId, asignatura.id, supabase])
 
   function marcarTodos(estado: 'P' | 'A' | 'J') {
     const nuevo: Asistencia = {}
@@ -78,25 +228,20 @@ function AsistenciaView({
 
   async function guardar() {
     setGuardando(true)
-    const hoy = new Date().toISOString().split('T')[0]
-    // Obtener plantel_id del docente desde la sesión
+    const hoy = formatFechaISO()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: usuarioData } = await supabase
-      .from('usuarios')
-      .select('plantel_id')
-      .eq('auth_id', user?.id)
-      .single()
-
+    const { data: ud } = await supabase.from('usuarios').select('plantel_id').eq('auth_id', user?.id).single()
     const registros = alumnos.map(a => ({
       estudiante_id: a.id,
       grupo_id: grupoId,
       asignatura_id: asignatura.id,
       fecha: hoy,
       estado: asistencia[a.id] ?? 'P',
-      plantel_id: usuarioData?.plantel_id,
+      plantel_id: ud?.plantel_id,
     }))
     await supabase.from('asistencias').upsert(registros, {
       onConflict: 'estudiante_id,grupo_id,asignatura_id,fecha',
+      ignoreDuplicates: false,
     })
     setGuardando(false)
     setGuardado(true)
@@ -107,26 +252,17 @@ function AsistenciaView({
   const ausentes  = Object.values(asistencia).filter(v => v === 'A').length
   const justif    = Object.values(asistencia).filter(v => v === 'J').length
 
-  const btnEstado = (estado: 'P' | 'A' | 'J', alumnoId: string) => {
+  const BtnEstado = ({ estado, alumnoId }: { estado: 'P' | 'A' | 'J'; alumnoId: string }) => {
     const activo = asistencia[alumnoId] === estado
     const cfg = {
-      P: { bg: activo ? '#dcfce7' : '#f8fafc', color: activo ? '#16a34a' : '#94a3b8', border: activo ? '#86efac' : '#e2e8f0', label: 'P' },
-      A: { bg: activo ? '#fee2e2' : '#f8fafc', color: activo ? '#dc2626' : '#94a3b8', border: activo ? '#fca5a5' : '#e2e8f0', label: 'A' },
-      J: { bg: activo ? '#fef3c7' : '#f8fafc', color: activo ? '#d97706' : '#94a3b8', border: activo ? '#fcd34d' : '#e2e8f0', label: 'J' },
+      P: { bg: activo ? '#dcfce7' : '#f8fafc', color: activo ? '#16a34a' : '#94a3b8', border: activo ? '#86efac' : '#e2e8f0' },
+      A: { bg: activo ? '#fee2e2' : '#f8fafc', color: activo ? '#dc2626' : '#94a3b8', border: activo ? '#fca5a5' : '#e2e8f0' },
+      J: { bg: activo ? '#fef3c7' : '#f8fafc', color: activo ? '#d97706' : '#94a3b8', border: activo ? '#fcd34d' : '#e2e8f0' },
     }[estado]
     return (
-      <button
-        onClick={() => marcar(alumnoId, estado)}
-        style={{
-          width: '36px', height: '36px', borderRadius: '10px',
-          background: cfg.bg, color: cfg.color,
-          border: `1.5px solid ${cfg.border}`,
-          fontWeight: 700, fontSize: '0.8rem',
-          cursor: 'pointer', transition: 'all 0.15s',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {cfg.label}
+      <button onClick={() => marcar(alumnoId, estado)}
+        style={{ width: 36, height: 36, borderRadius: 10, background: cfg.bg, color: cfg.color, border: ('1.5px solid ' + cfg.border), fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {estado}
       </button>
     )
   }
@@ -136,65 +272,45 @@ function AsistenciaView({
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          style={{
-            width: '38px', height: '38px', borderRadius: '12px',
-            background: '#f1f5f9', border: '1px solid #e2e8f0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: '#475569', flexShrink: 0,
-          }}
-        >
+        <button onClick={onBack}
+          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         <div>
           <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>{asignatura.nombre}</h1>
-          <p className="text-xs" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
+          <p className="text-xs capitalize" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
         </div>
       </div>
 
       {/* Stats + marcar todos */}
       <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #e2e8f0' }}>
         <div className="flex items-center justify-between flex-wrap gap-3">
-          {/* Contadores */}
           <div className="flex gap-4 text-sm">
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }}/>
-              <span style={{ color: '#64748b' }}>Presentes: <strong style={{ color: '#16a34a' }}>{presentes}</strong></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }}/>
-              <span style={{ color: '#64748b' }}>Ausentes: <strong style={{ color: '#dc2626' }}>{ausentes}</strong></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }}/>
-              <span style={{ color: '#64748b' }}>Justif.: <strong style={{ color: '#d97706' }}>{justif}</strong></span>
-            </div>
+            {[
+              { label: 'Presentes', val: presentes, color: '#16a34a', dot: '#22c55e' },
+              { label: 'Ausentes',  val: ausentes,  color: '#dc2626', dot: '#ef4444' },
+              { label: 'Justif.',   val: justif,    color: '#d97706', dot: '#f59e0b' },
+            ].map(s => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, flexShrink: 0 }}/>
+                <span style={{ color: '#64748b' }}>{s.label}: <strong style={{ color: s.color }}>{s.val}</strong></span>
+              </div>
+            ))}
           </div>
-
-          {/* Marcar todos */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Marcar todos:</span>
+            <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Todos:</span>
             {(['P', 'A', 'J'] as const).map(e => {
               const cfg = {
-                P: { bg: '#dcfce7', color: '#16a34a', border: '#86efac', label: 'P' },
-                A: { bg: '#fee2e2', color: '#dc2626', border: '#fca5a5', label: 'A' },
-                J: { bg: '#fef3c7', color: '#d97706', border: '#fcd34d', label: 'J' },
+                P: { bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
+                A: { bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
+                J: { bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
               }[e]
               return (
-                <button
-                  key={e}
-                  onClick={() => marcarTodos(e)}
-                  style={{
-                    padding: '5px 14px', borderRadius: '10px',
-                    background: cfg.bg, color: cfg.color,
-                    border: `1.5px solid ${cfg.border}`,
-                    fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
-                  }}
-                >
-                  {cfg.label}
+                <button key={e} onClick={() => marcarTodos(e)}
+                  style={{ padding: '5px 14px', borderRadius: 10, background: cfg.bg, color: cfg.color, border: ('1.5px solid ' + cfg.border), fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                  {e}
                 </button>
               )
             })}
@@ -202,72 +318,40 @@ function AsistenciaView({
         </div>
       </div>
 
-      {/* Lista de alumnos */}
+      {/* Lista */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"/>
         </div>
       ) : alumnos.length === 0 ? (
-        <div className="text-center py-12 text-sm" style={{ color: '#94a3b8' }}>
-          No hay alumnos registrados en este grupo
-        </div>
+        <div className="text-center py-12 text-sm" style={{ color: '#94a3b8' }}>No hay alumnos en este grupo</div>
       ) : (
         <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
           {alumnos.map((alumno, idx) => (
-            <div
-              key={alumno.id}
-              className="flex items-center justify-between px-4 py-3"
-              style={{
-                borderBottom: idx < alumnos.length - 1 ? '1px solid #f1f5f9' : 'none',
-                background: idx % 2 === 0 ? '#ffffff' : '#fafbfc',
-              }}
-            >
-              {/* Info alumno */}
+            <div key={alumno.id} className="flex items-center justify-between px-4 py-3"
+              style={{ borderBottom: idx < alumnos.length - 1 ? '1px solid #f1f5f9' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
               <div className="flex items-center gap-3 min-w-0">
-                <div
-                  style={{
-                    width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontWeight: 700, fontSize: '0.8rem',
-                  }}
-                >
+                <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
                   {alumno.nombre_completo.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>
-                    {alumno.nombre_completo}
-                  </p>
-                  {alumno.matricula && (
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>{alumno.matricula}</p>
-                  )}
+                  <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>{alumno.nombre_completo}</p>
+                  {alumno.matricula && <p className="text-xs" style={{ color: '#94a3b8' }}>{alumno.matricula}</p>}
                 </div>
               </div>
-              {/* Botones P A J */}
               <div className="flex gap-2 flex-shrink-0">
-                {btnEstado('P', alumno.id)}
-                {btnEstado('A', alumno.id)}
-                {btnEstado('J', alumno.id)}
+                <BtnEstado estado="P" alumnoId={alumno.id}/>
+                <BtnEstado estado="A" alumnoId={alumno.id}/>
+                <BtnEstado estado="J" alumnoId={alumno.id}/>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Botón guardar */}
       {alumnos.length > 0 && (
-        <button
-          onClick={guardar}
-          disabled={guardando}
-          style={{
-            width: '100%', padding: '0.875rem', borderRadius: '14px',
-            background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-            color: guardado ? '#16a34a' : 'white',
-            border: guardado ? '1.5px solid #86efac' : 'none',
-            fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s', opacity: guardando ? 0.7 : 1,
-          }}
-        >
+        <button onClick={guardar} disabled={guardando}
+          style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
           {guardando ? 'Guardando...' : guardado ? '✓ Asistencia guardada' : 'Guardar asistencia'}
         </button>
       )}
@@ -275,72 +359,30 @@ function AsistenciaView({
   )
 }
 
-// ─── Componente: Selección de asignatura ──────────────────────────────────────
-
-function AsignaturasView({
-  grupo,
-  onSelect,
-  onBack,
-}: {
-  grupo: GrupoAgrupado
-  onSelect: (asig: AsignaturaItem) => void
-  onBack: () => void
-}) {
+// ─── Vista: Selección de asignatura ──────────────────────────────────────────
+function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; onSelect: (a: AsignaturaItem) => void; onBack: () => void }) {
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
-
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          style={{
-            width: '38px', height: '38px', borderRadius: '12px',
-            background: '#f1f5f9', border: '1px solid #e2e8f0',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: '#475569', flexShrink: 0,
-          }}
-        >
+        <button onClick={onBack}
+          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         <div>
           <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>Grupo {grupo.numero}</h1>
-          <p className="text-xs" style={{ color: '#94a3b8' }}>Selecciona la asignatura para tomar asistencia</p>
+          <p className="text-xs" style={{ color: '#94a3b8' }}>Selecciona la asignatura</p>
         </div>
       </div>
-
-      {/* Cards de asignaturas */}
       <div className="space-y-3">
         {grupo.asignaturas.map(asig => (
-          <button
-            key={asig.id}
-            onClick={() => onSelect(asig)}
-            className="w-full text-left"
-            style={{
-              background: 'white', border: '1px solid #e2e8f0',
-              borderRadius: '16px', padding: '1rem 1.25rem',
-              cursor: 'pointer', transition: 'all 0.15s',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#3b82f6'
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(59,130,246,0.1)'
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = '#e2e8f0'
-              e.currentTarget.style.boxShadow = 'none'
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
-          >
+          <button key={asig.id} onClick={() => onSelect(asig)} className="w-full text-left"
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 16, padding: '1rem 1.25rem', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(59,130,246,0.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}>
             <div className="flex items-center gap-3">
-              <div style={{
-                width: '42px', height: '42px', borderRadius: '12px',
-                background: 'linear-gradient(135deg, #1e3a5f, #2563eb)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 700, fontSize: '1rem',
-              }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '1rem' }}>
                 {asig.nombre.charAt(0)}
               </div>
               <span className="font-semibold text-sm" style={{ color: '#1e3a5f' }}>{asig.nombre}</span>
@@ -355,87 +397,140 @@ function AsignaturasView({
   )
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
 
+// ─── Botón macOS ─────────────────────────────────────────────────────────────
+function MacButton({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  const dots = [
+    { color: '#ff5f57', shadow: 'rgba(255,95,87,0.5)'  },
+    { color: '#febc2e', shadow: 'rgba(254,188,46,0.5)' },
+    { color: '#28c840', shadow: 'rgba(40,200,64,0.5)'  },
+  ]
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '6px 4px',
+      }}
+    >
+      <style>{`
+        @keyframes macBounce {
+          0%   { transform: translateY(0); }
+          30%  { transform: translateY(-5px); }
+          60%  { transform: translateY(1px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {dots.map((dot, i) => (
+          <div
+            key={i}
+            style={{
+              width: 13, height: 13, borderRadius: '50%',
+              background: dot.color,
+              boxShadow: hovered ? ('0 0 6px ' + dot.shadow) : 'none',
+              animation: hovered ? ('macBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) ' + (i * 0.08) + 's both') : 'none',
+              transition: 'box-shadow 0.2s',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
+        <span style={{
+          fontSize: '0.8rem', fontWeight: 600,
+          color: hovered ? '#1e3a5f' : '#94a3b8',
+          transition: 'color 0.2s',
+          letterSpacing: '0.01em',
+          lineHeight: 1.3,
+        }}>
+          Tomar asistencia
+        </span>
+        <span style={{
+          fontSize: '0.68rem',
+          color: '#5b9af0',
+          fontWeight: 500,
+          maxHeight: hovered ? '20px' : '0px',
+          opacity: hovered ? 1 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.25s ease, opacity 0.2s ease',
+          letterSpacing: '0.01em',
+          marginTop: hovered ? 1 : 0,
+        }}>
+          {new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </span>
+      </div>
+    </button>
+  )
+}
+
+// ─── Tipos de vista ───────────────────────────────────────────────────────────
 type Vista =
   | { tipo: 'grupos' }
   | { tipo: 'asignaturas'; grupo: GrupoAgrupado }
+  | { tipo: 'confirmar'; grupo: GrupoAgrupado; asignatura: AsignaturaItem }
   | { tipo: 'asistencia'; grupo: GrupoAgrupado; asignatura: AsignaturaItem }
 
+// ─── Página principal ─────────────────────────────────────────────────────────
 export default function GruposPage() {
   const { docente, loading, error } = useDocente()
   const [vista, setVista] = useState<Vista>({ tipo: 'grupos' })
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"/>
-          <p className="text-sm" style={{ color: '#94a3b8' }}>Cargando tus grupos...</p>
-        </div>
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"/>
+        <p className="text-sm" style={{ color: '#94a3b8' }}>Cargando tus grupos...</p>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (error || !docente) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>Error al cargar datos</p>
-          <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{error}</p>
-        </div>
-      </div>
-    )
-  }
+  if (error || !docente) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <p className="text-sm" style={{ color: '#dc2626' }}>{error || 'Error al cargar datos'}</p>
+    </div>
+  )
 
-  // Agrupar por grupo
   const gruposPorId = docente.asignaciones.reduce((acc, asig) => {
-    if (!acc[asig.grupo_id]) {
-      acc[asig.grupo_id] = { id: asig.grupo_id, numero: asig.grupo_numero, grado: asig.grupo_grado, asignaturas: [] }
-    }
+    if (!acc[asig.grupo_id]) acc[asig.grupo_id] = { id: asig.grupo_id, numero: asig.grupo_numero, grado: asig.grupo_grado, asignaturas: [] }
     acc[asig.grupo_id].asignaturas.push({ id: asig.asignatura_id, nombre: asig.asignatura_nombre })
     return acc
   }, {} as Record<string, GrupoAgrupado>)
   const grupos = Object.values(gruposPorId)
 
-  // Vistas secundarias
-  if (vista.tipo === 'asistencia') {
-    return (
-      <AsistenciaView
-        asignatura={vista.asignatura}
-        grupoId={vista.grupo.id}
-        onBack={() => setVista({ tipo: 'asignaturas', grupo: vista.grupo })}
-      />
-    )
-  }
+  if (vista.tipo === 'asistencia') return (
+    <AsistenciaView asignatura={vista.asignatura} grupoId={vista.grupo.id}
+      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}/>
+  )
 
-  if (vista.tipo === 'asignaturas') {
-    return (
-      <AsignaturasView
-        grupo={vista.grupo}
-        onSelect={asig => setVista({ tipo: 'asistencia', grupo: vista.grupo, asignatura: asig })}
-        onBack={() => setVista({ tipo: 'grupos' })}
-      />
-    )
-  }
+  if (vista.tipo === 'confirmar') return (
+    <ConfirmarFechaView
+      asignatura={vista.asignatura}
+      grupo={vista.grupo}
+      onConfirmar={() => setVista({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
+      onBack={() => setVista({ tipo: 'asignaturas', grupo: vista.grupo })}
+    />
+  )
 
-  // Vista principal: lista de grupos
+  if (vista.tipo === 'asignaturas') return (
+    <AsignaturasView grupo={vista.grupo}
+      onSelect={asig => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: asig })}
+      onBack={() => setVista({ tipo: 'grupos' })}/>
+  )
+
+  // Vista principal: grupos
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
-
-      {/* Header */}
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto" style={{ minHeight: '100vh' }}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-lg md:text-xl font-bold" style={{ color: '#1e3a5f' }}>Mis grupos asignados</h1>
-          <p className="text-xs md:text-sm mt-1" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
+          <p className="text-xs md:text-sm mt-1 capitalize" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
         </div>
-        <span className="text-xs font-semibold px-3 py-1.5 rounded-full w-fit"
-          style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
-          {grupos.length} {grupos.length === 1 ? 'grupo activo' : 'grupos activos'}
-        </span>
       </div>
 
-      {/* Grid */}
       {grupos.length === 0 ? (
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="text-center max-w-md">
@@ -446,96 +541,79 @@ export default function GruposPage() {
               </svg>
             </div>
             <p className="text-sm font-semibold mb-2" style={{ color: '#1e3a5f' }}>No tienes grupos asignados</p>
-            <p className="text-xs" style={{ color: '#94a3b8' }}>Contacta al administrador para que te asigne grupos y asignaturas</p>
+            <p className="text-xs" style={{ color: '#94a3b8' }}>Contacta al administrador</p>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {grupos.map(grupo => (
-            <div
-              key={grupo.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm transition-all cursor-pointer"
-              style={{ border: '1px solid #e2e8f0' }}
+            <div key={grupo.id} className="rounded-2xl overflow-hidden transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.55)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+              }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-3px)'
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(59,130,246,0.14)'
-                e.currentTarget.style.borderColor = '#3b82f6'
+                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,118,255,0.14), 0 2px 4px rgba(0,0,0,0.06)'
+                e.currentTarget.style.borderColor = 'rgba(0,118,255,0.3)'
+                e.currentTarget.style.background = 'rgba(255,255,255,0.72)'
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.borderColor = '#e2e8f0'
-              }}
-            >
-              {/* Banner azul */}
-              <div className="relative px-5 pt-5 pb-8 overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)' }}>
-                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '110px', height: '110px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }}/>
-                <div style={{ position: 'absolute', right: '20px', bottom: '-30px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }}/>
+                e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'
+                e.currentTarget.style.background = 'rgba(255,255,255,0.55)'
+              }}>
 
+              {/* Banner */}
+              <div className="relative px-5 pt-5 pb-8 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.75) 0%, rgba(96,165,250,0.7) 100%)', backdropFilter: 'blur(8px)' }}>
+                <div style={{ position: 'absolute', right: -20, top: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }}/>
+                <div style={{ position: 'absolute', right: 20, bottom: -30, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }}/>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full mb-3 inline-block"
                   style={{ background: 'rgba(255,255,255,0.18)', color: 'white' }}>
                   {grupo.grado}° Semestre
                 </span>
-
                 <div className="flex items-end justify-between">
                   <div>
-                    <h3 className="text-2xl font-bold text-white mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                      Grupo {grupo.numero}
-                    </h3>
+                    <h3 className="text-2xl font-bold text-white mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>Grupo {grupo.numero}</h3>
                     <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
                       {grupo.asignaturas.length} {grupo.asignaturas.length === 1 ? 'asignatura' : 'asignaturas'}
                     </p>
                   </div>
-                  {/* Recuadro gris con nombre del grupo — igual al sistema principal */}
-                  <div style={{
-                    ...BADGE_STYLE,
-                    padding: '6px 14px',
-                    borderRadius: '10px',
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    fontFamily: 'Outfit, sans-serif',
-                    minWidth: '48px',
-                    textAlign: 'center',
-                  }}>
+                  {/* Recuadro gris con número del grupo */}
+                  <div style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', padding: '6px 14px', borderRadius: 10, fontWeight: 700, fontSize: '1rem', fontFamily: 'Outfit, sans-serif', minWidth: 48, textAlign: 'center' }}>
                     {grupo.numero}
                   </div>
                 </div>
               </div>
 
               {/* Cuerpo */}
-              <div className="px-5 pt-4 pb-5">
+              <div className="px-5 pt-4 pb-5" style={{ background: 'rgba(255,255,255,0.3)' }}>
                 <div className="mb-4">
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#94a3b8' }}>ASIGNATURAS:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs font-semibold mb-2" style={{ color: '#94a3b8', letterSpacing: '0.06em' }}>ASIGNATURAS</p>
+                  <div className="flex flex-wrap gap-1.5" style={{ maxHeight: '72px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                     {grupo.asignaturas.map(asig => (
-                      <span key={asig.id} className="text-xs font-medium px-2.5 py-1 rounded-lg"
-                        style={{ background: '#eff6ff', color: '#2563eb' }}>
+                      <span key={asig.id} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        fontSize: '0.72rem', fontWeight: 500,
+                        padding: '3px 10px 3px 7px',
+                        borderRadius: 20,
+                        background: 'rgba(59,130,246,0.07)',
+                        color: '#4f88e3',
+                        border: '1px solid rgba(59,130,246,0.15)',
+                        backdropFilter: 'blur(4px)',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4f88e3', opacity: 0.7, flexShrink: 0, display: 'inline-block' }}/>
                         {asig.nombre}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex gap-3 mb-4 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24">
-                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                      <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <span style={{ color: '#64748b' }}>{formatFechaCorta()}</span>
-                  </div>
-                </div>
-
-                <button
-                  className="w-full py-2.5 text-sm font-semibold rounded-xl transition-all"
-                  style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}
-                  onClick={() => setVista({ tipo: 'asignaturas', grupo })}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  Tomar asistencia
-                </button>
+                <MacButton onClick={() => setVista({ tipo: 'asignaturas', grupo })} />
               </div>
             </div>
           ))}

@@ -18,11 +18,24 @@ function DocenteLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(145deg, #e8f0fe 0%, #f0f7ff 40%, #e8f4fd 70%, #f5f0ff 100%)' }}>
       <HeaderDocente nombre={docente?.nombre_completo || 'Docente'} />
-      <main className="w-full">
+      <main className="w-full flex-1">
         {children}
       </main>
+      <footer style={{ background: '#f5f5f7', borderTop: '1px solid #d2d2d7' }}>
+        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-2">
+          <p style={{ fontSize: '0.72rem', color: '#6e6e73', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            Desarrollado por{' '}
+            <span style={{ color: '#1d1d1f', fontWeight: 500 }}>Nelson Narciso Contreras Mendez</span>
+            {' '}y{' '}
+            <span style={{ color: '#1d1d1f', fontWeight: 500 }}>Mario Alexander De La Mora</span>
+          </p>
+          <p style={{ fontSize: '0.72rem', color: '#6e6e73', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            © {new Date().getFullYear()} EduControl · Dinoti Platforms
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
