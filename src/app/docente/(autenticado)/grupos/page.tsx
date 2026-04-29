@@ -82,16 +82,19 @@ function ConfirmarFechaView({
       </div>
 
       {/* Card fecha de hoy */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}
-      >
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}>
         <div className="p-6">
           <div className="flex items-center gap-2 mb-3">
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: yaHayHoy ? '#fbbf24' : '#4ade80' }}/>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: yaHayHoy ? '#4ade80' : 'rgba(255,255,255,0.4)' }}/>
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {yaHayHoy ? 'Ya tomada hoy' : 'Lista para tomar'}
+              {yaHayHoy ? 'Asistencia registrada' : 'Lista para tomar'}
             </span>
+            {yaHayHoy && (
+              <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 700, padding: '2px 10px', borderRadius: 9999, background: 'rgba(74,222,128,0.2)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}>
+                ✓ Completada
+              </span>
+            )}
           </div>
           <p className="text-white text-2xl font-bold capitalize mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
             {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -100,18 +103,28 @@ function ConfirmarFechaView({
             {new Date().getFullYear()} · {asignatura.nombre}
           </p>
         </div>
-        <div className="px-6 pb-6">
-          <button
-            onClick={onConfirmar}
-            className="w-full py-3 rounded-xl text-sm font-bold transition-all"
-            style={{
-              background: yaHayHoy ? 'rgba(255,255,255,0.15)' : 'white',
-              color: yaHayHoy ? 'white' : '#1e3a5f',
-              border: yaHayHoy ? '1.5px solid rgba(255,255,255,0.3)' : 'none',
-            }}
-          >
-            {yaHayHoy ? 'Editar asistencia de hoy' : 'Tomar asistencia ahora →'}
-          </button>
+        <div className="px-6 pb-6" style={{ display: 'flex', gap: '0.75rem' }}>
+          {yaHayHoy ? (
+            <>
+              {/* Asistencia ya tomada — mensaje + botón editar */}
+              <div style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg width="15" height="15" fill="none" stroke="#4ade80" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Asistencia del día tomada</span>
+              </div>
+              <button onClick={onConfirmar}
+                className="py-3 rounded-xl text-sm font-bold transition-all"
+                style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+                Editar
+              </button>
+            </>
+          ) : (
+            <button onClick={onConfirmar} className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+              style={{ background: 'white', color: '#1e3a5f', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 700, padding: '0.875rem' }}>
+              Tomar asistencia ahora →
+            </button>
+          )}
         </div>
       </div>
 
@@ -176,10 +189,12 @@ function AsistenciaView({
   asignatura,
   grupoId,
   onBack,
+  onGuardado,
 }: {
   asignatura: AsignaturaItem
   grupoId: string
   onBack: () => void
+  onGuardado: () => void
 }) {
   const supabase = createClient()
   const [alumnos, setAlumnos]     = useState<Alumno[]>([])
@@ -204,9 +219,15 @@ function AsistenciaView({
           .eq('fecha', hoy)
         const init: Asistencia = {}
         data.forEach((a: Alumno) => { init[a.id] = 'P' })
+        // Invertir el mapa al leer: 'presente'→'P', 'falta'→'A', 'justificado'→'J'
+        const estadoInverso: Record<string, 'P' | 'A' | 'J'> = {
+          presente: 'P',
+          falta: 'A',
+          justificado: 'J',
+        }
         if (prevData) {
           prevData.forEach((r: { estudiante_id: string; estado: string }) => {
-            init[r.estudiante_id] = r.estado as 'P' | 'A' | 'J'
+            init[r.estudiante_id] = estadoInverso[r.estado] ?? 'P'
           })
         }
         setAsistencia(init)
@@ -228,24 +249,54 @@ function AsistenciaView({
 
   async function guardar() {
     setGuardando(true)
-    const hoy = formatFechaISO()
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: ud } = await supabase.from('usuarios').select('plantel_id').eq('auth_id', user?.id).single()
-    const registros = alumnos.map(a => ({
-      estudiante_id: a.id,
-      grupo_id: grupoId,
-      asignatura_id: asignatura.id,
-      fecha: hoy,
-      estado: asistencia[a.id] ?? 'P',
-      plantel_id: ud?.plantel_id,
-    }))
-    await supabase.from('asistencias').upsert(registros, {
-      onConflict: 'estudiante_id,grupo_id,asignatura_id,fecha',
-      ignoreDuplicates: false,
-    })
-    setGuardando(false)
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2500)
+    try {
+      const hoy = formatFechaISO()
+
+      // Obtener plantel_id del docente autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) throw new Error('No autenticado')
+
+      const { data: ud, error: udError } = await supabase
+        .from('usuarios')
+        .select('plantel_id')
+        .eq('auth_id', user.id)
+        .single()
+      if (udError || !ud?.plantel_id) throw new Error('No se pudo obtener plantel_id')
+
+      // Mapa para respetar el check constraint "asistencias_estado_check"
+      // Si tu constraint usa otros valores (ej. 'P','A','J') ajusta este mapa
+      const estadoMap: Record<'P' | 'A' | 'J', string> = {
+        P: 'presente',
+        A: 'falta',
+        J: 'justificado',
+      }
+
+      const registros = alumnos.map(a => ({
+        estudiante_id: a.id,
+        grupo_id: grupoId,
+        asignatura_id: asignatura.id,
+        fecha: hoy,
+        estado: estadoMap[asistencia[a.id] ?? 'P'],
+        plantel_id: ud.plantel_id,
+      }))
+
+      const { error: upsertError } = await supabase
+        .from('asistencias')
+        .upsert(registros, {
+          onConflict: 'estudiante_id,asignatura_id,fecha',
+          ignoreDuplicates: false,
+        })
+
+      if (upsertError) throw upsertError
+
+      setGuardado(true)
+      setTimeout(() => onGuardado(), 1800)
+    } catch (err) {
+      console.error('Error al guardar asistencia:', err)
+      alert('No se pudo guardar la asistencia. Revisa la consola para más detalles.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   const presentes = Object.values(asistencia).filter(v => v === 'P').length
@@ -401,22 +452,19 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
 // ─── Botón macOS ─────────────────────────────────────────────────────────────
 function MacButton({ onClick }: { onClick: () => void }) {
   const [hovered, setHovered] = useState(false)
+
   const dots = [
     { color: '#ff5f57', shadow: 'rgba(255,95,87,0.5)'  },
     { color: '#febc2e', shadow: 'rgba(254,188,46,0.5)' },
     { color: '#28c840', shadow: 'rgba(40,200,64,0.5)'  },
   ]
+
+  const fechaCorta = new Date().toLocaleDateString('es-MX', {
+    weekday: 'short', day: 'numeric', month: 'short'
+  })
+
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        background: 'none', border: 'none', cursor: 'pointer',
-        padding: '6px 4px',
-      }}
-    >
+    <>
       <style>{`
         @keyframes macBounce {
           0%   { transform: translateY(0); }
@@ -424,46 +472,119 @@ function MacButton({ onClick }: { onClick: () => void }) {
           60%  { transform: translateY(1px); }
           100% { transform: translateY(0); }
         }
+        @media (max-width: 767px) {
+          .mac-btn-desktop { display: none !important; }
+          .mac-btn-mobile  { display: flex !important; }
+        }
+        @media (min-width: 768px) {
+          .mac-btn-desktop { display: flex !important; }
+          .mac-btn-mobile  { display: none !important; }
+        }
       `}</style>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        {dots.map((dot, i) => (
-          <div
-            key={i}
-            style={{
-              width: 13, height: 13, borderRadius: '50%',
-              background: dot.color,
-              boxShadow: hovered ? ('0 0 6px ' + dot.shadow) : 'none',
-              animation: hovered ? ('macBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) ' + (i * 0.08) + 's both') : 'none',
-              transition: 'box-shadow 0.2s',
-            }}
-          />
-        ))}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
+
+      {/* ── Desktop: dots macOS originales ── */}
+      <button
+        className="mac-btn-desktop"
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          alignItems: 'center',
+          gap: '10px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '6px 4px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {dots.map((dot, i) => (
+            <div
+              key={i}
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: '50%',
+                background: dot.color,
+                boxShadow: hovered ? ('0 0 6px ' + dot.shadow) : 'none',
+                animation: hovered
+                  ? ('macBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) ' + (i * 0.08) + 's both')
+                  : 'none',
+                transition: 'box-shadow 0.2s',
+              }}
+            />
+          ))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
+          <span style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            color: hovered ? '#1e3a5f' : '#94a3b8',
+            transition: 'color 0.2s',
+            letterSpacing: '0.01em',
+            lineHeight: 1.3,
+          }}>
+            Tomar asistencia
+          </span>
+          <span style={{
+            fontSize: '0.68rem',
+            color: '#5b9af0',
+            fontWeight: 500,
+            maxHeight: hovered ? '20px' : '0px',
+            opacity: hovered ? 1 : 0,
+            overflow: 'hidden',
+            transition: 'max-height 0.25s ease, opacity 0.2s ease',
+            letterSpacing: '0.01em',
+            marginTop: hovered ? 1 : 0,
+          }}>
+            {fechaCorta}
+          </span>
+        </div>
+      </button>
+
+      {/* ── Móvil: botón compacto con fecha inline ── */}
+      <button
+        className="mac-btn-mobile"
+        onClick={onClick}
+        style={{
+          display: 'none', /* overridden by media query */
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
+          border: 'none',
+          borderRadius: 12,
+          padding: '10px 14px',
+          cursor: 'pointer',
+          gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="15" height="15" fill="none" stroke="#475569" strokeWidth="2.2" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', letterSpacing: '0.01em' }}>
+            Tomar asistencia
+          </span>
+        </div>
         <span style={{
-          fontSize: '0.8rem', fontWeight: 600,
-          color: hovered ? '#1e3a5f' : '#94a3b8',
-          transition: 'color 0.2s',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          color: '#64748b',
+          background: 'rgba(0,0,0,0.08)',
+          padding: '3px 9px',
+          borderRadius: 20,
           letterSpacing: '0.01em',
-          lineHeight: 1.3,
+          textTransform: 'capitalize',
+          flexShrink: 0,
         }}>
-          Tomar asistencia
+          {fechaCorta}
         </span>
-        <span style={{
-          fontSize: '0.68rem',
-          color: '#5b9af0',
-          fontWeight: 500,
-          maxHeight: hovered ? '20px' : '0px',
-          opacity: hovered ? 1 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.25s ease, opacity 0.2s ease',
-          letterSpacing: '0.01em',
-          marginTop: hovered ? 1 : 0,
-        }}>
-          {new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}
-        </span>
-      </div>
-    </button>
+      </button>
+    </>
   )
 }
 
@@ -502,8 +623,12 @@ export default function GruposPage() {
   const grupos = Object.values(gruposPorId)
 
   if (vista.tipo === 'asistencia') return (
-    <AsistenciaView asignatura={vista.asignatura} grupoId={vista.grupo.id}
-      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}/>
+    <AsistenciaView
+      asignatura={vista.asignatura}
+      grupoId={vista.grupo.id}
+      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}
+      onGuardado={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}
+    />
   )
 
   if (vista.tipo === 'confirmar') return (
@@ -516,9 +641,11 @@ export default function GruposPage() {
   )
 
   if (vista.tipo === 'asignaturas') return (
-    <AsignaturasView grupo={vista.grupo}
+    <AsignaturasView
+      grupo={vista.grupo}
       onSelect={asig => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: asig })}
-      onBack={() => setVista({ tipo: 'grupos' })}/>
+      onBack={() => setVista({ tipo: 'grupos' })}
+    />
   )
 
   // Vista principal: grupos
@@ -569,7 +696,8 @@ export default function GruposPage() {
               }}>
 
               {/* Banner */}
-              <div className="relative px-5 pt-5 pb-8 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.75) 0%, rgba(96,165,250,0.7) 100%)', backdropFilter: 'blur(8px)' }}>
+              <div className="relative px-5 pt-5 pb-8 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.75) 0%, rgba(96,165,250,0.7) 100%)', backdropFilter: 'blur(8px)' }}>
                 <div style={{ position: 'absolute', right: -20, top: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }}/>
                 <div style={{ position: 'absolute', right: 20, bottom: -30, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }}/>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full mb-3 inline-block"
@@ -583,7 +711,7 @@ export default function GruposPage() {
                       {grupo.asignaturas.length} {grupo.asignaturas.length === 1 ? 'asignatura' : 'asignaturas'}
                     </p>
                   </div>
-                  {/* Recuadro gris con número del grupo */}
+                  {/* Recuadro con número del grupo */}
                   <div style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', padding: '6px 14px', borderRadius: 10, fontWeight: 700, fontSize: '1rem', fontFamily: 'Outfit, sans-serif', minWidth: 48, textAlign: 'center' }}>
                     {grupo.numero}
                   </div>

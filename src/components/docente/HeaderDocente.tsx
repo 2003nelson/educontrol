@@ -23,6 +23,8 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
   const supabase  = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const seccionActiva = NAV_ITEMS.find(item => isItemActive(item.href, pathname ?? ''))?.label ?? ''
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -45,6 +47,16 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
             <p className="text-xs" style={{ color: '#94a3b8' }}>Panel Docente</p>
           </div>
         </div>
+
+        {/* Sección activa — solo móvil, centrada */}
+        {seccionActiva && (
+          <span
+            className="md:hidden absolute left-1/2 -translate-x-1/2 text-sm font-semibold"
+            style={{ color: '#1e293b', letterSpacing: '0.01em', pointerEvents: 'none' }}
+          >
+            {seccionActiva}
+          </span>
+        )}
 
         {/* Nav Desktop */}
         <nav className="hidden md:flex items-center gap-1">
