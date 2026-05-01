@@ -167,6 +167,32 @@ export function useDocentes() {
 
   useEffect(() => { cargarDocentes() }, [cargarDocentes])
 
+  // ── Realtime: escuchar cambios en usuarios del plantel ──────────────────
+  useEffect(() => {
+    if (!plantelId) return
+
+    const channel = supabase
+      .channel(`docentes-${plantelId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'usuarios',
+          filter: `plantel_id=eq.${plantelId}`,
+        },
+        () => {
+          // Cualquier cambio en usuarios del plantel recarga la lista
+          cargarDocentes()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [plantelId, supabase, cargarDocentes])
+
   const crearDocente = async (data: CrearDocenteData): Promise<boolean> => {
     if (!plantelId) { setError('No hay plantel seleccionado'); return false }
     try {
