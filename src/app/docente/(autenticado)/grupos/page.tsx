@@ -43,15 +43,17 @@ function ConfirmarFechaView({
 
   useEffect(() => {
     async function cargar() {
+      // Traer suficientes filas para cubrir 10 fechas distintas con grupos grandes
+      // Se pide un límite alto y luego se deduplica en cliente
       const { data } = await supabase
         .from('asistencias')
         .select('fecha')
         .eq('grupo_id', grupo.id)
         .eq('asignatura_id', asignatura.id)
         .order('fecha', { ascending: false })
-        .limit(10)
+        .limit(1000)
       if (data) {
-        const fechas = [...new Set(data.map(r => r.fecha as string))]
+        const fechas = [...new Set(data.map(r => r.fecha as string))].slice(0, 10)
         setHistorial(fechas)
       }
       setLoadingHist(false)
