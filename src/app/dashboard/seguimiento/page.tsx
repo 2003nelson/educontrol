@@ -4,15 +4,68 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 import { createClient } from '@/lib/supabase/client'
+import SemanaSlidePanel, { type Semana } from '@/components/dashboard/seguimiento/SemanaSlidePanel'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type AsignacionGrupo = { asignatura: string; asignatura_id: string; docente: string; docente_id: string }
-type Grupo = { id: string; numero: string; grado: number; ciclo_escolar: string; activo: boolean; plantel_id: string; total_alumnos: number; asignaciones: AsignacionGrupo[] }
-type Alumno = { id: string; nombre_completo: string; matricula: string | null }
-type ResumenAsistencia = { estudiante_id: string; total: number; presentes: number; ausentes: number; porcentaje: number }
-type Vista = 'semestres' | 'grupos' | 'alumnos'
-type Direccion = 'adelante' | 'atras'
-type FiltroPanel = 'asignaturas' | null
+type AsignacionGrupo  = { asignatura: string; asignatura_id: string; docente: string; docente_id: string }
+type Grupo            = { id: string; numero: string; grado: number; ciclo_escolar: string; activo: boolean; plantel_id: string; total_alumnos: number; asignaciones: AsignacionGrupo[] }
+type Alumno           = { id: string; nombre_completo: string; matricula: string | null }
+type ResumenAsistencia= { estudiante_id: string; total: number; presentes: number; ausentes: number; porcentaje: number }
+type RegistroDia      = { fecha: string; estado: string }
+type AsistenciaDiaria = Record<string, RegistroDia[]>
+type Vista            = 'semestres' | 'grupos' | 'alumnos'
+type Direccion        = 'adelante' | 'atras'
+type FiltroPanel      = 'asignaturas' | null
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getInicioSemana(fecha: Date): Date {
+  const d = new Date(fecha)
+  const dia = d.getDay()
+  const diff = dia === 0 ? -6 : 1 - dia
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function formatISO(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
+function formatFechaCorta(iso: string): string {
+  const [y, m, dia] = iso.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(dia)).toLocaleDateString('es-MX', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  })
+}
+
+function generarSemanas(fechasRegistradas: string[]): Semana[] {
+  if (fechasRegistradas.length === 0) return []
+  const hoy = new Date()
+  const primerFecha = new Date(fechasRegistradas[0] + 'T12:00:00')
+  let cursor = getInicioSemana(primerFecha)
+  const semanas: Semana[] = []
+  while (cursor <= hoy) {
+    const fin = new Date(cursor)
+    fin.setDate(fin.getDate() + 4)
+    semanas.push({
+      inicio: formatISO(cursor),
+      fin: formatISO(fin),
+      label: cursor.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) +
+        ' – ' + fin.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+    })
+    cursor = new Date(cursor)
+    cursor.setDate(cursor.getDate() + 7)
+  }
+  return semanas.reverse()
+}
+
+function diasDeSemana(inicioISO: string): { iso: string; letra: string }[] {
+  return ['L', 'M', 'M', 'J', 'V'].map((letra, i) => {
+    const d = new Date(inicioISO + 'T12:00:00')
+    d.setDate(d.getDate() + i)
+    return { iso: formatISO(d), letra }
+  })
+}
 
 function useViewTransition() {
   const [visible, setVisible] = useState(true)
@@ -34,14 +87,19 @@ function VolverBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-// ─── Modal toggle ─────────────────────────────────────────────────────────────
+// ─── Modal toggle activo/inactivo ─────────────────────────────────────────────
 function ModalToggle({ grado, activando, onConfirmar, onCerrar }: { grado: number; activando: boolean; onConfirmar: () => void; onCerrar: () => void }) {
   const [cerrando, setCerrando] = useState(false)
   function cerrar() { setCerrando(true); setTimeout(onCerrar, 350) }
   function confirmar() { setCerrando(true); setTimeout(() => { onConfirmar(); onCerrar() }, 350) }
   return createPortal(
     <>
-      <style>{`@keyframes bdI{from{opacity:0}to{opacity:1}}@keyframes bdO{from{opacity:1}to{opacity:0}}@keyframes mI{from{opacity:0;transform:scale(0.92) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}@keyframes mO{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;transform:scale(0.92) translateY(12px)}}`}</style>
+      <style>{`
+        @keyframes bdI { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes bdO { from { opacity: 1 } to { opacity: 0 } }
+        @keyframes mI  { from { opacity: 0; transform: scale(0.92) translateY(12px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+        @keyframes mO  { from { opacity: 1; transform: scale(1) translateY(0) } to { opacity: 0; transform: scale(0.92) translateY(12px) } }
+      `}</style>
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', animation: cerrando ? 'bdO 0.35s ease forwards' : 'bdI 0.22s ease' }}>
         <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '1.25rem', width: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden', animation: cerrando ? 'mO 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'mI 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
           <div style={{ background: activando ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,#dc2626,#b91c1c)', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', position: 'relative' }}>
@@ -72,7 +130,6 @@ function GradoCard({ grado, grupos, onClick, idx }: { grado: number; grupos: Gru
   const [modal, setModal] = useState(false)
   const [pendiente, setPendiente] = useState<boolean | null>(null)
   const totalAlumnos = grupos.reduce((s, g) => s + g.total_alumnos, 0)
-
   return (
     <>
       <button onClick={onClick}
@@ -112,39 +169,135 @@ function GradoCard({ grado, grupos, onClick, idx }: { grado: number; grupos: Gru
   )
 }
 
-// ─── Vista alumnos ────────────────────────────────────────────────────────────
-function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, volver }: {
-  grupo: Grupo; alumnos: Alumno[]; asistencias: ResumenAsistencia[]; semanas: string[]; loadingAlumnos: boolean; volver: () => void
+// ─── Tabla asistencia semanal L-V ─────────────────────────────────────────────
+function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
+  alumnos: Alumno[]
+  asistenciaDiaria: AsistenciaDiaria
+  semanaInicio: string
 }) {
-  const [busqueda, setBusqueda] = useState('')
+  const dias = diasDeSemana(semanaInicio)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; texto: string } | null>(null)
+
+  return (
+    <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative' }}>
+      <div style={{ maxHeight: 'calc(8 * 56px + 44px)', overflowY: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', width: 40 }}>#</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Alumno</th>
+              <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Matrícula</th>
+              {dias.map(d => (
+                <th key={d.iso} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', minWidth: 36 }}>
+                  {d.letra}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {alumnos.map((alumno, i) => {
+              const registros = asistenciaDiaria[alumno.id] ?? []
+              const regMap = Object.fromEntries(registros.map(r => [r.fecha, r.estado]))
+              return (
+                <tr key={alumno.id} style={{ borderBottom: '1px solid #f8fafc' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                  <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>{i + 1}</td>
+                  <td style={{ padding: '0.875rem 1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                        {alumno.nombre_completo.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#1e3a5f' }}>{alumno.nombre_completo}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '0.875rem 1rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{alumno.matricula ?? '—'}</span>
+                  </td>
+                  {dias.map(d => {
+                    const estado = regMap[d.iso]
+                    const esPresente = estado === 'presente'
+                    const esFalta    = estado === 'falta'
+                    const esJustif   = estado === 'justificada'
+                    const esRetardo  = estado === 'retardo'
+                    const tieneReg   = !!estado
+                    return (
+                      <td key={d.iso} style={{ textAlign: 'center', padding: '0.875rem 0.5rem' }}>
+                        <div
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '0.5rem',
+                            background: esPresente ? '#f0fdf4' : esFalta ? '#fef2f2' : esJustif ? '#fefce8' : esRetardo ? '#f5f3ff' : '#f8fafc',
+                          }}
+                          onMouseEnter={e => {
+                            if (!tieneReg) return
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                            const label = esPresente ? ' · Presente' : esFalta ? ' · Falta' : esJustif ? ' · Justificada' : ' · Retardo'
+                            setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 8, texto: formatFechaCorta(d.iso) + label })
+                          }}
+                          onMouseLeave={() => setTooltip(null)}
+                        >
+                          {esPresente && <svg width="13" height="13" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esFalta    && <svg width="12" height="12" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esJustif   && <svg width="12" height="12" fill="none" stroke="#ca8a04" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esRetardo  && <svg width="12" height="12" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>}
+                          {!tieneReg  && <span style={{ fontSize: '0.55rem', color: '#e2e8f0' }}>—</span>}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {tooltip && (
+        <div style={{ position: 'fixed', left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)', background: '#1e293b', color: 'white', fontSize: '0.72rem', fontWeight: 500, padding: '4px 10px', borderRadius: 6, pointerEvents: 'none', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          {tooltip.texto}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Vista alumnos ────────────────────────────────────────────────────────────
+function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, loadingAlumnos, volver }: {
+  grupo: Grupo
+  alumnos: Alumno[]
+  asistencias: ResumenAsistencia[]
+  asistenciaDiaria: AsistenciaDiaria
+  semanas: Semana[]
+  loadingAlumnos: boolean
+  volver: () => void
+}) {
+  const [busqueda, setBusqueda]   = useState('')
   const [searchExp, setSearchExp] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Estado de filtros
   const [panelAbierto, setPanelAbierto] = useState<FiltroPanel>(null)
-  const [asigSelec, setAsigSelec] = useState<AsignacionGrupo | null>(null)
-  const [dropSemana, setDropSemana] = useState(false)
-  const [semanaSelec, setSemanaSelec] = useState<string | null>(null)
+  const [asigSelec, setAsigSelec]       = useState<AsignacionGrupo | null>(null)
+  const [semanaSlide, setSemanaSlide]   = useState(false)
+  const [semanaSelec, setSemanaSelec]   = useState<string | null>(null)
 
-  const tieneAsig = asigSelec !== null
-  const asistMap = Object.fromEntries(asistencias.map(a => [a.estudiante_id, a]))
-  const tieneAsistencias = asistencias.some(a => a.total > 0)
+  const tieneAsig       = asigSelec !== null
+  const asistMap        = Object.fromEntries(asistencias.map(a => [a.estudiante_id, a]))
+  const tieneAsistencias= asistencias.some(a => a.total > 0)
+  const semanaActual    = semanas.find(s => s.inicio === semanaSelec) ?? null
 
   const filtrados = alumnos.filter(a =>
     a.nombre_completo.toLowerCase().includes(busqueda.toLowerCase()) ||
     (a.matricula ?? '').toLowerCase().includes(busqueda.toLowerCase())
   )
 
-  // Botones de filtro
   const btns = [
-    { id: 'asignaturas', label: 'Asignatura', sub: asigSelec?.asignatura ?? null, activo: true },
-    { id: 'periodo',     label: 'Período',     sub: null,                           activo: false },
-    { id: 'calificaciones', label: 'Calificaciones', sub: null,                    activo: false },
-    { id: 'asistencias', label: 'Asistencias', sub: semanaSelec ? ('Sem. ' + semanaSelec) : null, activo: tieneAsig },
+    { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,           activo: true },
+    { id: 'periodo',        label: 'Período',        sub: null,                                    activo: false },
+    { id: 'calificaciones', label: 'Calificaciones', sub: null,                                    activo: false },
+    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null, activo: tieneAsig },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
@@ -155,12 +308,10 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* Botones filtro */}
           {btns.map(btn => {
-            const estaAbierto = panelAbierto === btn.id || (btn.id === 'asistencias' && dropSemana)
-            const tieneValor = btn.sub !== null
-            const disabled = !btn.activo
-
+            const estaAbierto = panelAbierto === btn.id
+            const tieneValor  = btn.sub !== null
+            const disabled    = !btn.activo
             return (
               <div key={btn.id} style={{ position: 'relative' }}>
                 <button
@@ -169,20 +320,18 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
                     if (disabled) return
                     if (btn.id === 'asignaturas') {
                       setPanelAbierto(panelAbierto === 'asignaturas' ? null : 'asignaturas')
-                      setDropSemana(false)
                     } else if (btn.id === 'asistencias') {
-                      setDropSemana(p => !p)
+                      setSemanaSlide(true)
                       setPanelAbierto(null)
                     }
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '0.375rem',
-                    padding: '0.45rem 0.875rem', borderRadius: '0.75rem',
-                    fontSize: '0.8rem',
+                    padding: '0.45rem 0.875rem', borderRadius: '0.75rem', fontSize: '0.8rem',
                     fontWeight: estaAbierto || tieneValor ? 700 : 500,
-                    color: disabled ? '#cbd5e1' : (estaAbierto || tieneValor) ? '#1e3a5f' : '#64748b',
+                    color:      disabled ? '#cbd5e1' : (estaAbierto || tieneValor) ? '#1e3a5f' : '#64748b',
                     background: disabled ? '#fafafa' : (estaAbierto || tieneValor) ? 'white' : '#f8fafc',
-                    border: ('1px solid ' + (disabled ? '#f1f5f9' : (tieneValor ? '#bfdbfe' : '#e2e8f0'))),
+                    border: '1px solid ' + (disabled ? '#f1f5f9' : tieneValor ? '#bfdbfe' : '#e2e8f0'),
                     cursor: disabled ? 'not-allowed' : 'pointer',
                     opacity: disabled ? 0.5 : 1,
                     boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
@@ -194,37 +343,10 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
                     <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
-
-                {/* Dropdown semanas */}
-                {btn.id === 'asistencias' && dropSemana && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50, background: 'white', borderRadius: '0.875rem', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden', minWidth: 160, animation: 'cardIn 0.25s cubic-bezier(0.34,1.56,0.64,1)' }}>
-                    {semanas.length === 0 ? (
-                      <div style={{ padding: '1rem', textAlign: 'center' }}>
-                        <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>Sin semanas registradas</p>
-                      </div>
-                    ) : semanas.map((sem, idx) => (
-                      <button key={sem} onClick={() => { setSemanaSelec(semanaSelec === sem ? null : sem); setDropSemana(false) }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.625rem 1rem', fontSize: '0.8rem', fontWeight: semanaSelec === sem ? 700 : 500, color: semanaSelec === sem ? '#1e3a5f' : '#475569', background: semanaSelec === sem ? '#eff6ff' : 'white', border: 'none', borderTop: idx > 0 ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', textAlign: 'left' }}
-                        onMouseEnter={e => { if (semanaSelec !== sem) e.currentTarget.style.background = '#f8fafc' }}
-                        onMouseLeave={e => { if (semanaSelec !== sem) e.currentTarget.style.background = 'white' }}>
-                        Semana {sem}
-                        {semanaSelec === sem && <svg width="11" height="11" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>}
-                      </button>
-                    ))}
-                    {semanaSelec && (
-                      <button onClick={() => { setSemanaSelec(null); setDropSemana(false) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', width: '100%', padding: '0.525rem 1rem', fontSize: '0.78rem', fontWeight: 500, color: '#dc2626', background: 'white', border: 'none', borderTop: '1px solid #f1f5f9', cursor: 'pointer' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                        Quitar filtro
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             )
           })}
 
-          {/* Limpiar */}
           {(asigSelec || semanaSelec) && (
             <button onClick={() => { setAsigSelec(null); setSemanaSelec(null); setPanelAbierto(null) }}
               style={{ padding: '0.4rem 0.75rem', borderRadius: '0.75rem', fontSize: '0.75rem', fontWeight: 600, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', cursor: 'pointer', transition: 'all 0.15s' }}
@@ -251,7 +373,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
         </div>
       </div>
 
-      {/* Panel asignaturas — se despliega sobre la tabla */}
+      {/* Panel asignaturas */}
       {panelAbierto === 'asignaturas' && (
         <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden', animation: 'cardIn 0.3s cubic-bezier(0.34,1.56,0.64,1)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
           <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid #f1f5f9' }}>
@@ -269,14 +391,14 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
               {grupo.asignaciones.length === 0 ? (
                 <tr><td colSpan={3} style={{ padding: '2rem', textAlign: 'center', fontSize: '0.8rem', color: '#94a3b8' }}>Sin asignaturas registradas</td></tr>
               ) : grupo.asignaciones.map((asig, idx) => {
-                const seleccionada = asigSelec?.asignatura_id === asig.asignatura_id && asigSelec?.docente_id === asig.docente_id
+                const sel = asigSelec?.asignatura_id === asig.asignatura_id && asigSelec?.docente_id === asig.docente_id
                 return (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: seleccionada ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onClick={() => { setAsigSelec(seleccionada ? null : asig); setPanelAbierto(null) }}
-                    onMouseEnter={e => { if (!seleccionada) e.currentTarget.style.background = '#f8fafc' }}
-                    onMouseLeave={e => { if (!seleccionada) e.currentTarget.style.background = 'white' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: sel ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'background 0.15s' }}
+                    onClick={() => { setAsigSelec(sel ? null : asig); setPanelAbierto(null) }}
+                    onMouseEnter={e => { if (!sel) e.currentTarget.style.background = '#f8fafc' }}
+                    onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'white' }}>
                     <td style={{ padding: '0.875rem 1.25rem' }}>
-                      <span style={{ fontSize: '0.8125rem', fontWeight: seleccionada ? 700 : 500, color: seleccionada ? '#1e3a5f' : '#334155' }}>{asig.asignatura}</span>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: sel ? 700 : 500, color: sel ? '#1e3a5f' : '#334155' }}>{asig.asignatura}</span>
                     </td>
                     <td style={{ padding: '0.875rem 1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -285,7 +407,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
                       </div>
                     </td>
                     <td style={{ padding: '0.875rem 1.25rem', textAlign: 'right' }}>
-                      {seleccionada
+                      {sel
                         ? <svg width="14" height="14" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg>
                         : <svg width="14" height="14" fill="none" stroke="#cbd5e1" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" strokeLinecap="round"/></svg>
                       }
@@ -307,91 +429,116 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
             <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e3a5f', margin: 0 }}>{asigSelec.docente}</p>
           </div>
           <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 9999, background: 'white', color: '#2563eb', border: '1px solid #bfdbfe' }}>{asigSelec.asignatura}</span>
-          {semanaSelec && <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 9999, background: 'white', color: '#7c3aed', border: '1px solid #ddd6fe' }}>Sem. {semanaSelec}</span>}
+          {semanaActual && <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 9999, background: 'white', color: '#7c3aed', border: '1px solid #ddd6fe' }}>{semanaActual.label}</span>}
         </div>
       )}
 
-      {/* Tabla alumnos */}
-      <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
-        {loadingAlumnos ? (
-          <div style={{ padding: '3rem', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '4px solid #bfdbfe', borderTopColor: '#2563eb', animation: 'spin 0.8s linear infinite' }}/>
+      {/* Contenido principal */}
+      {loadingAlumnos ? (
+        <div style={{ background: 'white', borderRadius: '1rem', padding: '3rem', display: 'flex', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', border: '4px solid #bfdbfe', borderTopColor: '#2563eb', animation: 'spin 0.8s linear infinite' }}/>
+        </div>
+      ) : !tieneAsig ? (
+        <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #f1f5f9', padding: '3.5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="20" height="20" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <path d="M9 12h6M9 16h4" strokeLinecap="round"/>
+            </svg>
           </div>
-        ) : !tieneAsig ? (
-          /* Estado vacío — sin asignatura seleccionada */
-          <div style={{ padding: '3.5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="20" height="20" fill="none" stroke="#94a3b8" strokeWidth="1.8" viewBox="0 0 24 24">
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-                <rect x="9" y="3" width="6" height="4" rx="1"/>
-                <path d="M9 12h6M9 16h4" strokeLinecap="round"/>
-              </svg>
+          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', margin: 0 }}>Selecciona una asignatura para ver los datos</p>
+          <p style={{ fontSize: '0.775rem', color: '#94a3b8', margin: 0 }}>Usa el botón <strong>Asignatura</strong> en la parte superior</p>
+        </div>
+      ) : !semanaSelec ? (
+        /* Sin semana seleccionada — resumen general */
+        <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
+          {filtrados.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>No se encontraron alumnos</p>
             </div>
-            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', margin: 0 }}>Selecciona una asignatura para ver los datos</p>
-            <p style={{ fontSize: '0.775rem', color: '#94a3b8', margin: 0 }}>Usa el botón <strong>Asignatura</strong> en la parte superior</p>
-          </div>
-        ) : filtrados.length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>No se encontraron alumnos</p>
-          </div>
-        ) : (
-          <>
-            <div style={{ maxHeight: 'calc(8 * 56px + 44px)', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
-                    {['#', 'Alumno', 'Matrícula', 'Asistencia', 'Faltas'].map(col => (
-                      <th key={col} style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrados.map((alumno, i) => {
-                    const asist = asistMap[alumno.id]
-                    return (
-                      <tr key={alumno.id} style={{ borderBottom: '1px solid #f8fafc' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                        <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>{i + 1}</td>
-                        <td style={{ padding: '0.875rem 1.25rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
-                              {alumno.nombre_completo.charAt(0).toUpperCase()}
-                            </div>
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#1e3a5f' }}>{alumno.nombre_completo}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '0.875rem 1.25rem' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{alumno.matricula ?? '—'}</span>
-                        </td>
-                        <td style={{ padding: '0.875rem 1.25rem' }}>
-                          {tieneAsistencias && asist && asist.total > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <div style={{ flex: 1, height: 4, borderRadius: 9999, background: '#f1f5f9', maxWidth: 60 }}>
-                                <div style={{ height: '100%', borderRadius: 9999, background: asist.porcentaje >= 80 ? '#16a34a' : '#dc2626', width: (asist.porcentaje + '%') }}/>
+          ) : (
+            <>
+              <div style={{ maxHeight: 'calc(8 * 56px + 44px)', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+                      {['#', 'Alumno', 'Matrícula', 'Asistencia', 'Faltas'].map(col => (
+                        <th key={col} style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtrados.map((alumno, i) => {
+                      const asist = asistMap[alumno.id]
+                      return (
+                        <tr key={alumno.id} style={{ borderBottom: '1px solid #f8fafc' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
+                          <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>{i + 1}</td>
+                          <td style={{ padding: '0.875rem 1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                                {alumno.nombre_completo.charAt(0).toUpperCase()}
                               </div>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: asist.porcentaje >= 80 ? '#16a34a' : '#dc2626' }}>{asist.porcentaje}%</span>
+                              <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: '#1e3a5f' }}>{alumno.nombre_completo}</span>
                             </div>
-                          ) : <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontStyle: 'italic' }}>Sin datos</span>}
-                        </td>
-                        <td style={{ padding: '0.875rem 1.25rem' }}>
-                          {tieneAsistencias && asist && asist.total > 0
-                            ? <span style={{ fontSize: '0.875rem', fontWeight: 700, color: asist.ausentes > 5 ? '#dc2626' : '#475569' }}>{asist.ausentes}</span>
-                            : <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>—</span>}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ padding: '0.625rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>{filtrados.length} alumnos · {asigSelec.asignatura}</p>
-              {!tieneAsistencias && <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, fontStyle: 'italic' }}>Sin registros de asistencia aún</p>}
-            </div>
-          </>
-        )}
-      </div>
+                          </td>
+                          <td style={{ padding: '0.875rem 1.25rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{alumno.matricula ?? '—'}</span>
+                          </td>
+                          <td style={{ padding: '0.875rem 1.25rem' }}>
+                            {tieneAsistencias && asist && asist.total > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ flex: 1, height: 4, borderRadius: 9999, background: '#f1f5f9', maxWidth: 60 }}>
+                                  <div style={{ height: '100%', borderRadius: 9999, background: asist.porcentaje >= 80 ? '#16a34a' : '#dc2626', width: asist.porcentaje + '%' }}/>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: asist.porcentaje >= 80 ? '#16a34a' : '#dc2626' }}>{asist.porcentaje}%</span>
+                              </div>
+                            ) : <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontStyle: 'italic' }}>Sin datos</span>}
+                          </td>
+                          <td style={{ padding: '0.875rem 1.25rem' }}>
+                            {tieneAsistencias && asist && asist.total > 0
+                              ? <span style={{ fontSize: '0.875rem', fontWeight: 700, color: asist.ausentes > 5 ? '#dc2626' : '#475569' }}>{asist.ausentes}</span>
+                              : <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>—</span>}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ padding: '0.625rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>{filtrados.length} alumnos · {asigSelec.asignatura}</p>
+                {!tieneAsistencias
+                  ? <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, fontStyle: 'italic' }}>Sin registros de asistencia aún</p>
+                  : <button onClick={() => setSemanaSlide(true)}
+                      style={{ fontSize: '0.72rem', fontWeight: 600, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '3px 10px', cursor: 'pointer' }}>
+                      Ver por semana →
+                    </button>
+                }
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        /* Semana seleccionada — tabla L/M/M/J/V */
+        <TablaAsistenciaSemanal
+          alumnos={filtrados}
+          asistenciaDiaria={asistenciaDiaria}
+          semanaInicio={semanaSelec}
+        />
+      )}
+
+      {/* Slide panel de semanas — componente externo */}
+      {semanaSlide && (
+        <SemanaSlidePanel
+          semanas={semanas}
+          semanaSelec={semanaSelec}
+          onSelec={setSemanaSelec}
+          onCerrar={() => setSemanaSlide(false)}
+        />
+      )}
     </div>
   )
 }
@@ -400,16 +547,17 @@ function AlumnosVista({ grupo, alumnos, asistencias, semanas, loadingAlumnos, vo
 export default function SeguimientoPage() {
   const supabase = createClient()
   const [vista, setVista] = useState<Vista>('semestres')
-  const [dir, setDir] = useState<Direccion>('adelante')
+  const [dir, setDir]     = useState<Direccion>('adelante')
   const { visible, transicionar } = useViewTransition()
 
-  const [grupos, setGrupos] = useState<Grupo[]>([])
+  const [grupos, setGrupos]               = useState<Grupo[]>([])
   const [loadingGrupos, setLoadingGrupos] = useState(true)
-  const [gradoActivo, setGradoActivo] = useState<number | null>(null)
-  const [grupoActivo, setGrupoActivo] = useState<Grupo | null>(null)
-  const [alumnos, setAlumnos] = useState<Alumno[]>([])
-  const [asistencias, setAsistencias] = useState<ResumenAsistencia[]>([])
-  const [semanas, setSemanas] = useState<string[]>([])
+  const [gradoActivo, setGradoActivo]     = useState<number | null>(null)
+  const [grupoActivo, setGrupoActivo]     = useState<Grupo | null>(null)
+  const [alumnos, setAlumnos]             = useState<Alumno[]>([])
+  const [asistencias, setAsistencias]     = useState<ResumenAsistencia[]>([])
+  const [asistenciaDiaria, setAsistenciaDiaria] = useState<AsistenciaDiaria>({})
+  const [semanas, setSemanas]             = useState<Semana[]>([])
   const [loadingAlumnos, setLoadingAlumnos] = useState(false)
 
   useEffect(() => {
@@ -418,7 +566,7 @@ export default function SeguimientoPage() {
       const { data: gruposData } = await supabase
         .from('grupos')
         .select('id, numero, grado, ciclo_escolar, activo, plantel_id')
-        .eq('activo', true)   // ← solo grupos activos
+        .eq('activo', true)
         .order('grado').order('numero')
 
       if (!gruposData) { setLoadingGrupos(false); return }
@@ -429,20 +577,13 @@ export default function SeguimientoPage() {
 
       const asignMap: Record<string, AsignacionGrupo[]> = {}
       ;(asignData ?? []).forEach((row: Record<string, unknown>) => {
-        const grupoId = row.grupo_id as string
-        const rawAsig = row.asignaturas as { id: string; nombre: string } | { id: string; nombre: string }[] | null
-        const rawUser = row.usuarios as { id: string; nombre_completo: string } | { id: string; nombre_completo: string }[] | null
-        const asig = Array.isArray(rawAsig) ? rawAsig[0] : rawAsig
-        const user = Array.isArray(rawUser) ? rawUser[0] : rawUser
+        const grupoId  = row.grupo_id as string
+        const rawAsig  = row.asignaturas as { id: string; nombre: string } | { id: string; nombre: string }[] | null
+        const rawUser  = row.usuarios as { id: string; nombre_completo: string } | { id: string; nombre_completo: string }[] | null
+        const asig     = Array.isArray(rawAsig) ? rawAsig[0] : rawAsig
+        const user     = Array.isArray(rawUser) ? rawUser[0] : rawUser
         if (!asignMap[grupoId]) asignMap[grupoId] = []
-        if (asig && user) {
-          asignMap[grupoId].push({
-            asignatura: asig.nombre,
-            asignatura_id: asig.id,
-            docente: user.nombre_completo,
-            docente_id: user.id,
-          })
-        }
+        if (asig && user) asignMap[grupoId].push({ asignatura: asig.nombre, asignatura_id: asig.id, docente: user.nombre_completo, docente_id: user.id })
       })
 
       const conConteo = await Promise.all(gruposData.map(async g => {
@@ -462,7 +603,7 @@ export default function SeguimientoPage() {
 
   const cargarGrupo = useCallback(async (grupo: Grupo) => {
     setLoadingAlumnos(true)
-    setAlumnos([]); setAsistencias([]); setSemanas([])
+    setAlumnos([]); setAsistencias([]); setAsistenciaDiaria({}); setSemanas([])
 
     const { data: alumnosData } = await supabase
       .from('estudiantes')
@@ -480,20 +621,30 @@ export default function SeguimientoPage() {
       .eq('grupo_id', grupo.id)
 
     if (asistData && asistData.length > 0) {
+      // Resumen general
       const resumen: Record<string, ResumenAsistencia> = {}
       alumnosData.forEach(a => { resumen[a.id] = { estudiante_id: a.id, total: 0, presentes: 0, ausentes: 0, porcentaje: 0 } })
       asistData.forEach(r => {
         if (!resumen[r.estudiante_id]) return
         resumen[r.estudiante_id].total++
-        if (r.estado === 'P') resumen[r.estudiante_id].presentes++
-        if (r.estado === 'A') resumen[r.estudiante_id].ausentes++
+        if (r.estado === 'presente') resumen[r.estudiante_id].presentes++
+        if (r.estado === 'falta')    resumen[r.estudiante_id].ausentes++
       })
       Object.values(resumen).forEach(r => { r.porcentaje = r.total > 0 ? Math.round((r.presentes / r.total) * 100) : 0 })
       setAsistencias(Object.values(resumen))
 
-      // Semanas únicas con asistencia registrada
+      // Diaria por alumno
+      const diaria: AsistenciaDiaria = {}
+      alumnosData.forEach(a => { diaria[a.id] = [] })
+      asistData.forEach(r => {
+        if (!diaria[r.estudiante_id]) diaria[r.estudiante_id] = []
+        diaria[r.estudiante_id].push({ fecha: r.fecha as string, estado: r.estado as string })
+      })
+      setAsistenciaDiaria(diaria)
+
+      // Semanas automáticas
       const fechasUnicas = [...new Set(asistData.map(r => r.fecha as string))].sort()
-      setSemanas(fechasUnicas)
+      setSemanas(generarSemanas(fechasUnicas))
     }
 
     setLoadingAlumnos(false)
@@ -508,14 +659,16 @@ export default function SeguimientoPage() {
     acc[g.grado].push(g)
     return acc
   }, {} as Record<number, Grupo[]>)
-  const grados = Object.keys(gradosMap).map(Number).sort()
-  const gruposDelGrado = gradoActivo ? (gradosMap[gradoActivo] ?? []) : []
-
-  const slideIn = dir === 'adelante' ? 'translateX(18px)' : 'translateX(-18px)'
+  const grados          = Object.keys(gradosMap).map(Number).sort()
+  const gruposDelGrado  = gradoActivo ? (gradosMap[gradoActivo] ?? []) : []
+  const slideIn         = dir === 'adelante' ? 'translateX(18px)' : 'translateX(-18px)'
 
   return (
     <div className="flex flex-col h-full">
-      <style>{`@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes cardIn { from { opacity: 0; transform: translateY(10px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        @keyframes spin   { to { transform: rotate(360deg) } }
+      `}</style>
       <Header titulo="Seguimiento Académico"/>
       <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', gap: '1rem' }}>
         <div style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateX(0) scale(1)' : (slideIn + ' scale(0.985)'), transition: visible ? 'opacity 0.38s cubic-bezier(0.34,1.56,0.64,1),transform 0.38s cubic-bezier(0.34,1.56,0.64,1)' : 'opacity 0.2s ease,transform 0.2s ease' }}>
@@ -555,30 +708,39 @@ export default function SeguimientoPage() {
                 <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{gruposDelGrado[0]?.ciclo_escolar}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-                {gruposDelGrado.map((grupo, i) => (
-                  <button key={grupo.id}
-                    onClick={() => { nav('alumnos', 'adelante', () => setGrupoActivo(grupo)); cargarGrupo(grupo) }}
-                    style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.875rem', transition: 'all 0.22s ease', animation: ('cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ' + i * 0.06 + 's both') }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(59,130,246,0.1)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 700, color: 'white', fontFamily: 'Outfit,sans-serif', flexShrink: 0 }}>
-                        {grupo.numero}
+                {gruposDelGrado.map((grupo, i) => {
+                  const asignaturasUnicas = [...new Set(grupo.asignaciones.map(a => a.asignatura))]
+                  return (
+                    <button key={grupo.id}
+                      onClick={() => { nav('alumnos', 'adelante', () => setGrupoActivo(grupo)); cargarGrupo(grupo) }}
+                      style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.875rem', transition: 'all 0.22s ease', animation: ('cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ' + i * 0.06 + 's both') }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(59,130,246,0.1)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 700, color: 'white', fontFamily: 'Outfit,sans-serif', flexShrink: 0 }}>
+                          {grupo.numero}
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>Grupo {grupo.numero}</p>
+                          <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0' }}>{grupo.total_alumnos} alumnos</p>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>Grupo {grupo.numero}</p>
-                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0' }}>{grupo.total_alumnos} alumnos</p>
-                      </div>
-                    </div>
-                    {grupo.asignaciones.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                        {[...new Set(grupo.asignaciones.map(a => a.asignatura))].map(asig => (
-                          <span key={asig} style={{ fontSize: '0.68rem', fontWeight: 500, padding: '2px 8px', borderRadius: 9999, background: 'rgba(59,130,246,0.07)', color: '#4f88e3', border: '1px solid rgba(59,130,246,0.15)' }}>{asig}</span>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                ))}
+                      {/* Asignaturas en texto gris plano */}
+                      {asignaturasUnicas.length > 0 && (
+                        <div style={{ paddingTop: '0.125rem' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Asignaturas:
+                          </span>
+                          <div style={{ marginTop: '0.3rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            {asignaturasUnicas.map(asig => (
+                              <span key={asig} style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>{asig}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -586,8 +748,12 @@ export default function SeguimientoPage() {
           {/* Vista alumnos */}
           {vista === 'alumnos' && grupoActivo && (
             <AlumnosVista
-              grupo={grupoActivo} alumnos={alumnos} asistencias={asistencias}
-              semanas={semanas} loadingAlumnos={loadingAlumnos}
+              grupo={grupoActivo}
+              alumnos={alumnos}
+              asistencias={asistencias}
+              asistenciaDiaria={asistenciaDiaria}
+              semanas={semanas}
+              loadingAlumnos={loadingAlumnos}
               volver={() => nav('grupos', 'atras', () => setGrupoActivo(null))}
             />
           )}

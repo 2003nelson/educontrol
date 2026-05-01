@@ -599,7 +599,7 @@ function MacButton({ onClick }: { onClick: () => void }) {
 type Vista =
   | { tipo: 'grupos' }
   | { tipo: 'asignaturas'; grupo: GrupoAgrupado }
-  | { tipo: 'confirmar'; grupo: GrupoAgrupado; asignatura: AsignaturaItem }
+  | { tipo: 'confirmar'; grupo: GrupoAgrupado; asignatura: AsignaturaItem; ts?: number }
   | { tipo: 'asistencia'; grupo: GrupoAgrupado; asignatura: AsignaturaItem }
 
 // ─── Página principal ─────────────────────────────────────────────────────────
@@ -633,13 +633,14 @@ export default function GruposPage() {
     <AsistenciaView
       asignatura={vista.asignatura}
       grupoId={vista.grupo.id}
-      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}
-      onGuardado={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura })}
+      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
+      onGuardado={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
     />
   )
 
   if (vista.tipo === 'confirmar') return (
     <ConfirmarFechaView
+      key={`${vista.grupo.id}-${vista.asignatura.id}-${vista.ts ?? 0}`}
       asignatura={vista.asignatura}
       grupo={vista.grupo}
       onConfirmar={() => setVista({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
