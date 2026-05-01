@@ -11,6 +11,8 @@ export default function CambiarPasswordPage() {
   const [confirmar, setConfirmar] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showNueva, setShowNueva] = useState(false)
+  const [showConfirmar, setShowConfirmar] = useState(false)
 
   async function handleCambiar() {
     if (nueva !== confirmar) { setError('Las contraseñas no coinciden'); return }
@@ -83,32 +85,50 @@ export default function CambiarPasswordPage() {
             <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.375rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               Nueva contraseña
             </label>
-            <input
-              type="password"
-              value={nueva}
-              onChange={e => setNueva(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              onKeyDown={e => e.key === 'Enter' && handleCambiar()}
-              style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showNueva ? 'text' : 'password'}
+                value={nueva}
+                onChange={e => setNueva(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                onKeyDown={e => e.key === 'Enter' && handleCambiar()}
+                style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 3rem 0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
+              />
+              <button type="button" onClick={() => setShowNueva(p => !p)}
+                style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aeaeb2', padding: 0, display: 'flex' }}>
+                {showNueva
+                  ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
+              </button>
+            </div>
           </div>
 
           <div>
             <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.375rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               Confirmar contraseña
             </label>
-            <input
-              type="password"
-              value={confirmar}
-              onChange={e => setConfirmar(e.target.value)}
-              placeholder="Repite la contraseña"
-              onKeyDown={e => e.key === 'Enter' && handleCambiar()}
-              style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showConfirmar ? 'text' : 'password'}
+                value={confirmar}
+                onChange={e => setConfirmar(e.target.value)}
+                placeholder="Repite la contraseña"
+                onKeyDown={e => e.key === 'Enter' && handleCambiar()}
+                style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 3rem 0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
+              />
+              <button type="button" onClick={() => setShowConfirmar(p => !p)}
+                style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aeaeb2', padding: 0, display: 'flex' }}>
+                {showConfirmar
+                  ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
+              </button>
+            </div>
           </div>
 
           {error && (
