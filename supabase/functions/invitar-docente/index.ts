@@ -3,8 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-// APP_URL debe estar configurado en los secrets de la Edge Function:
-// supabase secrets set APP_URL=https://dinoti.xyz
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://dinoti.xyz'
 
 const corsHeaders = {
@@ -25,11 +23,7 @@ Deno.serve(async (req: Request) => {
 
     const jwt = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt)
-
-    if (authError || !user) {
-      console.error('Auth error:', authError?.message)
-      return errorResponse('Sesión inválida', 401)
-    }
+    if (authError || !user) return errorResponse('Sesión inválida', 401)
 
     const { data: caller, error: callerError } = await supabaseAdmin
       .from('usuarios')
@@ -48,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: docente, error: docenteError } = await supabaseAdmin
       .from('usuarios')
-      .select('id, nombre_completo, email, cuenta_activada, plantel_id')
+      .select('id, nombre_completo, email, cuenta_activada, plantel_id, auth_id')
       .eq('id', docente_id)
       .eq('plantel_id', caller.plantel_id)
       .eq('rol', 'docente')
@@ -57,9 +51,27 @@ Deno.serve(async (req: Request) => {
     if (docenteError || !docente) return errorResponse('Docente no encontrado', 404)
     if (docente.cuenta_activada) return errorResponse('La cuenta ya está activada', 409)
 
-    // ── Redirect a cambiar-password (primer login) ────────────────────────
     const redirectTo = `${APP_URL}/cambiar-password`
 
+    // ── Si tiene auth_id, borrar de auth.users directamente ──────────────
+    // Esto es más confiable que buscar por email con listUsers
+    if (docente.auth_id) {
+      console.log(`Borrando auth_id previo: ${docente.auth_id}`)
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(docente.auth_id)
+      if (deleteError) {
+        console.error('Error al borrar auth user:', deleteError.message)
+        // Si no se pudo borrar, intentar de todas formas
+      }
+      // Limpiar auth_id y estado en tabla usuarios
+      await supabaseAdmin
+        .from('usuarios')
+        .update({ auth_id: null, cuenta_activada: false, invitacion_enviada: false })
+        .eq('id', docente_id)
+      // Pequeña espera para que Auth procese el delete
+      await new Promise(resolve => setTimeout(resolve, 800))
+    }
+
+    // ── Invitar fresco ────────────────────────────────────────────────────
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       docente.email,
       {
@@ -74,23 +86,11 @@ Deno.serve(async (req: Request) => {
     )
 
     if (inviteError) {
-      if (inviteError.status === 422) {
-        // Usuario ya existe en auth — generar magic link
-        const { error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'magiclink',
-          email: docente.email,
-          options: { redirectTo },
-        })
-        if (linkError) {
-          console.error('Generate link error:', linkError.message)
-          throw linkError
-        }
-      } else {
-        console.error('Invite error:', inviteError.message)
-        throw inviteError
-      }
+      console.error('Invite error:', inviteError.message, inviteError.status)
+      return errorResponse(`Error al invitar: ${inviteError.message}`, 500)
     }
 
+    // Registrar invitación enviada
     await supabaseAdmin
       .from('usuarios')
       .update({
@@ -99,6 +99,8 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', docente.id)
       .eq('plantel_id', caller.plantel_id)
+
+    console.log(`Invitación enviada exitosamente a ${docente.email}`)
 
     return new Response(
       JSON.stringify({ ok: true, message: `Invitación enviada a ${docente.email}` }),

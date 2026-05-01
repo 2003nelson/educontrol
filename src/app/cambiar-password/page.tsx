@@ -5,90 +5,131 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function CambiarPasswordPage() {
   const router = useRouter()
-  const supabase = createClient() // ← CORRECCIÓN
-  
+  const supabase = createClient()
+
   const [nueva, setNueva] = useState('')
   const [confirmar, setConfirmar] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleCambiar() {
-    if (nueva !== confirmar) {
-      setError('Las contraseñas no coinciden')
-      return
-    }
-    if (nueva.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
-      return
-    }
+    if (nueva !== confirmar) { setError('Las contraseñas no coinciden'); return }
+    if (nueva.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
 
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.updateUser({
+    // 1. Actualizar contraseña
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
       password: nueva,
       data: { primer_login: false }
     })
 
-    if (error) {
+    if (updateError) {
       setError('Error al actualizar contraseña')
       setLoading(false)
       return
     }
 
-    router.push('/dashboard')
+    // 2. Marcar cuenta_activada en tabla usuarios
+    if (updateData.user) {
+      await supabase
+        .from('usuarios')
+        .update({ cuenta_activada: true })
+        .eq('auth_id', updateData.user.id)
+    }
+
+    // 3. Verificar rol para redirigir correctamente
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('rol')
+        .eq('auth_id', user.id)
+        .single()
+
+      const rol = usuarioData?.rol ?? user.user_metadata?.rol
+
+      if (rol === 'docente') {
+        router.push('/docente/grupos')
+      } else if (rol === 'super_admin') {
+        router.push('/super-admin')
+      } else {
+        router.push('/dashboard')
+      }
+    } else {
+      router.push('/login')
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-lg p-10 w-full max-w-md">
+    <div style={{ minHeight: '100vh', background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', padding: '1rem' }}>
+      <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', padding: '2.5rem', width: '100%', maxWidth: 400 }}>
 
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
-            <span className="text-white text-2xl font-bold">E</span>
+        {/* Logo */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem', gap: '0.5rem' }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontSize: 20, fontWeight: 700 }}>EC</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-800">Crea tu contraseña</h1>
-          <p className="text-sm text-gray-400 mt-1 text-center">
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1c1c1e', margin: 0 }}>Crea tu contraseña</h1>
+          <p style={{ fontSize: '0.8rem', color: '#8e8e93', margin: 0, textAlign: 'center' }}>
             Es tu primer acceso. Elige una contraseña segura.
           </p>
         </div>
 
-        <div className="space-y-4">
+        {/* Campos */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label className="text-sm font-medium text-gray-600">Nueva contraseña</label>
+            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.375rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Nueva contraseña
+            </label>
             <input
               type="password"
               value={nueva}
               onChange={e => setNueva(e.target.value)}
               placeholder="Mínimo 8 caracteres"
-              className="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={e => e.key === 'Enter' && handleCambiar()}
+              style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-600">Confirmar contraseña</label>
+            <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.375rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              Confirmar contraseña
+            </label>
             <input
               type="password"
               value={confirmar}
               onChange={e => setConfirmar(e.target.value)}
               placeholder="Repite la contraseña"
-              className="mt-1 w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={e => e.key === 'Enter' && handleCambiar()}
+              style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 10, padding: '0.75rem 1rem', fontSize: '0.9rem', color: '#1c1c1e', outline: 'none', boxSizing: 'border-box', background: '#fafafa' }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }}
             />
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
+            <div style={{ background: '#fff5f5', border: '1px solid #ffd7d5', borderRadius: 8, padding: '0.625rem 0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff3b30', flexShrink: 0 }}/>
+              <p style={{ fontSize: '0.78rem', color: '#ff3b30', margin: 0, fontWeight: 500 }}>{error}</p>
+            </div>
           )}
 
           <button
             onClick={handleCambiar}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50"
+            style={{ width: '100%', padding: '0.875rem', borderRadius: 10, border: 'none', background: loading ? '#aeaeb2' : '#007aff', color: 'white', fontSize: '0.9rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '0.5rem', boxShadow: loading ? 'none' : '0 2px 12px rgba(0,122,255,0.25)', transition: 'all 0.18s' }}
           >
             {loading ? 'Guardando...' : 'Guardar contraseña'}
           </button>
         </div>
 
+        <p style={{ fontSize: '0.7rem', color: '#c7c7cc', textAlign: 'center', marginTop: '1.5rem', marginBottom: 0 }}>
+          © 2026 Dinoti Platforms · EduControl
+        </p>
       </div>
     </div>
   )
