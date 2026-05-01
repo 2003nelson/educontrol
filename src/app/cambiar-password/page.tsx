@@ -18,8 +18,11 @@ export default function CambiarPasswordPage() {
 
   // Capturar el token del hash URL al cargar la página
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null
+    let timeout: ReturnType<typeof setTimeout>
+
     async function procesarToken() {
-      // Supabase detecta automáticamente el token en el hash
+      // 1. Verificar si ya hay sesión activa
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setSesionLista(true)
@@ -27,25 +30,51 @@ export default function CambiarPasswordPage() {
         return
       }
 
-      // Si no hay sesión, escuchar el evento de auth que dispara el token del hash
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
-          if (session) {
-            setSesionLista(true)
-            setProcesando(false)
-            subscription.unsubscribe()
-          }
+      // 2. Escuchar cambios de auth — Supabase procesa el hash automáticamente
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY' || event === 'USER_UPDATED') && session) {
+          setSesionLista(true)
+          setProcesando(false)
+          clearTimeout(timeout)
+          data.subscription.unsubscribe()
         }
       })
+      subscription = data.subscription
 
-      // Timeout de seguridad — si en 5s no hay sesión, mostrar error
-      setTimeout(() => {
+      // 3. Forzar procesamiento del hash si existe en la URL
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const hash = window.location.hash.substring(1)
+        const params = new URLSearchParams(hash)
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error) {
+            setSesionLista(true)
+            setProcesando(false)
+            clearTimeout(timeout)
+            data.subscription.unsubscribe()
+            return
+          }
+        }
+      }
+
+      // 4. Timeout — si en 8s no hay sesión mostrar error
+      timeout = setTimeout(() => {
         setProcesando(false)
-        subscription.unsubscribe()
-      }, 5000)
+        data.subscription.unsubscribe()
+      }, 8000)
     }
 
     procesarToken()
+
+    return () => {
+      clearTimeout(timeout)
+      subscription?.unsubscribe()
+    }
   }, [supabase])
 
   async function handleCambiar() {
