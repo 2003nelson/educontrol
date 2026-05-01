@@ -180,6 +180,24 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
 
   return (
     <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative' }}>
+
+      {/* Leyenda de estados */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.625rem 1.25rem', borderBottom: '1px solid #f1f5f9', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        {[
+          { icon: <svg width="12" height="12" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#f0fdf4', label: 'Presente' },
+          { icon: <svg width="11" height="11" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fef2f2', label: 'Falta' },
+          { icon: <svg width="11" height="11" fill="none" stroke="#ca8a04" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fefce8', label: 'Justificada' },
+          { icon: <svg width="11" height="11" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg: '#f5f3ff', label: 'Retardo' },
+        ].map(item => (
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <div style={{ width: 22, height: 22, borderRadius: '0.375rem', background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {item.icon}
+            </div>
+            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+
       <div style={{ maxHeight: 'calc(8 * 56px + 44px)', overflowY: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -299,15 +317,30 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+        {/* Izquierda: breadcrumb + buscador */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexShrink: 0 }}>
           <VolverBtn onClick={volver}/>
           <div style={{ width: 1, height: 14, background: '#e2e8f0' }}/>
           <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f', margin: 0 }}>Grupo {grupo.numero}</p>
           <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{grupo.grado}° Semestre</span>
+          <div style={{ width: 1, height: 14, background: '#e2e8f0' }}/>
+          {/* Buscador — movido aquí */}
+          <div style={{ display: 'flex', alignItems: 'center', height: 32, borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: 'white', overflow: 'hidden', transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', width: searchExp ? 180 : 32, cursor: searchExp ? 'text' : 'pointer' }}
+            onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}
+            onMouseLeave={() => { if (!busqueda) { searchRef.current?.blur(); setSearchExp(false) } }}>
+            <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <input ref={searchRef} type="text" placeholder="Buscar alumno..." value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              onFocus={() => setSearchExp(true)} onBlur={() => { if (!busqueda) setSearchExp(false) }}
+              style={{ border: 'none', outline: 'none', fontSize: '0.78rem', color: '#334155', background: 'transparent', width: '100%', opacity: searchExp ? 1 : 0, transition: 'opacity 0.2s' }}/>
+            {busqueda && <button onClick={e => { e.stopPropagation(); setBusqueda('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}>✕</button>}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Derecha: filtros fijos */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           {btns.map(btn => {
             const estaAbierto = panelAbierto === btn.id
             const tieneValor  = btn.sub !== null
@@ -356,20 +389,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
             </button>
           )}
 
-          <div style={{ width: 1, height: 18, background: '#e2e8f0' }}/>
 
-          {/* Buscador */}
-          <div style={{ display: 'flex', alignItems: 'center', height: 36, borderRadius: '0.875rem', border: '1px solid #e2e8f0', background: 'white', overflow: 'hidden', transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', width: searchExp ? 200 : 36, cursor: searchExp ? 'text' : 'pointer' }}
-            onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}
-            onMouseLeave={() => { if (!busqueda) { searchRef.current?.blur(); setSearchExp(false) } }}>
-            <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            </div>
-            <input ref={searchRef} type="text" placeholder="Buscar alumno..." value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              onFocus={() => setSearchExp(true)} onBlur={() => { if (!busqueda) setSearchExp(false) }}
-              style={{ border: 'none', outline: 'none', fontSize: '0.8rem', color: '#334155', background: 'transparent', width: '100%', opacity: searchExp ? 1 : 0, transition: 'opacity 0.2s' }}/>
-            {busqueda && <button onClick={e => { e.stopPropagation(); setBusqueda('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 0.4rem', fontSize: '1rem', lineHeight: 1 }}>✕</button>}
-          </div>
         </div>
       </div>
 

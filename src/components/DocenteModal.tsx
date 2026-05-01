@@ -1,8 +1,9 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useGrupos } from '@/hooks/useGrupos'
 import { useAsignaturas } from '@/hooks/useAsignaturas'
+import { createClient } from '@/lib/supabase/client'
 
 export type Asignacion = {
   grupo_id: string
@@ -33,6 +34,9 @@ type Props = {
   onCerrar: () => void
 }
 
+// Par grupo+asignatura ya ocupado globalmente en la BD
+type ParOcupado = { grupo_id: string; asignatura_id: string }
+
 const DOMINIOS_PERMITIDOS = [
   'gmail.com', 'outlook.com', 'hotmail.com',
   'yahoo.com', 'icloud.com', 'live.com', 'protonmail.com'
@@ -40,35 +44,62 @@ const DOMINIOS_PERMITIDOS = [
 
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
 
-// Validación pura — sin setState, se calcula en render
 function validarEmail(email: string, docenteEmailOriginal?: string): {
   valido: boolean | null
   mensaje: string
 } {
   const trimmed = email.trim().toLowerCase()
-
-  // Si es el mismo email que ya tenía el docente, es válido sin más
   if (docenteEmailOriginal && trimmed === docenteEmailOriginal.toLowerCase()) {
     return { valido: true, mensaje: '' }
   }
-
   if (!trimmed) return { valido: null, mensaje: '' }
-
   if (!EMAIL_REGEX.test(trimmed)) {
     return { valido: false, mensaje: '✕ Formato de correo inválido' }
   }
-
   const [, dominio] = trimmed.split('@')
   if (!DOMINIOS_PERMITIDOS.includes(dominio)) {
     return { valido: false, mensaje: '✕ Usa Gmail, Outlook, Yahoo o iCloud para recibir la invitación' }
   }
-
   return { valido: true, mensaje: '✓ Correo válido - se enviará la invitación aquí' }
+}
+
+// ─── Hook: cargar asignaciones globales del plantel ──────────────────────────
+function useAsignacionesGlobales(docenteIdActual: string | null) {
+  const supabase = createClient()
+  const [paresOcupados, setParesOcupados] = useState<ParOcupado[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('asignaciones_docentes')
+        .select('grupo_id, asignatura_id, docente_id')
+
+      if (data) {
+        // Excluir las asignaciones del docente actual
+        // (para que al editar, sus propias asignaciones no bloqueen sus opciones)
+        const ocupados = data
+          .filter(r => r.docente_id !== docenteIdActual)
+          .map(r => ({ grupo_id: r.grupo_id, asignatura_id: r.asignatura_id }))
+        setParesOcupados(ocupados)
+      }
+    } catch (err) {
+      console.error('Error al cargar asignaciones globales:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase, docenteIdActual])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  return { paresOcupados, loadingGlobal: loading }
 }
 
 export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   const { grupos: gruposDB, loading: loadingGrupos } = useGrupos()
   const { asignaturas: asignaturasDB, loading: loadingAsignaturas } = useAsignaturas()
+  const { paresOcupados, loadingGlobal } = useAsignacionesGlobales(docente?.id ?? null)
 
   const [form, setForm] = useState({
     nombre_completo: docente?.nombre_completo ?? '',
@@ -94,30 +125,57 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   const [error, setError] = useState('')
   const [agregado, setAgregado] = useState(false)
 
-  // Validación derivada en render — sin useEffect ni setState
   const { valido: emailValido, mensaje: emailMensaje } = useMemo(
     () => validarEmail(form.email, docente?.email),
     [form.email, docente?.email]
   )
 
-  const asignaturasYaAsignadas = new Set(
-    asignaciones.filter(a => a.grupo_id === grupoSelec).map(a => a.asignatura_id)
+  // ── Asignaturas ya usadas en la sesión actual para el grupo seleccionado ──
+  const asignaturasEnSesionParaGrupo = useMemo(
+    () => new Set(asignaciones.filter(a => a.grupo_id === grupoSelec).map(a => a.asignatura_id)),
+    [asignaciones, grupoSelec]
+  )
+
+  // ── Asignaturas bloqueadas globalmente para el grupo seleccionado ──────────
+  const asignaturasOcupadasEnGrupo = useMemo(
+    () => new Set(
+      paresOcupados
+        .filter(p => p.grupo_id === grupoSelec)
+        .map(p => p.asignatura_id)
+    ),
+    [paresOcupados, grupoSelec]
   )
 
   const gruposFiltrados = gruposDB.filter(g =>
     `${g.grado}${g.numero}`.toLowerCase().includes(busquedaGrupo.toLowerCase())
   )
 
+  // Asignaturas disponibles = no ocupadas globalmente Y no agregadas en sesión
   const asignaturasFiltradas = asignaturasDB.filter(a =>
-    !asignaturasYaAsignadas.has(a.id) &&
+    !asignaturasEnSesionParaGrupo.has(a.id) &&
+    !asignaturasOcupadasEnGrupo.has(a.id) &&
     a.nombre.toLowerCase().includes(busquedaAsignatura.toLowerCase())
   )
+
+  // Cuántas asignaturas disponibles hay para el grupo seleccionado
+  const disponiblesEnGrupo = grupoSelec
+    ? asignaturasDB.filter(a =>
+        !asignaturasEnSesionParaGrupo.has(a.id) &&
+        !asignaturasOcupadasEnGrupo.has(a.id)
+      ).length
+    : null
 
   function agregarAsignacion() {
     if (!grupoSelec || !asignaturaSelec) { setError('Selecciona una asignatura y un grupo'); return }
     const grupo = gruposDB.find(g => g.id === grupoSelec)
     const asignatura = asignaturasDB.find(a => a.id === asignaturaSelec)
     if (!grupo || !asignatura) { setError('Grupo o asignatura no encontrada'); return }
+
+    // Doble check por si acaso
+    if (asignaturasOcupadasEnGrupo.has(asignaturaSelec)) {
+      setError('Esta asignatura ya está asignada a otro docente en este grupo')
+      return
+    }
 
     setAsignaciones(prev => [...prev, {
       grupo_id: grupo.id, asignatura_id: asignatura.id,
@@ -138,7 +196,6 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
     if (!form.email.trim()) { setError('El correo es obligatorio'); return }
     if (emailValido === false) { setError('El correo no es válido'); return }
     if (emailValido === null) { setError('Escribe un correo válido'); return }
-
     onGuardar({
       nombre_completo: form.nombre_completo.trim(),
       email: form.email.trim().toLowerCase(),
@@ -147,7 +204,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
   }
 
   const formularioValido = form.nombre_completo.trim() && form.email.trim() && emailValido === true
-  const cargandoDatos = loadingGrupos || loadingAsignaturas
+  const cargandoDatos = loadingGrupos || loadingAsignaturas || loadingGlobal
 
   if (typeof window === 'undefined') return null
 
@@ -203,7 +260,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
             </div>
           )}
 
-          {/* Email personal */}
+          {/* Email */}
           {!mostrarTabla && (
             <div>
               <label style={{ fontSize: '0.875rem', fontWeight: 500, color: '#475569', display: 'block', marginBottom: '0.25rem' }}>
@@ -277,6 +334,7 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
               <div style={{ borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', padding: '0.875rem 1rem', borderBottom: '1px solid #f1f5f9', background: '#fafafa', flexShrink: 0 }}>
+
                   {/* Selector asignatura */}
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => { if (grupoSelec) setMostrarAsignaturas(prev => !prev) }}
@@ -289,13 +347,33 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         fontWeight: asignaturaSelec ? 600 : 400, opacity: grupoSelec ? 1 : 0.6,
                       }}>
-                      <span>{!grupoSelec ? 'Selecciona un grupo primero' : asignaturaSelec ? asignaturasDB.find(a => a.id === asignaturaSelec)?.nombre : 'Seleccionar asignatura'}</span>
+                      <span>
+                        {!grupoSelec
+                          ? 'Selecciona un grupo primero'
+                          : asignaturaSelec
+                            ? asignaturasDB.find(a => a.id === asignaturaSelec)?.nombre
+                            : disponiblesEnGrupo === 0
+                              ? 'Sin asignaturas disponibles'
+                              : 'Seleccionar asignatura'}
+                      </span>
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
                         style={{ transform: mostrarAsignaturas ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0, color: '#94a3b8' }}>
                         <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
-                    {mostrarAsignaturas && (
+
+                    {/* Badge de disponibles */}
+                    {grupoSelec && disponiblesEnGrupo !== null && (
+                      <div style={{ position: 'absolute', top: '-8px', right: '8px', fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: 9999,
+                        background: disponiblesEnGrupo === 0 ? '#fef2f2' : '#f0fdf4',
+                        color: disponiblesEnGrupo === 0 ? '#dc2626' : '#16a34a',
+                        border: `1px solid ${disponiblesEnGrupo === 0 ? '#fecaca' : '#bbf7d0'}`,
+                      }}>
+                        {disponiblesEnGrupo === 0 ? 'Lleno' : `${disponiblesEnGrupo} libre${disponiblesEnGrupo !== 1 ? 's' : ''}`}
+                      </div>
+                    )}
+
+                    {mostrarAsignaturas && grupoSelec && (
                       <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', borderRadius: '0.75rem', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', maxHeight: '252px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '0.5rem', borderBottom: '1px solid #f1f5f9' }}>
                           <input type="text" placeholder="Buscar asignatura..." value={busquedaAsignatura}
@@ -303,7 +381,15 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                             style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.375rem 0.5rem', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box' }} />
                         </div>
                         <div style={{ overflowY: 'auto', flex: 1 }}>
-                          {asignaturasFiltradas.map(a => {
+                          {asignaturasFiltradas.length === 0 ? (
+                            <div style={{ padding: '1.25rem', textAlign: 'center' }}>
+                              <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>
+                                {busquedaAsignatura
+                                  ? 'Sin resultados'
+                                  : 'Todas las asignaturas de este grupo ya están asignadas a otro docente'}
+                              </p>
+                            </div>
+                          ) : asignaturasFiltradas.map(a => {
                             const sel = asignaturaSelec === a.id
                             return (
                               <button key={a.id} onClick={() => { setAsignaturaSelec(a.id); setMostrarAsignaturas(false); setBusquedaAsignatura('') }}
@@ -338,12 +424,20 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                       <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
                         <th style={{ textAlign: 'left', padding: '0.5rem 1.25rem', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grupo</th>
                         <th style={{ textAlign: 'left', padding: '0.5rem 1.25rem', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grado</th>
+                        <th style={{ textAlign: 'left', padding: '0.5rem 1.25rem', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Disponibles</th>
                         <th style={{ padding: '0.5rem 1.25rem' }} />
                       </tr>
                     </thead>
                     <tbody>
                       {gruposFiltrados.map(grupo => {
                         const seleccionado = grupoSelec === grupo.id
+                        // Cuántas asignaturas libres tiene este grupo
+                        const ocupadasEnEsteGrupo = paresOcupados.filter(p => p.grupo_id === grupo.id).length
+                        const asignaturasEnSesionParaEsteGrupo = asignaciones.filter(a => a.grupo_id === grupo.id).length
+                        const totalOcupadas = ocupadasEnEsteGrupo + asignaturasEnSesionParaEsteGrupo
+                        const totalAsignaturas = asignaturasDB.length
+                        const libres = Math.max(0, totalAsignaturas - totalOcupadas)
+
                         return (
                           <tr key={grupo.id}
                             style={{ borderBottom: '1px solid #f8fafc', background: seleccionado ? '#eff6ff' : 'white', cursor: 'pointer' }}
@@ -358,7 +452,19 @@ export default function DocenteModal({ docente, onGuardar, onCerrar }: Props) {
                                 <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f' }}>{grupo.grado}° - {grupo.numero}</span>
                               </div>
                             </td>
-                            <td style={{ padding: '0.625rem 1.25rem' }}><span style={{ fontSize: '0.75rem', color: '#64748b' }}>{grupo.grado}° Grado</span></td>
+                            <td style={{ padding: '0.625rem 1.25rem' }}>
+                              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{grupo.grado}° Grado</span>
+                            </td>
+                            <td style={{ padding: '0.625rem 1.25rem' }}>
+                              <span style={{
+                                fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 9999,
+                                background: libres === 0 ? '#fef2f2' : '#f0fdf4',
+                                color: libres === 0 ? '#dc2626' : '#16a34a',
+                                border: `1px solid ${libres === 0 ? '#fecaca' : '#bbf7d0'}`,
+                              }}>
+                                {libres === 0 ? 'Sin espacio' : `${libres} libre${libres !== 1 ? 's' : ''}`}
+                              </span>
+                            </td>
                             <td style={{ padding: '0.625rem 1.25rem', textAlign: 'right' }}>
                               {seleccionado && <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '0.5rem', background: '#dbeafe', color: '#2563eb' }}>Seleccionado</span>}
                             </td>
