@@ -725,19 +725,10 @@ export default function SeguimientoPage() {
                           <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0' }}>{grupo.total_alumnos} alumnos</p>
                         </div>
                       </div>
-                      {/* Asignaturas en texto gris plano */}
-                      {asignaturasUnicas.length > 0 && (
-                        <div style={{ paddingTop: '0.125rem' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            Asignaturas:
-                          </span>
-                          <div style={{ marginTop: '0.3rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                            {asignaturasUnicas.map(asig => (
-                              <span key={asig} style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.4 }}>{asig}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {/* Contador de asignaturas */}
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        Asignaturas: <strong style={{ color: '#64748b' }}>{asignaturasUnicas.length}</strong>
+                      </span>
                     </button>
                   )
                 })}
