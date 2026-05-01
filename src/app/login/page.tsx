@@ -154,7 +154,7 @@ export default function LoginPage() {
         {/* Sidebar oscuro */}
         <div className="mac-sidebar" style={{
           width: 380, flexShrink: 0,
-          background: '#1c1c1e',
+          background: 'linear-gradient(145deg, #1e6fcc 0%, #1a5fb4 40%, #155ca0 100%)',
           position: 'relative', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
           padding: '3rem 2.5rem',
@@ -163,14 +163,18 @@ export default function LoginPage() {
           {/* Fondo imagen sutil */}
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/fondo.png)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }}/>
           {/* Gradient overlay */}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(28,28,30,0.6) 0%, rgba(28,28,30,0.95) 100%)' }}/>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(30,111,204,0.3) 0%, rgba(21,92,160,0.7) 100%)' }}/>
 
+          {/* Highlight cristal superior */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%)', zIndex: 0, pointerEvents: 'none' }}/>
+          {/* Borde izquierdo brillante */}
+          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.05) 100%)', zIndex: 0 }}/>
           <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Logo */}
-            <div style={{ marginBottom: 'auto', paddingTop: '0.5rem' }}>
+            <div style={{ marginBottom: 'auto', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <div style={{
                 width: 72, height: 72, borderRadius: 20,
-                background: '#636366',
+                background: '#d1d1d6',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: '1.5rem',
               }}>
@@ -180,22 +184,21 @@ export default function LoginPage() {
               <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 2.5rem', lineHeight: 1.6 }}>CBTA 62 · Gestión escolar</p>
 
               {/* Features con dot de color */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'flex-start', marginTop: '2.5rem' }}>
                 {[
                   { text: 'Gestión académica', dot: dots[2].color },
                   { text: 'Control de asistencias', dot: dots[1].color },
                   { text: 'Seguimiento académico', dot: dots[0].color },
                 ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.dot, flexShrink: 0, boxShadow: `0 0 8px ${item.dot}88` }}/>
-                    <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.55)', fontWeight: 400 }}>{item.text}</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.dot, flexShrink: 0 }}/>
+                    <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', fontWeight: 400 }}>{item.text}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Footer sidebar */}
-            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.18)' }}>© 2026 Dinoti Platforms</span>
+
           </div>
         </div>
 

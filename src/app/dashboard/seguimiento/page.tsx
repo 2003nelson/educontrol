@@ -317,7 +317,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
         {/* Izquierda: breadcrumb + buscador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexShrink: 0 }}>
           <VolverBtn onClick={volver}/>
@@ -340,7 +340,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
         </div>
 
         {/* Derecha: filtros fijos */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {btns.map(btn => {
             const estaAbierto = panelAbierto === btn.id
             const tieneValor  = btn.sub !== null
@@ -369,8 +369,10 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
                     opacity: disabled ? 0.5 : 1,
                     boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
                     transition: 'all 0.2s',
+                    maxWidth: btn.id === 'asignaturas' && tieneValor ? 220 : 'none',
+                    overflow: 'hidden',
                   }}>
-                  <span>{btn.label}{btn.sub ? (' · ' + btn.sub) : ''}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{btn.label}{btn.sub ? (' · ' + btn.sub) : ''}</span>
                   <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
                     style={{ transform: estaAbierto ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}>
                     <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
