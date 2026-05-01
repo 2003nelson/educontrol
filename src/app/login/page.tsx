@@ -26,34 +26,18 @@ const loginLimiter = {
     return { permitido: this.intentos < MAX_INTENTOS }
   },
   registrarIntento(exitoso: boolean) {
-    if (exitoso) {
-      this.intentos = 0
-      this.bloqueadoHasta = 0
-    } else {
+    if (exitoso) { this.intentos = 0; this.bloqueadoHasta = 0 }
+    else {
       this.intentos++
-      if (this.intentos >= MAX_INTENTOS) {
-        this.bloqueadoHasta = Date.now() + TIEMPO_BLOQUEO
-      }
+      if (this.intentos >= MAX_INTENTOS) this.bloqueadoHasta = Date.now() + TIEMPO_BLOQUEO
     }
   },
-  getIntentosRestantes(): number {
-    return Math.max(0, MAX_INTENTOS - this.intentos)
-  }
+  getIntentosRestantes(): number { return Math.max(0, MAX_INTENTOS - this.intentos) }
 }
 
-function validarEmail(email: string): boolean {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return regex.test(email)
-}
-
-function sanitizeEmail(value: string): string {
-  return value.trim().toLowerCase()
-}
-
-function validarPassword(password: string): boolean {
-  return password.length >= 6
-}
-
+function validarEmail(email: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) }
+function sanitizeEmail(v: string): string { return v.trim().toLowerCase() }
+function validarPassword(p: string): boolean { return p.length >= 6 }
 function validarOrigin(): boolean {
   if (typeof window === 'undefined') return true
   return ALLOWED_ORIGINS.includes(window.location.origin)
@@ -63,255 +47,270 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [showPass, setShowPass]   = useState(false)
-  const [error, setError]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [olvidé, setOlvidé]       = useState(false)
-  const [resetEmail, setResetEmail]   = useState('')
-  const [resetSent, setResetSent]     = useState(false)
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [olvidé, setOlvidé]     = useState(false)
+  const [resetEmail, setResetEmail]     = useState('')
+  const [resetSent, setResetSent]       = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+  const [focusEmail, setFocusEmail]     = useState(false)
+  const [focusPass, setFocusPass]       = useState(false)
 
   async function handleLogin() {
     const { permitido, minutosRestantes } = loginLimiter.puedeIntentar()
-    if (!permitido) {
-      setError(`Demasiados intentos fallidos. Intenta en ${minutosRestantes} minuto${minutosRestantes! > 1 ? 's' : ''}.`)
-      return
-    }
-
+    if (!permitido) { setError(`Demasiados intentos. Intenta en ${minutosRestantes} min.`); return }
     if (!email || !password) { setError('Completa todos los campos'); return }
-    if (!validarEmail(email)) { setError('Formato de correo electrónico inválido'); return }
-    if (!validarPassword(password)) { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (!validarEmail(email)) { setError('Formato de correo inválido'); return }
+    if (!validarPassword(password)) { setError('Mínimo 6 caracteres'); return }
 
-    setLoading(true)
-    setError('')
-
+    setLoading(true); setError('')
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: sanitizeEmail(email),
-        password,
+        email: sanitizeEmail(email), password,
       })
-
       if (authError) {
         loginLimiter.registrarIntento(false)
-        const intentosRestantes = loginLimiter.getIntentosRestantes()
-        if (intentosRestantes > 0 && intentosRestantes <= 2) {
-          setError(`Correo o contraseña incorrectos. Te quedan ${intentosRestantes} intento${intentosRestantes > 1 ? 's' : ''}.`)
-        } else {
-          setError('Correo o contraseña incorrectos')
-        }
-        setLoading(false)
-        return
+        const r = loginLimiter.getIntentosRestantes()
+        setError(r > 0 && r <= 2 ? `Credenciales incorrectas. ${r} intento${r > 1 ? 's' : ''} restante${r > 1 ? 's' : ''}.` : 'Correo o contraseña incorrectos')
+        setLoading(false); return
       }
-
       loginLimiter.registrarIntento(true)
-
       const meta = data.user?.user_metadata
-      if (meta?.primer_login === true) {
-        router.push('/cambiar-password')
-        return
-      }
-
-      // Verificar rol para redirigir correctamente
-      const { data: usuarioData } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .eq('auth_id', data.user.id)
-        .single()
-
-      const rol = usuarioData?.rol ?? meta?.rol
-
-      if (rol === 'super_admin') {
-        router.push('/super-admin')
-      } else if (rol === 'docente') {
-        router.push('/docente/grupos')
-      } else {
-        router.push('/dashboard')
-      }
-      // No setLoading(false) — la página se desmonta al navegar
+      if (meta?.primer_login === true) { router.push('/cambiar-password'); return }
+      const { data: ud } = await supabase.from('usuarios').select('rol').eq('auth_id', data.user.id).single()
+      const rol = ud?.rol ?? meta?.rol
+      if (rol === 'super_admin') router.push('/super-admin')
+      else if (rol === 'docente') router.push('/docente/grupos')
+      else router.push('/dashboard')
     } catch (err) {
-      console.error('Error en login:', err)
-      setError('Error al iniciar sesión. Intenta de nuevo.')
-      setLoading(false)
+      console.error(err); setError('Error al iniciar sesión.'); setLoading(false)
     }
   }
 
   async function handleReset() {
     if (!validarOrigin()) { setError('Dominio no autorizado'); return }
-    if (!resetEmail) { setError('Ingresa tu correo electrónico'); return }
-    if (!validarEmail(resetEmail)) { setError('Formato de correo electrónico inválido'); return }
-
-    setResetLoading(true)
-    setError('')
-
+    if (!resetEmail) { setError('Ingresa tu correo'); return }
+    if (!validarEmail(resetEmail)) { setError('Formato inválido'); return }
+    setResetLoading(true); setError('')
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        sanitizeEmail(resetEmail),
-        { redirectTo: `${window.location.origin}/cambiar-password` }
-      )
-      if (resetError) { setError('Error al enviar el correo. Intenta de nuevo.'); setResetLoading(false); return }
-      setResetSent(true)
-      setResetLoading(false)
-    } catch (err) {
-      console.error('Error en reset:', err)
-      setError('Error al enviar el correo. Intenta de nuevo.')
-      setResetLoading(false)
-    }
+      const { error: re } = await supabase.auth.resetPasswordForEmail(sanitizeEmail(resetEmail), {
+        redirectTo: `${window.location.origin}/cambiar-password`
+      })
+      if (re) { setError('Error al enviar correo.'); setResetLoading(false); return }
+      setResetSent(true); setResetLoading(false)
+    } catch (err) { console.error(err); setError('Error.'); setResetLoading(false) }
   }
 
+  const dots = [
+    { color: '#ef4444' },
+    { color: '#f59e0b' },
+    { color: '#22c55e' },
+  ]
+
   return (
-    <div className="min-h-screen flex" style={{ background: '#0f172a' }}>
+    <div style={{
+      minHeight: '100vh',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
+    }}>
       <style>{`
-        @keyframes slideInLeft  { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
-        @keyframes slideInRight { from { opacity:0; transform:translateX(40px);  } to { opacity:1; transform:translateX(0); } }
-        @keyframes fadeInUp     { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
-        @media (max-width: 768px) {
-          .login-left-panel  { display: none !important; }
-          .login-right-panel { flex: 1 !important; padding: 2rem 1.5rem !important; }
-          .login-card        { animation: fadeInUp 0.6s cubic-bezier(0.22,1,0.36,1) !important; margin-top: 6rem !important; }
-          .mobile-logo       { display: flex !important; flex-direction: column; align-items: center; gap: 0.5rem; }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-24px) }
+          to   { opacity: 1; transform: translateX(0) }
         }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(24px) }
+          to   { opacity: 1; transform: translateX(0) }
+        }
+        @keyframes dotPulse {
+          0%, 100% { opacity: 0.35; transform: scale(0.85) }
+          50%      { opacity: 1;    transform: scale(1)    }
+        }
+        .lbtn { transition: all 0.18s ease; }
+        .lbtn:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,122,255,0.3) !important; }
+        .lbtn:active:not(:disabled) { transform: translateY(0); filter: brightness(0.96); }
+        .linput { transition: border-color 0.18s, box-shadow 0.18s; }
+        .linput:hover { border-color: #c7c7cc !important; }
+        @media (max-width: 768px) {
+          .mac-window { flex-direction: column !important; }
+          .mac-sidebar { display: none !important; }
+          .mac-form-inner { padding: 2rem 1.5rem !important; }
+          .mobile-logo { display: flex !important; }
+        }
+        .mobile-logo { display: none; }
       `}</style>
 
-      {/* Panel izquierdo */}
-      <div className="login-left-panel" style={{ flex: '1', position: 'relative', overflow: 'hidden', animation: 'slideInLeft 0.8s cubic-bezier(0.22,1,0.36,1)' }}>
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/fondo.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}/>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(59,130,246,0.6) 0%, rgba(37,99,235,0.75) 100%)' }}/>
-        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '4rem', color: 'white' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '2rem', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <span style={{ fontSize: '2.5rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: 'white' }}>E</span>
-          </div>
-          <h1 style={{ fontSize: '3rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', margin: '0 0 1rem', letterSpacing: '-0.02em' }}>EduControl</h1>
-          <p style={{ fontSize: '1.25rem', margin: '0 0 3rem', maxWidth: '500px', lineHeight: 1.6, color: 'rgba(255,255,255,0.9)' }}>
-            Sistema integral de administración escolar para instituciones educativas modernas
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {['Gestión académica completa', 'Control de asistencias', 'Seguimiento de calificaciones'].map((text, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 700 }}>✓</div>
-                <span style={{ fontSize: '1rem', fontWeight: 500 }}>{text}</span>
+      {/* Layout pantalla completa */}
+      <div className="mac-window" style={{
+        display: 'flex',
+        width: '100%',
+        minHeight: '100vh',
+        position: 'fixed',
+        inset: 0,
+      }}>
+
+        {/* Sidebar oscuro */}
+        <div className="mac-sidebar" style={{
+          width: 380, flexShrink: 0,
+          background: '#1c1c1e',
+          position: 'relative', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          padding: '3rem 2.5rem',
+          animation: 'slideInLeft 0.5s cubic-bezier(0.22,1,0.36,1)',
+        }}>
+          {/* Fondo imagen sutil */}
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/fondo.png)', backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.2 }}/>
+          {/* Gradient overlay */}
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(28,28,30,0.6) 0%, rgba(28,28,30,0.95) 100%)' }}/>
+
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Logo */}
+            <div style={{ marginBottom: 'auto', paddingTop: '0.5rem' }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: 20,
+                background: '#636366',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: '1.5rem',
+              }}>
+                <span style={{ color: 'white', fontSize: 26, fontWeight: 700, letterSpacing: '-0.5px' }}>EC</span>
               </div>
-            ))}
-          </div>
-          <p style={{ position: 'absolute', bottom: '2rem', left: '4rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>© 2026 Dinoti Platforms · EduControl</p>
-        </div>
-      </div>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>EduControl</h2>
+              <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 2.5rem', lineHeight: 1.6 }}>CBTA 62 · Gestión escolar</p>
 
-      {/* Panel derecho */}
-      <div className="login-right-panel" style={{ flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#0f172a', animation: 'slideInRight 0.8s cubic-bezier(0.22,1,0.36,1)' }}>
-
-        <div className="mobile-logo" style={{ position: 'absolute', top: '2rem', left: '50%', transform: 'translateX(-50%)', display: 'none' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white', fontFamily: 'Outfit, sans-serif' }}>E</span>
-          </div>
-          <p style={{ fontSize: '1.125rem', fontWeight: 700, color: 'white', fontFamily: 'Outfit, sans-serif', margin: 0 }}>EduControl</p>
-        </div>
-
-        <div className="login-card" style={{ width: '100%', maxWidth: '420px', background: 'white', borderRadius: '1.5rem', padding: '2.5rem', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-          <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1e3a5f', fontFamily: 'Outfit, sans-serif', margin: '0 0 0.5rem' }}>
-              {olvidé ? 'Recuperar contraseña' : 'Iniciar sesión'}
-            </h2>
-            <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>
-              {olvidé ? 'Te enviaremos un enlace de recuperación' : 'Accede a tu cuenta'}
-            </p>
-          </div>
-
-          {olvidé ? (
-            <div>
-              {resetSent ? (
-                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#dcfce7', border: '2px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                    <svg width="24" height="24" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              {/* Features con dot de color */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                {[
+                  { text: 'Gestión académica', dot: dots[2].color },
+                  { text: 'Control de asistencias', dot: dots[1].color },
+                  { text: 'Seguimiento académico', dot: dots[0].color },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.dot, flexShrink: 0, boxShadow: `0 0 8px ${item.dot}88` }}/>
+                    <span style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.55)', fontWeight: 400 }}>{item.text}</span>
                   </div>
-                  <p style={{ fontSize: '1rem', fontWeight: 600, color: '#1e3a5f', margin: '0 0 0.5rem' }}>Correo enviado</p>
-                  <p style={{ fontSize: '0.875rem', color: '#64748b', margin: '0 0 2rem' }}>Revisa tu bandeja de entrada</p>
-                  <button onClick={() => { setOlvidé(false); setResetSent(false); setResetEmail(''); setError('') }}
-                    style={{ fontSize: '0.875rem', fontWeight: 600, color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    ← Volver al inicio de sesión
-                  </button>
-                </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer sidebar */}
+            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.18)' }}>© 2026 Dinoti Platforms</span>
+          </div>
+        </div>
+
+        {/* Panel principal blanco */}
+        <div style={{ flex: 1, background: 'white', display: 'flex', flexDirection: 'column', overflowY: 'auto', animation: 'slideInRight 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
+
+
+
+          {/* Contenido del formulario */}
+          <div className="mac-form-inner" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 3.5rem' }}>
+            <div style={{ width: '100%', maxWidth: 400 }}>
+
+              {olvidé ? (
+                resetSent ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0fdf4', border: '1.5px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                      <svg width="20" height="20" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                    <p style={{ fontSize: '1rem', fontWeight: 600, color: '#1c1c1e', margin: '0 0 0.375rem' }}>Correo enviado</p>
+                    <p style={{ fontSize: '0.8rem', color: '#8e8e93', margin: '0 0 1.75rem' }}>Revisa tu bandeja de entrada</p>
+                    <button onClick={() => { setOlvidé(false); setResetSent(false); setResetEmail(''); setError('') }}
+                      style={{ fontSize: '0.8rem', color: '#007aff', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                      ← Volver
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h2 style={{ fontSize: '1.625rem', fontWeight: 700, color: '#1c1c1e', margin: '0 0 0.375rem', letterSpacing: '-0.02em' }}>Recuperar acceso</h2>
+                    <p style={{ fontSize: '0.875rem', color: '#8e8e93', margin: '0 0 1.875rem' }}>Enviaremos un enlace a tu correo</p>
+
+                    <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Correo</label>
+                    <input type="email" value={resetEmail} onChange={e => setResetEmail(sanitizeEmail(e.target.value))} placeholder="correo@dominio.com"
+                      className="linput"
+                      style={{ width: '100%', border: '1.5px solid #e5e5ea', borderRadius: 12, padding: '0.875rem 1rem', fontSize: '0.9375rem', color: '#1c1c1e', outline: 'none', background: '#fafafa', boxSizing: 'border-box', marginBottom: error ? '0.75rem' : '1.25rem' }}
+                      onFocus={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,122,255,0.1)' }}
+                      onBlur={e => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = 'none' }} />
+
+                    {error && <p style={{ fontSize: '0.74rem', color: '#ff3b30', margin: '0 0 0.875rem', fontWeight: 500 }}>{error}</p>}
+
+                    <button onClick={handleReset} disabled={!resetEmail || resetLoading} className="lbtn"
+                      style={{ width: '100%', padding: '0.95rem', borderRadius: 12, border: 'none', background: resetEmail && validarEmail(resetEmail) ? '#007aff' : '#e5e5ea', color: resetEmail && validarEmail(resetEmail) ? 'white' : '#aeaeb2', fontSize: '0.9375rem', fontWeight: 600, cursor: resetEmail ? 'pointer' : 'not-allowed', marginBottom: '0.875rem', boxShadow: '0 2px 8px rgba(0,122,255,0.18)' }}>
+                      {resetLoading ? 'Enviando...' : 'Enviar enlace'}
+                    </button>
+                    <button onClick={() => { setOlvidé(false); setError('') }}
+                      style={{ width: '100%', fontSize: '0.78rem', color: '#8e8e93', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}>
+                      ← Volver al inicio de sesión
+                    </button>
+                  </>
+                )
               ) : (
                 <>
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f', display: 'block', marginBottom: '0.5rem' }}>Correo electrónico</label>
-                    <input type="email" value={resetEmail} onChange={e => setResetEmail(sanitizeEmail(e.target.value))} placeholder="correo@escuela.edu.mx"
-                      style={{ width: '100%', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.875rem 1rem', fontSize: '0.9375rem', color: '#1e3a5f', outline: 'none', boxSizing: 'border-box' }}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
+                  {/* Logo móvil */}
+                  <div className="mobile-logo" style={{ flexDirection: 'column', alignItems: 'center', marginBottom: '1.75rem', gap: '0.5rem' }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#8e8e93', fontSize: 20, fontWeight: 700, letterSpacing: '-0.5px' }}>EC</span>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: '#8e8e93', fontWeight: 500 }}>EduControl</span>
                   </div>
+
+                  <h2 style={{ fontSize: '1.625rem', fontWeight: 700, color: '#1c1c1e', margin: '0 0 0.375rem', letterSpacing: '-0.02em' }}>Bienvenido</h2>
+                  <p style={{ fontSize: '0.875rem', color: '#8e8e93', margin: '0 0 1.875rem' }}>Ingresa tus credenciales para continuar</p>
+
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Correo electrónico</label>
+                  <input type="email" value={email} onChange={e => setEmail(sanitizeEmail(e.target.value))} placeholder="correo@dominio.com" autoComplete="email"
+                    className="linput"
+                    style={{ width: '100%', border: `1.5px solid ${focusEmail ? '#007aff' : '#e5e5ea'}`, borderRadius: 12, padding: '0.875rem 1rem', fontSize: '0.9375rem', color: '#1c1c1e', outline: 'none', background: '#fafafa', boxSizing: 'border-box', marginBottom: '1rem', boxShadow: focusEmail ? '0 0 0 3px rgba(0,122,255,0.1)' : 'none', transition: 'all 0.18s' }}
+                    onFocus={() => setFocusEmail(true)} onBlur={() => setFocusEmail(false)}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#6c6c70', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Contraseña</label>
+                  <div style={{ position: 'relative', marginBottom: error ? '0.75rem' : '1.25rem' }}>
+                    <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password"
+                      className="linput"
+                      style={{ width: '100%', border: `1.5px solid ${focusPass ? '#007aff' : '#e5e5ea'}`, borderRadius: 12, padding: '0.875rem 3rem 0.875rem 1rem', fontSize: '0.9375rem', color: '#1c1c1e', outline: 'none', background: '#fafafa', boxSizing: 'border-box', boxShadow: focusPass ? '0 0 0 3px rgba(0,122,255,0.1)' : 'none', transition: 'all 0.18s' }}
+                      onFocus={() => setFocusPass(true)} onBlur={() => setFocusPass(false)}
+                      onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+                    <button onClick={() => setShowPass(p => !p)} type="button"
+                      style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aeaeb2', padding: 0, display: 'flex' }}>
+                      {showPass
+                        ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      }
+                    </button>
+                  </div>
+
                   {error && (
-                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
-                      <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>{error}</p>
+                    <div style={{ background: '#fff5f5', border: '1px solid #ffd7d5', borderRadius: 8, padding: '0.6rem 0.875rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff3b30', flexShrink: 0 }}/>
+                      <p style={{ fontSize: '0.76rem', color: '#ff3b30', margin: 0, fontWeight: 500 }}>{error}</p>
                     </div>
                   )}
-                  <button onClick={handleReset} disabled={!resetEmail || resetLoading}
-                    style={{ width: '100%', padding: '0.875rem', borderRadius: '0.75rem', border: 'none', background: resetEmail && validarEmail(resetEmail) ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : '#e2e8f0', color: resetEmail && validarEmail(resetEmail) ? 'white' : '#94a3b8', fontSize: '0.9375rem', fontWeight: 600, cursor: resetEmail && validarEmail(resetEmail) ? 'pointer' : 'not-allowed', marginBottom: '1rem' }}>
-                    {resetLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+
+                  <button onClick={handleLogin} disabled={loading} className="lbtn"
+                    style={{ width: '100%', padding: '0.95rem', borderRadius: 12, border: 'none', background: loading ? '#aeaeb2' : '#007aff', color: 'white', fontSize: '0.9375rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 2px 12px rgba(0,122,255,0.25)', marginBottom: '0.875rem' }}>
+                    {loading ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center' }}>
+                        {[0, 1, 2].map(i => (
+                          <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'white', display: 'inline-block', animation: `dotPulse 0.9s ease-in-out ${i * 0.16}s infinite` }}/>
+                        ))}
+                      </span>
+                    ) : 'Iniciar sesión'}
                   </button>
-                  <button onClick={() => { setOlvidé(false); setError('') }}
-                    style={{ width: '100%', fontSize: '0.875rem', fontWeight: 500, color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center' }}>
-                    ← Volver al inicio de sesión
+
+                  <button onClick={() => { setOlvidé(true); setResetEmail(email); setError('') }}
+                    style={{ width: '100%', fontSize: '0.78rem', color: '#007aff', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#0056cc')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#007aff')}>
+                    ¿Olvidaste tu contraseña?
                   </button>
                 </>
               )}
             </div>
-          ) : (
-            <div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f', display: 'block', marginBottom: '0.5rem' }}>Correo electrónico</label>
-                <input type="email" value={email} onChange={e => setEmail(sanitizeEmail(e.target.value))} placeholder="correo@escuela.edu.mx" autoComplete="email"
-                  style={{ width: '100%', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.875rem 1rem', fontSize: '0.9375rem', color: '#1e3a5f', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
-              </div>
+          </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f', display: 'block', marginBottom: '0.5rem' }}>Contraseña</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                    style={{ width: '100%', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '0.75rem', padding: '0.875rem 3rem 0.875rem 1rem', fontSize: '0.9375rem', color: '#1e3a5f', outline: 'none', boxSizing: 'border-box' }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#3b82f6')}
-                    onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')} />
-                  <button onClick={() => setShowPass(p => !p)} type="button"
-                    style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, display: 'flex', alignItems: 'center' }}>
-                    {showPass ? (
-                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    ) : (
-                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#dc2626', margin: 0 }}>⚠️ {error}</p>
-                </div>
-              )}
-
-              <button onClick={handleLogin} disabled={loading}
-                style={{ width: '100%', padding: '1rem', borderRadius: '0.75rem', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', fontSize: '1rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, boxShadow: '0 4px 20px rgba(59,130,246,0.4)', marginBottom: '1.25rem' }}
-                onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = '0 6px 28px rgba(59,130,246,0.6)' }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(59,130,246,0.4)' }}>
-                {loading ? 'Verificando...' : 'Iniciar sesión'}
-              </button>
-
-              <button onClick={() => { setOlvidé(true); setResetEmail(email); setError('') }}
-                style={{ fontSize: '0.875rem', fontWeight: 500, color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', width: '100%' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#3b82f6')}>
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
