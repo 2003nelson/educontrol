@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -13,8 +13,43 @@ export default function CambiarPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [showNueva, setShowNueva] = useState(false)
   const [showConfirmar, setShowConfirmar] = useState(false)
+  const [sesionLista, setSesionLista] = useState(false)
+  const [procesando, setProcesando] = useState(true)
+
+  // Capturar el token del hash URL al cargar la página
+  useEffect(() => {
+    async function procesarToken() {
+      // Supabase detecta automáticamente el token en el hash
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setSesionLista(true)
+        setProcesando(false)
+        return
+      }
+
+      // Si no hay sesión, escuchar el evento de auth que dispara el token del hash
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+          if (session) {
+            setSesionLista(true)
+            setProcesando(false)
+            subscription.unsubscribe()
+          }
+        }
+      })
+
+      // Timeout de seguridad — si en 5s no hay sesión, mostrar error
+      setTimeout(() => {
+        setProcesando(false)
+        subscription.unsubscribe()
+      }, 5000)
+    }
+
+    procesarToken()
+  }, [supabase])
 
   async function handleCambiar() {
+    if (!sesionLista) { setError('Sesión no disponible. Usa el link del correo nuevamente.'); return }
     if (nueva !== confirmar) { setError('Las contraseñas no coinciden'); return }
     if (nueva.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return }
 
@@ -44,13 +79,22 @@ export default function CambiarPasswordPage() {
     // 3. Verificar rol para redirigir correctamente
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      // Primero intentar metadata (disponible inmediatamente)
+      const rolMeta = user.user_metadata?.rol as string | undefined
+
+      if (rolMeta === 'docente') {
+        router.push('/docente/grupos')
+        return
+      }
+
+      // Si no hay metadata, consultar la BD
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('rol')
         .eq('auth_id', user.id)
         .single()
 
-      const rol = usuarioData?.rol ?? user.user_metadata?.rol
+      const rol = usuarioData?.rol ?? rolMeta
 
       if (rol === 'docente') {
         router.push('/docente/grupos')
@@ -62,6 +106,22 @@ export default function CambiarPasswordPage() {
     } else {
       router.push('/login')
     }
+  }
+
+  if (procesando) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <style>{`@keyframes dotBounce { 0%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-10px);opacity:1} }`}</style>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[{c:'#ef4444',d:'0s'},{c:'#f59e0b',d:'0.15s'},{c:'#22c55e',d:'0.3s'}].map((dot,i) => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: dot.c, animation: `dotBounce 1.1s ease-in-out ${dot.d} infinite` }}/>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#8e8e93', margin: 0 }}>Verificando enlace...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -141,7 +201,7 @@ export default function CambiarPasswordPage() {
           <button
             onClick={handleCambiar}
             disabled={loading}
-            style={{ width: '100%', padding: '0.875rem', borderRadius: 10, border: 'none', background: loading ? '#aeaeb2' : '#007aff', color: 'white', fontSize: '0.9rem', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '0.5rem', boxShadow: loading ? 'none' : '0 2px 12px rgba(0,122,255,0.25)', transition: 'all 0.18s' }}
+            style={{ width: '100%', padding: '0.875rem', borderRadius: 10, border: 'none', background: loading || !sesionLista ? '#aeaeb2' : '#007aff', color: 'white', fontSize: '0.9rem', fontWeight: 600, cursor: loading || !sesionLista ? 'not-allowed' : 'pointer', marginTop: '0.5rem', boxShadow: loading || !sesionLista ? 'none' : '0 2px 12px rgba(0,122,255,0.25)', transition: 'all 0.18s' }}
           >
             {loading ? 'Guardando...' : 'Guardar contraseña'}
           </button>
