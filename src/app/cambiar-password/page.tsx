@@ -97,33 +97,29 @@ export default function CambiarPasswordPage() {
       return
     }
 
-    // 2. Marcar cuenta_activada en tabla usuarios
+    // 2. Marcar cuenta_activada y vincular auth_id en tabla usuarios
     if (updateData.user) {
       await supabase
         .from('usuarios')
-        .update({ cuenta_activada: true })
-        .eq('auth_id', updateData.user.id)
+        .update({
+          cuenta_activada: true,
+          auth_id: updateData.user.id,
+        })
+        .eq('email', updateData.user.email)
     }
 
     // 3. Verificar rol para redirigir correctamente
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      // Primero intentar metadata (disponible inmediatamente)
-      const rolMeta = user.user_metadata?.rol as string | undefined
-
-      if (rolMeta === 'docente') {
-        router.push('/docente/grupos')
-        return
-      }
-
-      // Si no hay metadata, consultar la BD
+      // Consultar rol por email (más confiable que auth_id que puede no estar vinculado aún)
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('rol')
-        .eq('auth_id', user.id)
+        .eq('email', user.email)
         .single()
 
-      const rol = usuarioData?.rol ?? rolMeta
+      // Fallback a metadata si la BD no responde
+      const rol = usuarioData?.rol ?? (user.user_metadata?.rol as string | undefined)
 
       if (rol === 'docente') {
         router.push('/docente/grupos')
