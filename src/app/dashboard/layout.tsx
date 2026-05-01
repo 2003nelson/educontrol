@@ -1,5 +1,6 @@
-import Sidebar from '@/components/Sidebar'
+// src/app/dashboard/layout.tsx
 import { PlantelProvider } from '@/contexts/PlantelContext'
+import DashboardLayoutContent from '@/components/DashboardLayoutContent'
 
 export default function DashboardLayout({
   children,
@@ -8,12 +9,9 @@ export default function DashboardLayout({
 }) {
   return (
     <PlantelProvider>
-      <div className="flex h-screen">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
-          {children}
-        </div>
-      </div>
+      <DashboardLayoutContent>
+        {children}
+      </DashboardLayoutContent>
     </PlantelProvider>
   )
 }
