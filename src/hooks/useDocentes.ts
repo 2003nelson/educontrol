@@ -8,7 +8,6 @@ import { usePlantelId } from '@/contexts/PlantelContext'
 // 🔒 TIPOS
 // ═════════════════════════════════════════════════════════════════
 
-// Supabase puede devolver el join como objeto o array según el tipo de relación
 type GrupoRaw = { numero: string; grado: number } | { numero: string; grado: number }[]
 type AsignaturaRaw = { nombre: string } | { nombre: string }[]
 
@@ -59,7 +58,6 @@ type EditarDocenteData = {
 // 🛠️ HELPERS
 // ═════════════════════════════════════════════════════════════════
 
-// Normaliza el join: Supabase puede devolver objeto o array[]
 function resolveGrupo(raw: GrupoRaw): { numero: string; grado: number } | undefined {
   if (Array.isArray(raw)) return raw[0]
   return raw ?? undefined
@@ -80,7 +78,6 @@ function validarEmailReal(email: string): { valido: boolean; error?: string } {
   const trimmed = email.trim().toLowerCase()
   if (!trimmed) return { valido: false, error: 'El correo es obligatorio' }
   if (!EMAIL_REGEX.test(trimmed)) return { valido: false, error: 'Formato de correo inválido' }
-
   const dominiosPermitidos = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com', 'live.com', 'protonmail.com']
   const [, dominio] = trimmed.split('@')
   if (!dominiosPermitidos.includes(dominio)) {
@@ -110,7 +107,6 @@ export function useDocentes() {
 
   const cargarDocentes = useCallback(async () => {
     if (!plantelId) { setLoading(false); return }
-
     try {
       setLoading(true)
       setError(null)
@@ -123,11 +119,7 @@ export function useDocentes() {
         .order('nombre_completo', { ascending: true })
 
       if (docentesError) throw docentesError
-
-      if (!docentesData || docentesData.length === 0) {
-        setDocentes([])
-        return
-      }
+      if (!docentesData || docentesData.length === 0) { setDocentes([]); return }
 
       const docenteIds = docentesData.map(d => d.id)
 
@@ -161,7 +153,6 @@ export function useDocentes() {
               asignatura_nombre: asignatura?.nombre ?? '',
             }
           })
-
         return { ...docente, asignaciones: asignacionesDelDocente }
       })
 
@@ -174,13 +165,10 @@ export function useDocentes() {
     }
   }, [plantelId, supabase])
 
-  useEffect(() => {
-    cargarDocentes()
-  }, [cargarDocentes])
+  useEffect(() => { cargarDocentes() }, [cargarDocentes])
 
   const crearDocente = async (data: CrearDocenteData): Promise<boolean> => {
     if (!plantelId) { setError('No hay plantel seleccionado'); return false }
-
     try {
       const nombreValidacion = validarNombre(data.nombre_completo)
       if (!nombreValidacion.valido) { setError(nombreValidacion.error || 'Nombre inválido'); return false }
@@ -279,11 +267,30 @@ export function useDocentes() {
     }
   }
 
+  // ── Eliminar docente: llama Edge Function para borrar también de auth.users ──
   const eliminarDocente = async (id: string): Promise<boolean> => {
     try {
-      await supabase.from('asignaciones_docentes').delete().eq('docente_id', id)
-      const { error: deleteError } = await supabase.from('usuarios').delete().eq('id', id).eq('plantel_id', plantelId)
-      if (deleteError) throw deleteError
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setError('Sesión no válida'); return false }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/eliminar-docente`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ docente_id: id }),
+        }
+      )
+
+      const result = await response.json()
+      if (!response.ok) {
+        setError(result.error ?? 'Error al eliminar docente')
+        return false
+      }
+
       await cargarDocentes()
       return true
     } catch (err) {
