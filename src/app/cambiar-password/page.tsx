@@ -111,15 +111,26 @@ export default function CambiarPasswordPage() {
     // 3. Verificar rol para redirigir correctamente
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      // Consultar rol por email (más confiable que auth_id que puede no estar vinculado aún)
+      // Usar metadata primero — siempre disponible y no depende de RLS
+      const rolMeta = user.user_metadata?.rol as string | undefined
+
+      if (rolMeta === 'docente') {
+        router.push('/docente/grupos')
+        return
+      }
+      if (rolMeta === 'super_admin') {
+        router.push('/super-admin')
+        return
+      }
+
+      // Fallback: consultar BD por email
       const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('rol')
         .eq('email', user.email)
-        .single()
+        .maybeSingle()
 
-      // Fallback a metadata si la BD no responde
-      const rol = usuarioData?.rol ?? (user.user_metadata?.rol as string | undefined)
+      const rol = usuarioData?.rol ?? rolMeta
 
       if (rol === 'docente') {
         router.push('/docente/grupos')
