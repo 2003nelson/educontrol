@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
@@ -43,9 +43,14 @@ function validarOrigin(): boolean {
   return ALLOWED_ORIGINS.includes(window.location.origin)
 }
 
-export default function LoginPage() {
+import { Suspense } from 'react'
+
+function LoginContent() {
   const router = useRouter()
   const supabase = createClient()
+
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get('returnTo')
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -82,6 +87,18 @@ export default function LoginPage() {
       if (meta?.primer_login === true) { router.push('/cambiar-password'); return }
       const { data: ud } = await supabase.from('usuarios').select('rol').eq('auth_id', data.user.id).single()
       const rol = ud?.rol ?? meta?.rol
+
+      // Si hay returnTo y coincide con el rol, redirigir ahí
+      if (returnTo) {
+        const esDocente = rol === 'docente'
+        const esRetornoDocente = returnTo.startsWith('/docente')
+        const esRetornoAdmin = !esRetornoDocente && !returnTo.startsWith('/super-admin')
+        if ((esDocente && esRetornoDocente) || (!esDocente && esRetornoAdmin)) {
+          router.push(returnTo)
+          return
+        }
+      }
+
       if (rol === 'super_admin') router.push('/super-admin')
       else if (rol === 'docente') router.push('/docente/grupos')
       else router.push('/dashboard')
@@ -317,5 +334,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#f2f2f7' }}/>}>
+      <LoginContent />
+    </Suspense>
   )
 }
