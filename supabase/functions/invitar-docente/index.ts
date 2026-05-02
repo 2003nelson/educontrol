@@ -53,23 +53,29 @@ Deno.serve(async (req: Request) => {
 
     const redirectTo = `${APP_URL}/cambiar-password`
 
-    // ── Si tiene auth_id, borrar de auth.users directamente ──────────────
-    // Esto es más confiable que buscar por email con listUsers
-    if (docente.auth_id) {
-      console.log(`Borrando auth_id previo: ${docente.auth_id}`)
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(docente.auth_id)
-      if (deleteError) {
-        console.error('Error al borrar auth user:', deleteError.message)
-        // Si no se pudo borrar, intentar de todas formas
-      }
-      // Limpiar auth_id y estado en tabla usuarios
-      await supabaseAdmin
-        .from('usuarios')
-        .update({ auth_id: null, cuenta_activada: false, invitacion_enviada: false })
-        .eq('id', docente_id)
-      // Pequeña espera para que Auth procese el delete
-      await new Promise(resolve => setTimeout(resolve, 800))
+    // ── Buscar y borrar cualquier auth user con ese email ───────────────
+    // Usar función SQL para obtener auth_id real por email
+    const { data: authIdReal } = await supabaseAdmin
+      .rpc('get_auth_id_by_email', { p_email: docente.email })
+
+    const idsABorrar = new Set<string>()
+    if (docente.auth_id) idsABorrar.add(docente.auth_id)
+    if (authIdReal) idsABorrar.add(authIdReal as string)
+
+    for (const authId of idsABorrar) {
+      console.log(`Borrando auth user: ${authId}`)
+      const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(authId)
+      if (delErr) console.log(`No se pudo borrar ${authId}: ${delErr.message}`)
     }
+
+    // Limpiar estado en tabla usuarios
+    await supabaseAdmin
+      .from('usuarios')
+      .update({ auth_id: null, cuenta_activada: false, invitacion_enviada: false })
+      .eq('id', docente_id)
+
+    // Esperar a que Auth procese los deletes
+    await new Promise(resolve => setTimeout(resolve, 1200))
 
     // ── Invitar fresco ────────────────────────────────────────────────────
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
