@@ -1,4 +1,4 @@
-// supabase/functions/invitar-docente/index.ts
+// supabase/functions/invvitar-docente/index.ts
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
