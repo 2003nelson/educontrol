@@ -15,6 +15,7 @@ export default function CambiarPasswordPage() {
   const [showConfirmar, setShowConfirmar] = useState(false)
   const [sesionLista, setSesionLista] = useState(false)
   const [procesando, setProcesando] = useState(true)
+  const [tokenExpirado, setTokenExpirado] = useState(false)
 
   // Capturar el token del hash URL al cargar la página
   useEffect(() => {
@@ -62,9 +63,10 @@ export default function CambiarPasswordPage() {
         }
       }
 
-      // 4. Timeout — si en 8s no hay sesión mostrar error
+      // 4. Timeout — si en 8s no hay sesión, el token expiró
       timeout = setTimeout(() => {
         setProcesando(false)
+        setTokenExpirado(true)
         data.subscription.unsubscribe()
       }, 8000)
     }
@@ -155,6 +157,27 @@ export default function CambiarPasswordPage() {
             ))}
           </div>
           <p style={{ fontSize: '0.8rem', color: '#8e8e93', margin: 0 }}>Verificando enlace...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (tokenExpirado && !sesionLista) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif', padding: '1rem' }}>
+        <div style={{ background: 'white', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', padding: '2.5rem', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#fff5f5', border: '1.5px solid #ffd7d5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+            <svg width="24" height="24" fill="none" stroke="#ff3b30" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1c1c1e', margin: '0 0 0.5rem' }}>Enlace expirado</h2>
+          <p style={{ fontSize: '0.82rem', color: '#8e8e93', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
+            Este enlace ya no es válido. Solicita al director que te envíe una nueva invitación.
+          </p>
+          <a href="/login" style={{ display: 'block', background: '#007aff', color: 'white', padding: '0.75rem', borderRadius: 10, fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}>
+            Ir al inicio de sesión
+          </a>
         </div>
       </div>
     )
