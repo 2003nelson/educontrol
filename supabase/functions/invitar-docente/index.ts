@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     if (docenteError || !docente) return errorResponse('Docente no encontrado', 404)
     if (docente.cuenta_activada) return errorResponse('La cuenta ya está activada', 409)
 
-    const redirectTo = `${APP_URL}/cambiar-password`
+    const redirectTo = `${APP_URL}/auth/callback?type=invite`
 
     // ── Buscar y borrar cualquier auth user con ese email ───────────────
     // Usar función SQL para obtener auth_id real por email
