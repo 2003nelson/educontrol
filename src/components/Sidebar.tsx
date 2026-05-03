@@ -164,6 +164,35 @@ export default function Sidebar() {
           from { opacity: 0; transform: translateX(-6px) }
           to   { opacity: 1; transform: translateX(0) }
         }
+        .nav-link {
+          color: #6b7280;
+          font-weight: 500;
+          background: transparent;
+          transition: color 0.18s, background 0.18s;
+        }
+        .nav-link:hover {
+          color: #374151;
+          background: #f9fafb;
+        }
+        .nav-link-active {
+          color: #1e6fcc !important;
+          font-weight: 600;
+          background: transparent !important;
+        }
+        .nav-link .nav-indicator {
+          position: absolute; left: 0; top: 50%;
+          transform: translateY(-50%);
+          width: 3px; height: 0;
+          background: #1e6fcc;
+          border-radius: 0 2px 2px 0;
+          transition: height 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .nav-link-active .nav-indicator {
+          height: 60%;
+        }
+        .nav-link .nav-icon { color: #9ca3af; transition: color 0.18s; }
+        .nav-link:hover .nav-icon { color: #374151; }
+        .nav-link-active .nav-icon { color: #1e6fcc !important; }
       `}</style>
 
       <aside style={{
@@ -242,42 +271,19 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   ref={el => { linkRefs.current[item.href] = el }}
+                  className={activo ? 'nav-link nav-link-active' : 'nav-link'}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '0.75rem',
                     padding: '0.625rem 0.75rem',
                     borderRadius: '0.75rem',
                     textDecoration: 'none',
-                    color: activo ? '#1e6fcc' : '#6b7280',
-                    fontWeight: activo ? 600 : 500,
                     fontSize: '0.875rem',
-                    background: 'transparent',
-                    transition: 'color 0.18s, background 0.18s',
                     position: 'relative',
-                  }}
-                  onMouseEnter={e => {
-                    if (!activo) {
-                      e.currentTarget.style.color = '#374151'
-                      e.currentTarget.style.background = '#f9fafb'
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!activo) {
-                      e.currentTarget.style.color = '#6b7280'
-                      e.currentTarget.style.background = 'transparent'
-                    }
                   }}
                 >
                   {/* Indicador activo izquierdo */}
-                  <div style={{
-                    position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                    width: 3, height: activo ? '60%' : 0,
-                    background: '#1e6fcc',
-                    borderRadius: '0 2px 2px 0',
-                    transition: 'height 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-                  }}/>
-                  <span style={{ color: activo ? '#1e6fcc' : '#9ca3af', transition: 'color 0.18s', flexShrink: 0 }}>
-                    {item.icon}
-                  </span>
+                  <div className="nav-indicator"/>
+                  <span className="nav-icon" style={{ flexShrink: 0 }}>{item.icon}</span>
                   <span>{item.nombre}</span>
                 </Link>
               )
