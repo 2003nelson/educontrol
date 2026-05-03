@@ -129,9 +129,6 @@ export default function Sidebar() {
   const [pillStyle, setPillStyle] = useState<{ top: number; height: number; opacity: number }>({ top: 0, height: 0, opacity: 0 })
 
   useEffect(() => {
-    // Ocultar pill inmediatamente al cambiar de ruta
-    setPillStyle(prev => ({ ...prev, opacity: 0 }))
-
     const raf = requestAnimationFrame(() => {
       const activeEl = linkRefs.current[pathname] as HTMLElement | null
       const navEl = navRef.current
@@ -143,6 +140,8 @@ export default function Sidebar() {
           height:  elRect.height,
           opacity: 1,
         })
+      } else {
+        setPillStyle(prev => ({ ...prev, opacity: 0 }))
       }
     })
     return () => cancelAnimationFrame(raf)
