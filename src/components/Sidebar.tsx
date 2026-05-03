@@ -60,58 +60,77 @@ const navItems = [
   },
 ]
 
-// ─── Dots macOS cerrar sesión ─────────────────────────────────────────────────
+// ─── Botón cerrar sesión ─────────────────────────────────────────────────────
 function CerrarSesionBtn({ onClick }: { onClick: () => void }) {
-  const [hov, setHov] = useState(false)
-  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [fase, setFase] = useState<'idle' | 'spinning' | 'rojo'>('idle')
 
-  function onEnter() {
-    if (leaveT.current) clearTimeout(leaveT.current)
-    enterT.current = setTimeout(() => setHov(true), 80)
-  }
-  function onLeave() {
-    if (enterT.current) clearTimeout(enterT.current)
-    leaveT.current = setTimeout(() => setHov(false), 220)
+  function handleClick() {
+    // Fase 1: anillo gira y se pone rojo
+    setFase('spinning')
+    setTimeout(() => {
+      // Fase 2: completamente rojo, luego llama onClick
+      setFase('rojo')
+      setTimeout(() => {
+        onClick()
+      }, 500)
+    }, 600)
   }
 
-  const dots = [
-    { color: '#ef4444', delay: '0ms' },
-    { color: '#f59e0b', delay: '80ms' },
-    { color: '#22c55e', delay: '160ms' },
-  ]
+  const color = fase === 'idle' ? '#22c55e' : '#ef4444'
+  const ring  = fase === 'idle' ? '60 22' : '82 0'
 
   return (
     <button
-      onClick={onClick}
-      onMouseEnter={e => { onEnter(); (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc' }}
-      onMouseLeave={e => { onLeave(); (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+      onClick={handleClick}
+      disabled={fase !== 'idle'}
       style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        width: '100%', padding: '0.75rem 1rem',
-        borderRadius: '0.875rem', border: 'none', background: 'transparent',
-        cursor: 'pointer', gap: '0.375rem', overflow: 'hidden',
-        transition: 'background 0.18s',
+        display: 'flex', alignItems: 'center', gap: '0.625rem',
+        width: '100%', padding: '0.625rem 0.75rem',
+        borderRadius: '0.875rem', border: 'none',
+        background: fase !== 'idle' ? '#fef2f2' : 'transparent',
+        cursor: fase === 'idle' ? 'pointer' : 'default',
+        transition: 'background 0.2s',
       }}
     >
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
-        {dots.map((d, i) => (
-          <div key={i} style={{
-            width: 14, height: 14, borderRadius: '50%',
-            background: d.color,
-            boxShadow: `0 1px 3px ${d.color}55`,
-            animation: hov ? `dotBounce 0.55s cubic-bezier(0.34,1.56,0.64,1) ${d.delay} both` : 'none',
-          }}/>
-        ))}
+      {/* Ícono power con anillo */}
+      <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+        {/* Anillo exterior */}
+        <svg
+          width="32" height="32" viewBox="0 0 32 32"
+          style={{
+            position: 'absolute', inset: 0,
+            transform: fase === 'spinning' ? 'rotate(360deg)' : 'rotate(0deg)',
+            transition: fase === 'spinning' ? 'transform 0.6s cubic-bezier(0.4,0,0.2,1)' : 'none',
+          }}
+        >
+          <circle
+            cx="16" cy="16" r="13"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.5"
+            strokeDasharray={ring}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.5s cubic-bezier(0.4,0,0.2,1), stroke 0.3s' }}
+          />
+        </svg>
+        {/* Power icon */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
+            stroke={color} strokeWidth="2.2"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{ transition: 'stroke 0.3s' }}
+          >
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+        </div>
       </div>
+
+      {/* Texto */}
       <span style={{
-        fontSize: '0.7rem', fontWeight: 600, color: '#ef4444',
-        maxHeight: hov ? '1.2rem' : '0',
-        opacity: hov ? 1 : 0,
-        overflow: 'hidden',
-        transition: 'max-height 0.25s ease, opacity 0.22s ease',
-        transitionDelay: hov ? '0.18s' : '0s',
-        whiteSpace: 'nowrap',
+        fontSize: '0.8rem', fontWeight: 600,
+        color: fase !== 'idle' ? '#ef4444' : '#6b7280',
+        transition: 'color 0.3s',
       }}>
         Cerrar sesión
       </span>
@@ -155,11 +174,6 @@ export default function Sidebar() {
   return (
     <>
       <style>{`
-        @keyframes dotBounce {
-          0%, 100% { transform: translateY(0) }
-          40%       { transform: translateY(-5px) }
-          60%       { transform: translateY(-2px) }
-        }
         @keyframes sidebarFadeIn {
           from { opacity: 0; transform: translateX(-6px) }
           to   { opacity: 1; transform: translateX(0) }

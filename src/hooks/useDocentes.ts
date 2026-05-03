@@ -32,6 +32,7 @@ export type AsignacionDocente = {
 export type Docente = {
   id: string
   plantel_id: string
+  auth_id: string | null
   nombre_completo: string
   email: string
   email_institucional: string | null
@@ -113,7 +114,7 @@ export function useDocentes() {
 
       const { data: docentesData, error: docentesError } = await supabase
         .from('usuarios')
-        .select('id, plantel_id, nombre_completo, email, email_institucional, activo, invitacion_enviada, fecha_invitacion, cuenta_activada, created_at')
+        .select('id, plantel_id, auth_id, nombre_completo, email, email_institucional, activo, invitacion_enviada, fecha_invitacion, cuenta_activada, created_at')
         .eq('plantel_id', plantelId)
         .eq('rol', 'docente')
         .order('nombre_completo', { ascending: true })
