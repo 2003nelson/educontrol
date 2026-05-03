@@ -80,51 +80,48 @@ const iconoTipo = {
   aviso:         { bg: '#fffbeb', color: '#d97706', svg: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 }
 
-
-
 function colorNota(v: number) { return v >= 70 ? '#16a34a' : '#dc2626' }
 function bgNota(v: number)    { return v >= 70 ? '#f0fdf4' : '#fef2f2' }
 
 type ParcialKey = 1 | 2 | 3 | 'final'
 
-function AyudaBtn() {
+// ── Botón icono limpio ────────────────────────────────────────────────────────
+function IconBtn({ onClick, active, children, badge }: {
+  onClick?: () => void
+  active?: boolean
+  children: React.ReactNode
+  badge?: number
+}) {
   const [hov, setHov] = useState(false)
-  const enterT = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const leaveT = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function handleEnter() {
-    if (leaveT.current) clearTimeout(leaveT.current)
-    enterT.current = setTimeout(() => setHov(true), 120)
-  }
-  function handleLeave() {
-    if (enterT.current) clearTimeout(enterT.current)
-    leaveT.current = setTimeout(() => setHov(false), 200)
-  }
-
   return (
     <button
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{
-        display:'flex', alignItems:'center', justifyContent:'center',
-        gap: hov ? '0.4rem' : '0',
-        height:'36px',
-        width: hov ? 'auto' : '36px',
-        minWidth: hov ? '148px' : '36px',
-        padding: hov ? '0 0.875rem' : '0',
-        borderRadius: hov ? '0.875rem' : '0.875rem',
-        background: hov ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.18)',
-        border: hov ? '1px solid rgba(251,191,36,0.5)' : '1px solid rgba(180,200,230,0.4)',
-        cursor:'pointer',
-        transition:'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-        overflow:'hidden', whiteSpace:'nowrap', flexShrink:0,
-      }}>
-      <svg width="15" height="15" fill="none" stroke="#f59e0b" strokeWidth="1.8" viewBox="0 0 24 24" style={{ flexShrink:0 }}>
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="rgba(251,191,36,0.15)" strokeLinejoin="round"/>
-        <line x1="12" y1="9" x2="12" y2="13"/>
-        <line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-      {hov && <span style={{ fontSize:'0.775rem', fontWeight:600, color:'#b45309' }}>Obtener ayuda</span>}
+        position: 'relative',
+        width: 36, height: 36,
+        borderRadius: 10,
+        border: '1px solid',
+        borderColor: active || hov ? '#e2e8f0' : '#f0f0f5',
+        background: active ? '#f8fafc' : hov ? '#f8fafc' : 'white',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+      {badge && badge > 0 ? (
+        <span style={{
+          position: 'absolute', top: -4, right: -4,
+          width: 16, height: 16, borderRadius: '50%',
+          background: '#ef4444', color: 'white',
+          fontSize: 9, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '1.5px solid white',
+        }}>{badge}</span>
+      ) : null}
     </button>
   )
 }
@@ -137,10 +134,10 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   const [descargado,  setDescargado]      = useState(false)
 
   const tabs: { key: ParcialKey; label: string }[] = [
-    { key: 1,       label: '1er Parcial' },
-    { key: 2,       label: '2do Parcial' },
-    { key: 3,       label: '3er Parcial' },
-    { key: 'final', label: 'Final'       },
+    { key: 1, label: '1er Parcial' },
+    { key: 2, label: '2do Parcial' },
+    { key: 3, label: '3er Parcial' },
+    { key: 'final', label: 'Final' },
   ]
   const tabIdx = tabs.findIndex(t => t.key === parcialActivo)
 
@@ -165,74 +162,56 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
   if (typeof window === 'undefined') return null
 
   return createPortal(
-    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)', animation:'backdropAlumnoIn 0.3s ease' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.4)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation:'backdropIn 0.25s ease' }}>
       <style>{`
-        @keyframes cardAlumnoIn { from{opacity:0;transform:scale(0.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        @keyframes backdropAlumnoIn { from{opacity:0} to{opacity:1} }
+        @keyframes cardIn { from{opacity:0;transform:scale(0.93) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes backdropIn { from{opacity:0} to{opacity:1} }
       `}</style>
-      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', width:'400px', display:'flex', flexDirection:'column', overflow:'hidden', animation:'cardAlumnoIn 0.42s cubic-bezier(0.34,1.56,0.64,1)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', boxShadow:'0 24px 64px rgba(0,0,0,0.16)', width:400, display:'flex', flexDirection:'column', overflow:'hidden', animation:'cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
 
-        {/* Header gris */}
-        <div style={{ background:'linear-gradient(135deg,#475569,#64748b)', borderRadius:'1.25rem 1.25rem 0 0', padding:'1.25rem 1.5rem 1rem', position:'relative' }}>
-          <button onClick={onCerrar} style={{ position:'absolute', top:'1rem', right:'1rem', background:'rgba(255,255,255,0.2)', border:'none', cursor:'pointer', width:'28px', height:'28px', borderRadius:'50%', color:'white', fontSize:'1rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-
-          <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem' }}>
-            <div style={{ width:'44px', height:'44px', borderRadius:'0.75rem', background:'rgba(255,255,255,0.92)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', fontWeight:800, color:'#475569', flexShrink:0, fontFamily:'Outfit,sans-serif' }}>
+        <div style={{ background:'linear-gradient(135deg,#1e6fcc,#155ca0)', padding:'1.25rem 1.5rem 1rem', position:'relative' }}>
+          <button onClick={onCerrar} style={{ position:'absolute', top:'1rem', right:'1rem', background:'rgba(255,255,255,0.15)', border:'none', cursor:'pointer', width:28, height:28, borderRadius:'50%', color:'white', fontSize:'1rem', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+          <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+            <div style={{ width:44, height:44, borderRadius:'0.75rem', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.125rem', fontWeight:800, color:'white', flexShrink:0 }}>
               {alumno.semestre}
             </div>
             <div>
-              <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'white', margin:0, fontFamily:'Outfit,sans-serif' }}>{alumno.nombre}</p>
-              <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.3rem' }}>
-                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.2)', color:'white', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>Grupo {alumno.grupo}</span>
-                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.2)', color:'white', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>{alumno.semestre}° Semestre</span>
+              <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'white', margin:'0 0 0.25rem' }}>{alumno.nombre}</p>
+              <div style={{ display:'flex', gap:'0.5rem' }}>
+                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>Grupo {alumno.grupo}</span>
+                <span style={{ fontSize:'0.7rem', background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', padding:'0.15rem 0.5rem', borderRadius:'9999px', fontWeight:600 }}>{alumno.semestre}° Semestre</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Slide pill menu parciales — fuera del header */}
         <div style={{ padding:'0.75rem 1.5rem', borderBottom:'1px solid #f1f5f9' }}>
-          <div style={{ position:'relative', display:'flex', background:'#f1f5f9', borderRadius:'0.875rem', padding:'3px' }}>
-            <div style={{ position:'absolute', top:'3px', bottom:'3px', width:`calc(${100/4}% - 2px)`, left:`calc(${tabIdx*(100/4)}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 6px rgba(0,0,0,0.12)', transition:'left 0.3s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
+          <div style={{ position:'relative', display:'flex', background:'#f8fafc', borderRadius:'0.875rem', padding:'3px' }}>
+            <div style={{ position:'absolute', top:3, bottom:3, width:`calc(${100/4}% - 2px)`, left:`calc(${tabIdx*(100/4)}% + 3px)`, background:'white', borderRadius:'0.625rem', boxShadow:'0 1px 4px rgba(0,0,0,0.08)', transition:'left 0.3s cubic-bezier(0.4,0,0.2,1)', pointerEvents:'none' }}/>
             {tabs.map(t => (
               <button key={String(t.key)} onClick={() => cambiarParcial(t.key)}
-                style={{ position:'relative', zIndex:1, flex:1, padding:'0.4rem 0', fontSize:'0.7rem', fontWeight: parcialActivo===t.key ? 700 : 500, color: parcialActivo===t.key ? '#1e3a5f' : '#94a3b8', background:'transparent', border:'none', cursor:'pointer', borderRadius:'0.625rem', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
+                style={{ position:'relative', zIndex:1, flex:1, padding:'0.4rem 0', fontSize:'0.7rem', fontWeight: parcialActivo===t.key ? 700 : 500, color: parcialActivo===t.key ? '#1e6fcc' : '#94a3b8', background:'transparent', border:'none', cursor:'pointer', transition:'color 0.2s', textAlign:'center', whiteSpace:'nowrap' }}>
                 {t.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Cuerpo */}
         <div style={{ padding:'1.25rem 1.5rem 1.5rem' }}>
-          <div style={{
-            opacity:   parcialVis ? 1 : 0,
-            transform: parcialVis ? 'translateX(0) scale(1)' : `translateX(${parcialDir==='der'?'14px':'-14px'}) scale(0.97)`,
-            transition: parcialVis ? 'opacity 0.28s cubic-bezier(0.4,0,0.2,1), transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'opacity 0.14s ease, transform 0.14s ease',
-          }}>
+          <div style={{ opacity: parcialVis?1:0, transform: parcialVis?'translateX(0) scale(1)':`translateX(${parcialDir==='der'?'12px':'-12px'}) scale(0.97)`, transition: parcialVis?'opacity 0.28s ease, transform 0.28s ease':'opacity 0.14s ease, transform 0.14s ease' }}>
             <div style={{ background: bgNota(calActiva), borderRadius:'1rem', padding:'2rem', textAlign:'center', border:`1px solid ${calActiva>=60?'#bbf7d0':'#fecaca'}`, marginBottom:'1rem' }}>
-              <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.625rem' }}>
-                {tabs.find(t=>t.key===parcialActivo)?.label}
-              </p>
-              <p style={{ fontSize:'4.5rem', fontWeight:800, color:colorNota(calActiva), margin:0, fontFamily:'Outfit,sans-serif', lineHeight:1 }}>
-                {calActiva}
-              </p>
-              <p style={{ fontSize:'0.8rem', color:colorNota(calActiva), margin:'0.75rem 0 0', fontWeight:600 }}>
-                {calActiva>=90?'Excelente':calActiva>=60?'Aprobado':'Reprobado'}
-              </p>
+              <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 0.5rem' }}>{tabs.find(t=>t.key===parcialActivo)?.label}</p>
+              <p style={{ fontSize:'4.5rem', fontWeight:800, color:colorNota(calActiva), margin:0, lineHeight:1 }}>{calActiva}</p>
+              <p style={{ fontSize:'0.8rem', color:colorNota(calActiva), margin:'0.75rem 0 0', fontWeight:600 }}>{calActiva>=90?'Excelente':calActiva>=60?'Aprobado':'Reprobado'}</p>
             </div>
           </div>
-
           <button onClick={handleDescargar}
-            style={{ width:'100%', padding:'0.75rem', borderRadius:'0.875rem', cursor:descargando||descargado?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.625rem', fontSize:'0.875rem', fontWeight:600, background:descargado?'#16a34a':descargando?'#f1f5f9':'#fef2f2', color:descargado?'white':descargando?'#94a3b8':'#dc2626', border:descargado?'none':`1px solid ${descargando?'#e2e8f0':'#fecaca'}`, transition:'all 0.3s' }}
+            style={{ width:'100%', padding:'0.75rem', borderRadius:'0.875rem', cursor:descargando||descargado?'default':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.625rem', fontSize:'0.875rem', fontWeight:600, background:descargado?'#16a34a':descargando?'#f8fafc':'#fef2f2', color:descargado?'white':descargando?'#94a3b8':'#dc2626', border:descargado?'none':`1px solid ${descargando?'#e2e8f0':'#fecaca'}`, transition:'all 0.25s' }}
             onMouseEnter={e=>{ if(!descargando&&!descargado){e.currentTarget.style.background='#dc2626';e.currentTarget.style.color='white';e.currentTarget.style.border='none'} }}
             onMouseLeave={e=>{ if(!descargando&&!descargado){e.currentTarget.style.background='#fef2f2';e.currentTarget.style.color='#dc2626';e.currentTarget.style.border='1px solid #fecaca'} }}>
-            {descargado
-              ? <><svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg> Boleta descargada</>
-              : descargando
-              ? <><div style={{ width:'14px', height:'14px', border:'2px solid #e2e8f0', borderTopColor:'#94a3b8', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Generando boleta...</>
-              : <><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar boleta PDF</>
-            }
+            {descargado ? <><svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round"/></svg> Boleta descargada</>
+            : descargando ? <><div style={{ width:14, height:14, border:'2px solid #e2e8f0', borderTopColor:'#94a3b8', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/> Generando...</>
+            : <><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar boleta PDF</>}
           </button>
         </div>
       </div>
@@ -240,7 +219,6 @@ function CardAlumno({ alumno, onCerrar }: { alumno: Alumno; onCerrar: () => void
     document.body
   )
 }
-
 
 export default function Header({ titulo }: { titulo: string }) {
   const [notifs, setNotifs]                   = useState<Notificacion[]>(notificacionesMock)
@@ -251,26 +229,25 @@ export default function Header({ titulo }: { titulo: string }) {
   const [alumnoSelec, setAlumnoSelec]         = useState<Alumno | null>(null)
   const [dropdownAbierto, setDropdownAbierto] = useState(false)
   const [searchExpanded, setSearchExpanded]   = useState(false)
+  const [notifCerrando, setNotifCerrando]     = useState(false)
   const busquedaRef    = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const noLeidas = notifs.filter(n => !n.leida).length
 
-  const [notifCerrando, setNotifCerrando] = useState(false)
-
   function cerrarNotifs() {
     setNotifCerrando(true)
-    setTimeout(() => { setPanelAbierto(false); setNotifCerrando(false) }, 320)
+    setTimeout(() => { setPanelAbierto(false); setNotifCerrando(false) }, 280)
   }
-  function marcarLeida(id: string)  { setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n)) }
-  function marcarTodasLeidas()      { setNotifs(prev => prev.map(n => ({ ...n, leida: true }))) }
+  function marcarLeida(id: string) { setNotifs(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n)) }
+  function marcarTodasLeidas()     { setNotifs(prev => prev.map(n => ({ ...n, leida: true }))) }
 
   function handleBusqueda(valor: string) {
     const upper = valor.toUpperCase()
     setBusqueda(upper)
     if (upper.trim().length < 2) { setSugerencias([]); setDropdownAbierto(false); return }
-    const resultados = alumnosMock.filter(a => a.nombre.includes(upper.trim()) || a.grupo.includes(upper.trim()))
-    setSugerencias(resultados)
+    const res = alumnosMock.filter(a => a.nombre.includes(upper.trim()) || a.grupo.includes(upper.trim()))
+    setSugerencias(res)
     setDropdownAbierto(true)
   }
 
@@ -287,38 +264,44 @@ export default function Header({ titulo }: { titulo: string }) {
   }, [])
 
   return (
-    <div className="px-4 pt-4 sticky top-0 z-40">
-      <header className="flex items-center justify-between px-6 py-3 rounded-2xl"
-        style={{ background: 'rgba(99,130,180,0.18)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.22)', boxShadow: '0 4px 32px rgba(60,80,120,0.10)' }}>
+    <div style={{
+      padding: '1rem 1.25rem 0.75rem',
+      background: 'white',
+      borderBottom: '1px solid #f0f0f5',
+      position: 'sticky', top: 0, zIndex: 40,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
+    }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
-        <h1 className="text-base font-semibold tracking-tight" style={{ color: '#1e3a5f', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+
+        {/* Título */}
+        <h1 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a2e', margin: 0, letterSpacing: '-0.01em' }}>
           {titulo}
         </h1>
 
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 
-          {/* Buscador — colapsable estilo Apple */}
-          <div ref={busquedaRef} className="relative">
+          {/* Buscador colapsable */}
+          <div ref={busquedaRef} style={{ position: 'relative' }}>
             <div
               onMouseEnter={() => { setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
               onMouseLeave={() => { if (!busqueda) setSearchExpanded(false) }}
               style={{
-                display:'flex', alignItems:'center',
-                height:'38px',
-                width: searchExpanded ? '300px' : '38px',
-                borderRadius:'0.875rem',
-                border:'1px solid rgba(180,200,230,0.4)',
-                background: searchExpanded ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)',
-                backdropFilter:'blur(8px)',
-                WebkitBackdropFilter:'blur(8px)',
-                transition:'width 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s, background 0.2s',
-                overflow:'hidden',
+                display: 'flex', alignItems: 'center',
+                height: 36,
+                width: searchExpanded ? 280 : 36,
+                borderRadius: 10,
+                border: `1px solid ${searchExpanded ? '#bfdbfe' : '#f0f0f5'}`,
+                background: searchExpanded ? 'white' : '#f8fafc',
+                transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.2s, box-shadow 0.2s',
+                overflow: 'hidden',
                 cursor: searchExpanded ? 'text' : 'pointer',
-                boxShadow: searchExpanded ? '0 0 0 2px #bfdbfe' : 'none',
+                boxShadow: searchExpanded ? '0 0 0 3px rgba(191,219,254,0.4)' : 'none',
                 flexShrink: 0,
               }}>
-              <div style={{ width:'38px', height:'38px', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2" viewBox="0 0 24 24">
+              <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="14" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                 </svg>
               </div>
@@ -329,196 +312,131 @@ export default function Header({ titulo }: { titulo: string }) {
                 onChange={e => handleBusqueda(e.target.value)}
                 onFocus={() => setSearchExpanded(true)}
                 onBlur={() => { if (!busqueda) setSearchExpanded(false) }}
-                placeholder="Buscar alumnos, grupos o reportes..."
-                style={{ border:'none', outline:'none', fontSize:'0.8125rem', color:'#334155', background:'transparent', width:'calc(100% - 38px)', paddingRight:'0.75rem', opacity: searchExpanded ? 1 : 0, transition:'opacity 0.2s', fontFamily:'DM Sans, sans-serif' }}
+                placeholder="Buscar alumnos..."
+                style={{ border: 'none', outline: 'none', fontSize: '0.8rem', color: '#374151', background: 'transparent', width: '100%', paddingRight: '0.5rem', opacity: searchExpanded ? 1 : 0, transition: 'opacity 0.2s' }}
               />
               {busqueda && searchExpanded && (
-                <button onClick={() => { handleBusqueda('') }}
-                  style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', paddingRight:'0.5rem', fontSize:'1rem', lineHeight:1, flexShrink:0 }}>✕</button>
+                <button onClick={() => handleBusqueda('')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', paddingRight: '0.5rem', fontSize: '1rem', flexShrink: 0 }}>✕</button>
               )}
             </div>
 
             {dropdownAbierto && sugerencias.length > 0 && (
-              <div className="absolute left-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl overflow-hidden"
-                style={{ width: '320px', border: '1px solid #e2e8f0', zIndex: 100 }}>
-                <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Alumnos encontrados</p>
+              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 6px)', width: 300, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #f0f0f5', zIndex: 100, overflow: 'hidden' }}>
+                <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#c0c0d0', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0, padding: '0.75rem 1rem 0.375rem' }}>Alumnos</p>
                 {sugerencias.map(a => (
                   <button key={a.id} onClick={() => seleccionarAlumno(a)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                    style={{ borderTop: '1px solid #f8fafc' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 1rem', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: '1px solid #f8fafc', transition: 'background 0.12s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: '#1e3a5f' }}>
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#1e6fcc,#155ca0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
                       {a.nombre.charAt(0)}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>{a.nombre}</p>
-                      <p className="text-xs" style={{ color: '#94a3b8' }}>Grupo {a.grupo} · {a.semestre}° Semestre</p>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a1a2e', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.nombre}</p>
+                      <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: 0 }}>Grupo {a.grupo} · {a.semestre}° Sem.</p>
                     </div>
-                    <svg width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" className="shrink-0 ml-auto">
-                      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
                   </button>
                 ))}
-                <p className="px-4 py-2 text-xs text-center" style={{ color: '#cbd5e1', borderTop: '1px solid #f1f5f9' }}>Clic para ver boleta completa</p>
               </div>
             )}
             {dropdownAbierto && sugerencias.length === 0 && busqueda.trim().length >= 2 && (
-              <div className="absolute left-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl px-4 py-5 text-center"
-                style={{ width: '280px', border: '1px solid #e2e8f0', zIndex: 100 }}>
-                <p className="text-sm" style={{ color: '#94a3b8' }}>No se encontraron alumnos</p>
+              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 6px)', width: 260, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid #f0f0f5', zIndex: 100, padding: '1.25rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: 0 }}>Sin resultados</p>
               </div>
             )}
           </div>
 
-          {/* Ayuda — expandible */}
-          <AyudaBtn />
-
-          {/* Mensajes — botón verde estilo iPhone */}
-          <button onClick={() => setMensajesAbierto(true)}
-            className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-            style={{ 
-              background: 'rgba(34,197,94,0.12)', 
-              border: '1px solid rgba(34,197,94,0.25)',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(34,197,94,0.18)'
-              e.currentTarget.style.borderColor = 'rgba(34,197,94,0.35)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(34,197,94,0.12)'
-              e.currentTarget.style.borderColor = 'rgba(34,197,94,0.25)'
-            }}>
-            <svg width="16" height="16" fill="none" stroke="#16a34a" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Mensajes */}
+          <IconBtn onClick={() => setMensajesAbierto(true)}>
+            <svg width="15" height="15" fill="none" stroke="#6b7280" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-          </button>
+          </IconBtn>
 
           {/* Notificaciones */}
-          <div className="relative">
-            <button onClick={() => setPanelAbierto(prev => !prev)}
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-              style={{ background: panelAbierto ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)', border: '1px solid rgba(180,200,230,0.4)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.9)')}
-              onMouseLeave={e => { if (!panelAbierto) e.currentTarget.style.background = 'rgba(255,255,255,0.6)' }}>
-              <svg width="16" height="16" fill="none" stroke="#64748b" strokeWidth="1.8" viewBox="0 0 24 24">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              </svg>
-              {noLeidas > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-white"
-                  style={{ background: '#dc2626', fontSize: '9px', fontWeight: 700 }}>
-                  {noLeidas}
-                </span>
-              )}
-            </button>
-          </div>
+          <IconBtn onClick={() => setPanelAbierto(p => !p)} active={panelAbierto} badge={noLeidas}>
+            <svg width="15" height="15" fill="none" stroke="#6b7280" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </IconBtn>
+
+          {/* Divisor */}
+          <div style={{ width: 1, height: 20, background: '#f0f0f5', flexShrink: 0 }}/>
 
           {/* Avatar */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ background: '#1e3a5f' }}>D</div>
-            <span className="text-sm font-medium" style={{ color: '#334155' }}>Dir. Gral.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#1e6fcc,#155ca0)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>D</div>
+            <div>
+              <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1a1a2e', margin: 0, lineHeight: 1.2 }}>Dir. Gral.</p>
+              <p style={{ fontSize: '0.65rem', color: '#9ca3af', margin: 0 }}>Director</p>
+            </div>
           </div>
+
         </div>
-      </header>
+      </div>
 
       {alumnoSelec && <CardAlumno alumno={alumnoSelec} onCerrar={() => setAlumnoSelec(null)} />}
 
-      {/* Modal notificaciones — centrado con spring */}
+      {/* Modal notificaciones */}
       {panelAbierto && typeof window !== 'undefined' && createPortal(
         <>
           <style>{`
-            @keyframes notifBackdropIn  { from { opacity:0 } to { opacity:1 } }
-            @keyframes notifBackdropOut { from { opacity:1 } to { opacity:0 } }
-            @keyframes notifSpringIn  { from { opacity:0; transform:scale(0.88) translateY(16px) } to { opacity:1; transform:scale(1) translateY(0) } }
-            @keyframes notifSpringOut { from { opacity:1; transform:scale(1) translateY(0) } to { opacity:0; transform:scale(0.88) translateY(16px) } }
+            @keyframes notifBackdropIn  { from{opacity:0} to{opacity:1} }
+            @keyframes notifBackdropOut { from{opacity:1} to{opacity:0} }
+            @keyframes notifIn  { from{opacity:0;transform:scale(0.9) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+            @keyframes notifOut { from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(0.9) translateY(12px)} }
           `}</style>
-          {/* Backdrop — NO cierra al hacer clic */}
-          <div style={{
-            position:'fixed', inset:0, zIndex:9990,
-            background:'rgba(0,0,0,0.45)',
-            backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)',
-            animation: notifCerrando ? 'notifBackdropOut 0.32s ease forwards' : 'notifBackdropIn 0.25s ease',
-          }}/>
-          {/* Card centrada */}
-          <div style={{
-            position:'fixed', inset:0, zIndex:9991,
-            display:'flex', alignItems:'center', justifyContent:'center',
-            pointerEvents:'none',
-          }}>
-            <div style={{
-              background:'white', borderRadius:'1.25rem',
-              boxShadow:'0 24px 64px rgba(0,0,0,0.18)',
-              width:'400px', maxHeight:'80vh',
-              display:'flex', flexDirection:'column',
-              overflow:'hidden', pointerEvents:'all',
-              animation: notifCerrando ? 'notifSpringOut 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'notifSpringIn 0.42s cubic-bezier(0.34,1.56,0.64,1)',
-            }}>
-              {/* Header */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.25rem 1.5rem 1rem', borderBottom:'1px solid #f1f5f9', flexShrink:0 }}>
+          <div style={{ position:'fixed', inset:0, zIndex:9990, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(4px)', WebkitBackdropFilter:'blur(4px)', animation: notifCerrando?'notifBackdropOut 0.28s ease forwards':'notifBackdropIn 0.22s ease' }}/>
+          <div style={{ position:'fixed', inset:0, zIndex:9991, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
+            <div style={{ background:'white', borderRadius:'1.25rem', boxShadow:'0 24px 64px rgba(0,0,0,0.14)', width:400, maxHeight:'80vh', display:'flex', flexDirection:'column', overflow:'hidden', pointerEvents:'all', animation: notifCerrando?'notifOut 0.28s cubic-bezier(0.4,0,0.2,1) forwards':'notifIn 0.38s cubic-bezier(0.34,1.56,0.64,1)' }}>
+
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.125rem 1.5rem 1rem', borderBottom:'1px solid #f4f4f8', flexShrink:0 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
-                  <div style={{ width:'32px', height:'32px', borderRadius:'0.625rem', background:'#eff6ff', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <svg width="16" height="16" fill="none" stroke="#2563eb" strokeWidth="1.8" viewBox="0 0 24 24">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                  </div>
-                  <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Notificaciones</p>
-                  {noLeidas > 0 && (
-                    <span style={{ fontSize:'0.7rem', fontWeight:700, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:'#dc2626', color:'white' }}>
-                      {noLeidas}
-                    </span>
-                  )}
+                  <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1a1a2e', margin:0 }}>Notificaciones</p>
+                  {noLeidas > 0 && <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'0.15rem 0.5rem', borderRadius:'9999px', background:'#ef4444', color:'white' }}>{noLeidas}</span>}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                   {noLeidas > 0 && (
-                    <button onClick={marcarTodasLeidas}
-                      style={{ fontSize:'0.75rem', fontWeight:500, color:'#3b82f6', background:'none', border:'none', cursor:'pointer', padding:0 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#1d4ed8')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#3b82f6')}>
+                    <button onClick={marcarTodasLeidas} style={{ fontSize:'0.75rem', fontWeight:500, color:'#1e6fcc', background:'none', border:'none', cursor:'pointer', padding:0 }}>
                       Marcar todas
                     </button>
                   )}
-                  <button onClick={cerrarNotifs}
-                    style={{ width:'28px', height:'28px', borderRadius:'50%', background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.9rem', fontWeight:700, transition:'background 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#e2e8f0')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#f1f5f9')}>
-                    ✕
-                  </button>
+                  <button onClick={cerrarNotifs} style={{ width:28, height:28, borderRadius:'50%', background:'#f4f4f8', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#6b7280', fontSize:'0.875rem', fontWeight:700 }}
+                    onMouseEnter={e=>(e.currentTarget.style.background='#ebebf0')}
+                    onMouseLeave={e=>(e.currentTarget.style.background='#f4f4f8')}>✕</button>
                 </div>
               </div>
 
-              {/* Lista */}
               <div style={{ overflowY:'auto', flex:1 }}>
                 {notifs.map(n => {
                   const icono = iconoTipo[n.tipo]
                   return (
                     <div key={n.id} onClick={() => marcarLeida(n.id)}
-                      style={{ display:'flex', gap:'0.875rem', padding:'1rem 1.5rem', cursor:'pointer', background: n.leida ? 'white' : '#f8faff', borderBottom:'1px solid #f8fafc', transition:'background 0.12s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                      onMouseLeave={e => (e.currentTarget.style.background = n.leida ? 'white' : '#f8faff')}>
-                      <div style={{ width:'38px', height:'38px', borderRadius:'0.75rem', background:icono.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'2px' }}>
+                      style={{ display:'flex', gap:'0.875rem', padding:'1rem 1.5rem', cursor:'pointer', background: n.leida?'white':'#f8fbff', borderBottom:'1px solid #f4f4f8', transition:'background 0.12s' }}
+                      onMouseEnter={e=>(e.currentTarget.style.background='#f8fafc')}
+                      onMouseLeave={e=>(e.currentTarget.style.background=n.leida?'white':'#f8fbff')}>
+                      <div style={{ width:38, height:38, borderRadius:10, background:icono.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
                         <svg width="16" height="16" fill="none" stroke={icono.color} strokeWidth="1.8" viewBox="0 0 24 24">{icono.svg}</svg>
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'0.5rem' }}>
-                          <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>{n.titulo}</p>
+                          <p style={{ fontSize:'0.8125rem', fontWeight:700, color:'#1a1a2e', margin:0 }}>{n.titulo}</p>
                           <div style={{ display:'flex', alignItems:'center', gap:'0.375rem', flexShrink:0 }}>
-                            <p style={{ fontSize:'0.7rem', color:'#cbd5e1', margin:0 }}>{n.fecha}</p>
-                            {!n.leida && <span style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#3b82f6', flexShrink:0, display:'inline-block' }}/>}
+                            <p style={{ fontSize:'0.7rem', color:'#c0c0d0', margin:0 }}>{n.fecha}</p>
+                            {!n.leida && <span style={{ width:7, height:7, borderRadius:'50%', background:'#1e6fcc', display:'inline-block' }}/>}
                           </div>
                         </div>
-                        <p style={{ fontSize:'0.75rem', color:'#64748b', margin:'0.25rem 0 0', lineHeight:1.5 }}>{n.mensaje}</p>
+                        <p style={{ fontSize:'0.75rem', color:'#6b7280', margin:'0.25rem 0 0', lineHeight:1.5 }}>{n.mensaje}</p>
                       </div>
                     </div>
                   )
                 })}
               </div>
 
-              {/* Footer */}
-              <div style={{ padding:'0.875rem 1.5rem', borderTop:'1px solid #f1f5f9', textAlign:'center', flexShrink:0 }}>
-                <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>Notificaciones enviadas por Dinoti Platforms</p>
+              <div style={{ padding:'0.875rem 1.5rem', borderTop:'1px solid #f4f4f8', textAlign:'center', flexShrink:0 }}>
+                <p style={{ fontSize:'0.65rem', color:'#c0c0d0', margin:0 }}>Notificaciones de Dinoti Platforms</p>
               </div>
             </div>
           </div>
@@ -526,7 +444,6 @@ export default function Header({ titulo }: { titulo: string }) {
         document.body
       )}
 
-      {/* Modal de Mensajería */}
       {mensajesAbierto && typeof window !== 'undefined' && (
         <Mensajeria onCerrar={() => setMensajesAbierto(false)} />
       )}
