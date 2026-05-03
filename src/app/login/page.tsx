@@ -121,12 +121,6 @@ function LoginContent() {
     } catch (err) { console.error(err); setError('Error.'); setResetLoading(false) }
   }
 
-  const dots = [
-    { color: '#ef4444' },
-    { color: '#f59e0b' },
-    { color: '#22c55e' },
-  ]
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -187,29 +181,29 @@ function LoginContent() {
           {/* Borde izquierdo brillante */}
           <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 1, background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.05) 100%)', zIndex: 0 }}/>
           <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Logo */}
-            <div style={{ marginBottom: 'auto', paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            {/* Logo — centrado verticalmente */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
               <div style={{
                 width: 72, height: 72, borderRadius: 20,
                 background: '#d1d1d6',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: '1.5rem',
+                marginBottom: '1.25rem',
               }}>
                 <span style={{ color: 'white', fontSize: 26, fontWeight: 700, letterSpacing: '-0.5px' }}>EC</span>
               </div>
-              <h2 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>EduControl</h2>
-              <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 2.5rem', lineHeight: 1.6 }}>CBTA 62 · Gestión escolar</p>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'white', margin: '0 0 0.375rem', letterSpacing: '-0.03em' }}>EduControl</h2>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', margin: '0 0 2.5rem', letterSpacing: '0.02em' }}>Sistema de gestión escolar</p>
 
-              {/* Features con dot de color */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'flex-start', marginTop: '2.5rem' }}>
+              {/* 3 puntos en fila horizontal */}
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '2rem', justifyContent: 'center' }}>
                 {[
-                  { text: 'Gestión académica', dot: dots[2].color },
-                  { text: 'Control de asistencias', dot: dots[1].color },
-                  { text: 'Seguimiento académico', dot: dots[0].color },
+                  { dot: '#22c55e', label: 'Gestión' },
+                  { dot: '#f59e0b', label: 'Control' },
+                  { dot: '#ef4444', label: 'Seguimiento' },
                 ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.dot, flexShrink: 0 }}/>
-                    <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.65)', fontWeight: 400 }}>{item.text}</span>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.dot, boxShadow: `0 0 8px ${item.dot}99` }}/>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500, letterSpacing: '0.03em' }}>{item.label}</span>
                   </div>
                 ))}
               </div>
