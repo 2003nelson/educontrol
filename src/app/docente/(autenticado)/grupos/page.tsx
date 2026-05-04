@@ -24,13 +24,9 @@ function formatFechaLegible(iso: string) {
   })
 }
 
-
 // ─── Vista: Confirmar fecha + historial ──────────────────────────────────────
 function ConfirmarFechaView({
-  asignatura,
-  grupo,
-  onConfirmar,
-  onBack,
+  asignatura, grupo, onConfirmar, onBack,
 }: {
   asignatura: AsignaturaItem
   grupo: GrupoAgrupado
@@ -38,13 +34,11 @@ function ConfirmarFechaView({
   onBack: () => void
 }) {
   const supabase = createClient()
-  const [historial, setHistorial] = useState<string[]>([])
+  const [historial, setHistorial]     = useState<string[]>([])
   const [loadingHist, setLoadingHist] = useState(true)
 
   useEffect(() => {
     async function cargar() {
-      // Traer suficientes filas para cubrir 10 fechas distintas con grupos grandes
-      // Se pide un límite alto y luego se deduplica en cliente
       const { data } = await supabase
         .from('asistencias')
         .select('fecha')
@@ -61,18 +55,14 @@ function ConfirmarFechaView({
     cargar()
   }, [grupo.id, asignatura.id, supabase])
 
-  const hoy = formatFechaISO()
+  const hoy      = formatFechaISO()
   const yaHayHoy = historial.includes(hoy)
 
   return (
     <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
-
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}
-        >
+        <button onClick={onBack}
+          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -83,7 +73,6 @@ function ConfirmarFechaView({
         </div>
       </div>
 
-      {/* Card fecha de hoy */}
       <div className="rounded-2xl overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}>
         <div className="p-6">
@@ -108,7 +97,6 @@ function ConfirmarFechaView({
         <div className="px-6 pb-6" style={{ display: 'flex', gap: '0.75rem' }}>
           {yaHayHoy ? (
             <>
-              {/* Asistencia ya tomada — mensaje + botón editar */}
               <div style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <svg width="15" height="15" fill="none" stroke="#4ade80" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -116,13 +104,12 @@ function ConfirmarFechaView({
                 <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Asistencia del día tomada</span>
               </div>
               <button onClick={onConfirmar}
-                className="py-3 rounded-xl text-sm font-bold transition-all"
                 style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
                 Editar
               </button>
             </>
           ) : (
-            <button onClick={onConfirmar} className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+            <button onClick={onConfirmar} className="w-full"
               style={{ background: 'white', color: '#1e3a5f', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 700, padding: '0.875rem' }}>
               Tomar asistencia ahora →
             </button>
@@ -130,7 +117,6 @@ function ConfirmarFechaView({
         </div>
       </div>
 
-      {/* Historial */}
       <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
         <div className="px-5 py-4 border-b" style={{ borderColor: '#f1f5f9' }}>
           <p className="text-sm font-bold" style={{ color: '#1e3a5f' }}>Historial de asistencias</p>
@@ -149,33 +135,21 @@ function ConfirmarFechaView({
             {historial.map((fecha, idx) => {
               const esHoy = fecha === hoy
               return (
-                <div
-                  key={fecha}
-                  className="flex items-center justify-between px-5 py-3"
-                  style={{ borderBottom: idx < historial.length - 1 ? '1px solid #f8fafc' : 'none' }}
-                >
+                <div key={fecha} className="flex items-center justify-between px-5 py-3"
+                  style={{ borderBottom: idx < historial.length - 1 ? '1px solid #f8fafc' : 'none' }}>
                   <div className="flex items-center gap-3">
-                    <div style={{
-                      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                      background: esHoy ? '#eff6ff' : '#f8fafc',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, background: esHoy ? '#eff6ff' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="14" height="14" fill="none" stroke={esHoy ? '#2563eb' : '#94a3b8'} strokeWidth="2" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
                         <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold capitalize" style={{ color: esHoy ? '#2563eb' : '#1e3a5f' }}>
-                        {formatFechaLegible(fecha)}
-                      </p>
+                      <p className="text-sm font-semibold capitalize" style={{ color: esHoy ? '#2563eb' : '#1e3a5f' }}>{formatFechaLegible(fecha)}</p>
                       {esHoy && <p className="text-xs" style={{ color: '#2563eb' }}>Hoy</p>}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                    style={{ background: '#f0fdf4', color: '#16a34a' }}>
-                    ✓ Registrada
-                  </span>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#f0fdf4', color: '#16a34a' }}>✓ Registrada</span>
                 </div>
               )
             })}
@@ -188,10 +162,7 @@ function ConfirmarFechaView({
 
 // ─── Vista: Lista de asistencia ───────────────────────────────────────────────
 function AsistenciaView({
-  asignatura,
-  grupoId,
-  onBack,
-  onGuardado,
+  asignatura, grupoId, onBack, onGuardado,
 }: {
   asignatura: AsignaturaItem
   grupoId: string
@@ -199,11 +170,11 @@ function AsistenciaView({
   onGuardado: () => void
 }) {
   const supabase = createClient()
-  const [alumnos, setAlumnos]     = useState<Alumno[]>([])
+  const [alumnos, setAlumnos]       = useState<Alumno[]>([])
   const [asistencia, setAsistencia] = useState<Asistencia>({})
-  const [loading, setLoading]     = useState(true)
-  const [guardando, setGuardando] = useState(false)
-  const [guardado, setGuardado]   = useState(false)
+  const [loading, setLoading]       = useState(true)
+  const [guardando, setGuardando]   = useState(false)
+  const [guardado, setGuardado]     = useState(false)
 
   useEffect(() => {
     async function cargar() {
@@ -211,7 +182,6 @@ function AsistenciaView({
       const { data, error } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: grupoId })
       if (!error && data) {
         setAlumnos(data)
-        // Intentar cargar asistencia previa de hoy
         const hoy = formatFechaISO()
         const { data: prevData } = await supabase
           .from('asistencias')
@@ -220,13 +190,9 @@ function AsistenciaView({
           .eq('asignatura_id', asignatura.id)
           .eq('fecha', hoy)
         const init: Asistencia = {}
-        data.forEach((a: Alumno) => { init[a.id] = 'P' as 'P' | 'A' | 'J' | 'R' })
-        // Invertir el mapa al leer: 'presente'→'P', 'falta'→'A', 'justificado'→'J'
+        data.forEach((a: Alumno) => { init[a.id] = 'P' })
         const estadoInverso: Record<string, 'P' | 'A' | 'J' | 'R'> = {
-          presente: 'P',
-          falta: 'A',
-          justificada: 'J',
-          retardo: 'R',
+          presente: 'P', falta: 'A', justificada: 'J', retardo: 'R',
         }
         if (prevData) {
           prevData.forEach((r: { estudiante_id: string; estado: string }) => {
@@ -255,39 +221,36 @@ function AsistenciaView({
     try {
       const hoy = formatFechaISO()
 
-      // Obtener plantel_id del docente autenticado
+      // Obtener datos del docente autenticado
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('No autenticado')
 
+      // ── FIX: obtener plantel_id E id del docente ──────────────────────────
       const { data: ud, error: udError } = await supabase
         .from('usuarios')
-        .select('plantel_id')
+        .select('plantel_id, id')
         .eq('auth_id', user.id)
         .single()
-      if (udError || !ud?.plantel_id) throw new Error('No se pudo obtener plantel_id')
+      if (udError || !ud?.plantel_id || !ud?.id) throw new Error('No se pudo obtener datos del docente')
 
-      // Mapa para respetar el check constraint "asistencias_estado_check"
-      // Si tu constraint usa otros valores (ej. 'P','A','J') ajusta este mapa
       const estadoMap: Record<'P' | 'A' | 'J' | 'R', string> = {
-        P: 'presente',
-        A: 'falta',
-        J: 'justificada',
-        R: 'retardo',
+        P: 'presente', A: 'falta', J: 'justificada', R: 'retardo',
       }
 
       const registros = alumnos.map(a => ({
         estudiante_id: a.id,
-        grupo_id: grupoId,
+        grupo_id:      grupoId,
         asignatura_id: asignatura.id,
-        fecha: hoy,
-        estado: estadoMap[asistencia[a.id] ?? 'P'],
-        plantel_id: ud.plantel_id,
+        fecha:         hoy,
+        estado:        estadoMap[asistencia[a.id] ?? 'P'],
+        plantel_id:    ud.plantel_id,
+        docente_id:    ud.id,          // ── FIX: docente_id requerido ─────────
       }))
 
       const { error: upsertError } = await supabase
         .from('asistencias')
         .upsert(registros, {
-          onConflict: 'estudiante_id,asignatura_id,fecha',
+          onConflict: 'estudiante_id,asignatura_id,fecha,docente_id',
           ignoreDuplicates: false,
         })
 
@@ -326,8 +289,6 @@ function AsistenciaView({
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
-
-      {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={onBack}
           style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
@@ -341,7 +302,6 @@ function AsistenciaView({
         </div>
       </div>
 
-      {/* Stats + marcar todos */}
       <div className="bg-white rounded-2xl p-4" style={{ border: '1px solid #e2e8f0' }}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex gap-4 text-sm">
@@ -377,7 +337,6 @@ function AsistenciaView({
         </div>
       </div>
 
-      {/* Lista */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"/>
@@ -457,20 +416,15 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
   )
 }
 
-
 // ─── Botón macOS ─────────────────────────────────────────────────────────────
 function MacButton({ onClick }: { onClick: () => void }) {
   const [hovered, setHovered] = useState(false)
-
   const dots = [
     { color: '#ff5f57', shadow: 'rgba(255,95,87,0.5)'  },
     { color: '#febc2e', shadow: 'rgba(254,188,46,0.5)' },
     { color: '#28c840', shadow: 'rgba(40,200,64,0.5)'  },
   ]
-
-  const fechaCorta = new Date().toLocaleDateString('es-MX', {
-    weekday: 'short', day: 'numeric', month: 'short'
-  })
+  const fechaCorta = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
     <>
@@ -481,115 +435,35 @@ function MacButton({ onClick }: { onClick: () => void }) {
           60%  { transform: translateY(1px); }
           100% { transform: translateY(0); }
         }
-        @media (max-width: 767px) {
-          .mac-btn-desktop { display: none !important; }
-          .mac-btn-mobile  { display: flex !important; }
-        }
-        @media (min-width: 768px) {
-          .mac-btn-desktop { display: flex !important; }
-          .mac-btn-mobile  { display: none !important; }
-        }
+        @media (max-width: 767px) { .mac-btn-desktop { display: none !important; } .mac-btn-mobile { display: flex !important; } }
+        @media (min-width: 768px) { .mac-btn-desktop { display: flex !important; } .mac-btn-mobile { display: none !important; } }
       `}</style>
-
-      {/* ── Desktop: dots macOS originales ── */}
-      <button
-        className="mac-btn-desktop"
-        onClick={onClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          alignItems: 'center',
-          gap: '10px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '6px 4px',
-        }}
-      >
+      <button className="mac-btn-desktop" onClick={onClick}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+        style={{ alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {dots.map((dot, i) => (
-            <div
-              key={i}
-              style={{
-                width: 13,
-                height: 13,
-                borderRadius: '50%',
-                background: dot.color,
-                boxShadow: hovered ? ('0 0 6px ' + dot.shadow) : 'none',
-                animation: hovered
-                  ? ('macBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) ' + (i * 0.08) + 's both')
-                  : 'none',
-                transition: 'box-shadow 0.2s',
-              }}
-            />
+            <div key={i} style={{ width: 13, height: 13, borderRadius: '50%', background: dot.color, boxShadow: hovered ? ('0 0 6px ' + dot.shadow) : 'none', animation: hovered ? ('macBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) ' + (i * 0.08) + 's both') : 'none', transition: 'box-shadow 0.2s' }}/>
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
-          <span style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: hovered ? '#1e3a5f' : '#94a3b8',
-            transition: 'color 0.2s',
-            letterSpacing: '0.01em',
-            lineHeight: 1.3,
-          }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: hovered ? '#1e3a5f' : '#94a3b8', transition: 'color 0.2s', letterSpacing: '0.01em', lineHeight: 1.3 }}>
             Tomar asistencia
           </span>
-          <span style={{
-            fontSize: '0.68rem',
-            color: '#5b9af0',
-            fontWeight: 500,
-            maxHeight: hovered ? '20px' : '0px',
-            opacity: hovered ? 1 : 0,
-            overflow: 'hidden',
-            transition: 'max-height 0.25s ease, opacity 0.2s ease',
-            letterSpacing: '0.01em',
-            marginTop: hovered ? 1 : 0,
-          }}>
+          <span style={{ fontSize: '0.68rem', color: '#5b9af0', fontWeight: 500, maxHeight: hovered ? '20px' : '0px', opacity: hovered ? 1 : 0, overflow: 'hidden', transition: 'max-height 0.25s ease, opacity 0.2s ease', letterSpacing: '0.01em', marginTop: hovered ? 1 : 0 }}>
             {fechaCorta}
           </span>
         </div>
       </button>
-
-      {/* ── Móvil: botón compacto con fecha inline ── */}
-      <button
-        className="mac-btn-mobile"
-        onClick={onClick}
-        style={{
-          display: 'none', /* overridden by media query */
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          width: '100%',
-          background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
-          border: 'none',
-          borderRadius: 12,
-          padding: '10px 14px',
-          cursor: 'pointer',
-          gap: 8,
-        }}
-      >
+      <button className="mac-btn-mobile" onClick={onClick}
+        style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)', border: 'none', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <svg width="15" height="15" fill="none" stroke="#475569" strokeWidth="2.2" viewBox="0 0 24 24">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', letterSpacing: '0.01em' }}>
-            Tomar asistencia
-          </span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', letterSpacing: '0.01em' }}>Tomar asistencia</span>
         </div>
-        <span style={{
-          fontSize: '0.7rem',
-          fontWeight: 600,
-          color: '#64748b',
-          background: 'rgba(0,0,0,0.08)',
-          padding: '3px 9px',
-          borderRadius: 20,
-          letterSpacing: '0.01em',
-          textTransform: 'capitalize',
-          flexShrink: 0,
-        }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', background: 'rgba(0,0,0,0.08)', padding: '3px 9px', borderRadius: 20, letterSpacing: '0.01em', textTransform: 'capitalize', flexShrink: 0 }}>
           {fechaCorta}
         </span>
       </button>
@@ -658,7 +532,6 @@ export default function GruposPage() {
     />
   )
 
-  // Vista principal: grupos
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto" style={{ minHeight: '100vh' }}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -685,27 +558,10 @@ export default function GruposPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {grupos.map(grupo => (
             <div key={grupo.id} className="rounded-2xl overflow-hidden transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.55)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.7)',
-                boxShadow: '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-3px)'
-                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,118,255,0.14), 0 2px 4px rgba(0,0,0,0.06)'
-                e.currentTarget.style.borderColor = 'rgba(0,118,255,0.3)'
-                e.currentTarget.style.background = 'rgba(255,255,255,0.72)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)'
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'
-                e.currentTarget.style.background = 'rgba(255,255,255,0.55)'
-              }}>
+              style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,118,255,0.14), 0 2px 4px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(0,118,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.72)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}>
 
-              {/* Banner */}
               <div className="relative px-5 pt-5 pb-8 overflow-hidden"
                 style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.75) 0%, rgba(96,165,250,0.7) 100%)', backdropFilter: 'blur(8px)' }}>
                 <div style={{ position: 'absolute', right: -20, top: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }}/>
@@ -721,37 +577,25 @@ export default function GruposPage() {
                       {grupo.asignaturas.length} {grupo.asignaturas.length === 1 ? 'asignatura' : 'asignaturas'}
                     </p>
                   </div>
-                  {/* Recuadro con número del grupo */}
                   <div style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', padding: '6px 14px', borderRadius: 10, fontWeight: 700, fontSize: '1rem', fontFamily: 'Outfit, sans-serif', minWidth: 48, textAlign: 'center' }}>
                     {grupo.numero}
                   </div>
                 </div>
               </div>
 
-              {/* Cuerpo */}
               <div className="px-5 pt-4 pb-5" style={{ background: 'rgba(255,255,255,0.3)' }}>
                 <div className="mb-4">
                   <p className="text-xs font-semibold mb-2" style={{ color: '#94a3b8', letterSpacing: '0.06em' }}>ASIGNATURAS</p>
                   <div className="flex flex-wrap gap-1.5" style={{ maxHeight: '72px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                     {grupo.asignaturas.map(asig => (
-                      <span key={asig.id} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        fontSize: '0.72rem', fontWeight: 500,
-                        padding: '3px 10px 3px 7px',
-                        borderRadius: 20,
-                        background: 'rgba(59,130,246,0.07)',
-                        color: '#4f88e3',
-                        border: '1px solid rgba(59,130,246,0.15)',
-                        backdropFilter: 'blur(4px)',
-                      }}>
+                      <span key={asig.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 500, padding: '3px 10px 3px 7px', borderRadius: 20, background: 'rgba(59,130,246,0.07)', color: '#4f88e3', border: '1px solid rgba(59,130,246,0.15)', backdropFilter: 'blur(4px)' }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4f88e3', opacity: 0.7, flexShrink: 0, display: 'inline-block' }}/>
                         {asig.nombre}
                       </span>
                     ))}
                   </div>
                 </div>
-
-                <MacButton onClick={() => setVista({ tipo: 'asignaturas', grupo })} />
+                <MacButton onClick={() => setVista({ tipo: 'asignaturas', grupo })}/>
               </div>
             </div>
           ))}
