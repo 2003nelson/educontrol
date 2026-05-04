@@ -1,4 +1,4 @@
-// src/app/docente/(autenticado)/grupos/page.tsx
+// src/app/docente/(autenticaado)/grupos/page.tsx
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useDocente } from '@/contexts/DocenteContext'
