@@ -1,6 +1,6 @@
 // src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useDocente } from '@/contexts/DocenteContext'
 import { createClient } from '@/lib/supabase/client'
 
@@ -482,6 +482,36 @@ type Vista =
 export default function GruposPage() {
   const { docente, loading, error } = useDocente()
   const [vista, setVista] = useState<Vista>({ tipo: 'grupos' })
+
+  // ── Manejo del botón atrás del teléfono ──────────────────────────────────
+  // Cada vez que la vista cambia a algo distinto de 'grupos', empujamos
+  // una entrada falsa al historial para que el botón atrás la consuma
+  // en lugar de salir al login.
+  useEffect(() => {
+    if (vista.tipo !== 'grupos') {
+      window.history.pushState({ vista: vista.tipo }, '')
+    }
+  }, [vista])
+
+  const handlePopState = useCallback(() => {
+    setVista(prev => {
+      if (prev.tipo === 'asistencia') {
+        return { tipo: 'confirmar', grupo: prev.grupo, asignatura: prev.asignatura, ts: Date.now() }
+      }
+      if (prev.tipo === 'confirmar') {
+        return { tipo: 'asignaturas', grupo: prev.grupo }
+      }
+      if (prev.tipo === 'asignaturas') {
+        return { tipo: 'grupos' }
+      }
+      return { tipo: 'grupos' }
+    })
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [handlePopState])
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
