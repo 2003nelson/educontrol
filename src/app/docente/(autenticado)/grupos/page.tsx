@@ -1,4 +1,4 @@
-// src/app/docente/(autenticaado)/grupos/page.tsx
+// src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useDocente } from '@/contexts/DocenteContext'
@@ -484,26 +484,41 @@ export default function GruposPage() {
   const [vista, setVista] = useState<Vista>({ tipo: 'grupos' })
 
   // ── Manejo del botón atrás del teléfono ──────────────────────────────────
-  // Cada vez que la vista cambia a algo distinto de 'grupos', empujamos
-  // una entrada falsa al historial para que el botón atrás la consuma
-  // en lugar de salir al login.
+  // Al montar, empujamos DOS entradas: una ancla base + la vista actual.
+  // Así el botón atrás siempre consume una entrada nuestra antes de llegar
+  // al historial real del browser.
   useEffect(() => {
-    if (vista.tipo !== 'grupos') {
-      window.history.pushState({ vista: vista.tipo }, '')
-    }
-  }, [vista])
+    // Ancla base — nunca se puede ir más atrás de aquí
+    window.history.replaceState({ vista: 'grupos', ancla: true }, '')
+    // Entrada de la vista actual (ya es 'grupos' al inicio, pero la dejamos lista)
+    window.history.pushState({ vista: 'grupos' }, '')
+  }, [])
 
-  const handlePopState = useCallback(() => {
+  const handlePopState = useCallback((e: PopStateEvent) => {
+    const state = e.state as { vista?: string; ancla?: boolean } | null
+
+    // Si llegamos al ancla, volvemos a empujar una entrada para no salir
+    if (state?.ancla) {
+      window.history.pushState({ vista: 'grupos' }, '')
+      setVista({ tipo: 'grupos' })
+      return
+    }
+
     setVista(prev => {
       if (prev.tipo === 'asistencia') {
+        // Empujar nueva entrada para que el próximo atrás funcione
+        window.history.pushState({ vista: 'confirmar' }, '')
         return { tipo: 'confirmar', grupo: prev.grupo, asignatura: prev.asignatura, ts: Date.now() }
       }
       if (prev.tipo === 'confirmar') {
+        window.history.pushState({ vista: 'asignaturas' }, '')
         return { tipo: 'asignaturas', grupo: prev.grupo }
       }
       if (prev.tipo === 'asignaturas') {
+        window.history.pushState({ vista: 'grupos' }, '')
         return { tipo: 'grupos' }
       }
+      window.history.pushState({ vista: 'grupos' }, '')
       return { tipo: 'grupos' }
     })
   }, [])
