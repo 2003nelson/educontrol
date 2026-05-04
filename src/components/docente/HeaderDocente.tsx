@@ -25,6 +25,10 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
 
   const seccionActiva = NAV_ITEMS.find(item => isItemActive(item.href, pathname ?? ''))?.label ?? ''
 
+  function handleNav(href: string) {
+    router.push(href)
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -65,7 +69,7 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
             return (
               <button
                 key={item.href}
-                onClick={() => router.push(item.href)}
+                onClick={() => handleNav(item.href)}
                 className="relative px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-150"
                 style={{
                   background: active ? '#eff6ff' : 'transparent',
@@ -126,7 +130,7 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
             return (
               <button
                 key={item.href}
-                onClick={() => { router.push(item.href); setMenuOpen(false) }}
+                onClick={() => { handleNav(item.href); setMenuOpen(false) }}
                 className="w-full text-left px-4 py-3 text-sm font-semibold rounded-lg transition"
                 style={{ background: active ? '#eff6ff' : 'transparent', color: active ? '#2563eb' : '#64748b' }}
               >

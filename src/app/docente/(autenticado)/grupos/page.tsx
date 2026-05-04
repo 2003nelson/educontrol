@@ -59,8 +59,9 @@ function ConfirmarFechaView({
   const yaHayHoy = historial.includes(hoy)
 
   return (
-    <div className="p-4 md:p-6 max-w-lg mx-auto space-y-5">
-      <div className="flex items-center gap-3">
+    <div className="p-4 md:p-6" style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
         <button onClick={onBack}
           style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
           <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -73,88 +74,148 @@ function ConfirmarFechaView({
         </div>
       </div>
 
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', boxShadow: '0 8px 24px rgba(37,99,235,0.25)' }}>
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: yaHayHoy ? '#4ade80' : 'rgba(255,255,255,0.4)' }}/>
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {yaHayHoy ? 'Asistencia registrada' : 'Lista para tomar'}
-            </span>
-            {yaHayHoy && (
-              <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 700, padding: '2px 10px', borderRadius: 9999, background: 'rgba(74,222,128,0.2)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}>
-                ✓ Completada
+      {/* Layout: columnas en desktop, apilado en móvil */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'stretch' }}>
+
+        {/* Card izquierda — acción del día */}
+        <div className="rounded-2xl" style={{
+          background: 'white',
+          border: '1px solid #f0f0f5',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          display: 'flex', flexDirection: 'column',
+          position: 'relative', overflow: 'hidden',
+        }}>
+
+
+          <div style={{ padding: '2.5rem 2rem 1.5rem', flex: 1 }}>
+            {/* Estado */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+              <div style={{
+                width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+                background: yaHayHoy ? '#22c55e' : '#e2e8f0',
+                boxShadow: yaHayHoy ? '0 0 0 3px rgba(34,197,94,0.15)' : 'none',
+              }}/>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8' }}>
+                {yaHayHoy ? 'Asistencia registrada' : 'Lista para tomar'}
               </span>
+              {yaHayHoy && (
+                <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 700, padding: '3px 12px', borderRadius: 9999, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                  ✓ Completada
+                </span>
+              )}
+            </div>
+
+            {/* Fecha grande */}
+            <p style={{ color: '#1e3a5f', fontSize: '2.5rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', lineHeight: 1.1, textTransform: 'capitalize', marginBottom: '0.5rem' }}>
+              {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>
+              {new Date().getFullYear()}
+            </p>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: '#f4f4f8', margin: '1.25rem 0' }}/>
+
+            {/* Asignatura */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f4f4f8', border: '1px solid #ebebf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="16" height="16" fill="none" stroke="#64748b" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#475569', fontWeight: 500, lineHeight: 1.3 }}>
+                {asignatura.nombre}
+              </p>
+            </div>
+          </div>
+
+          {/* Botón acción */}
+          <div style={{ padding: '0 2rem 2rem', display: 'flex', gap: '0.75rem' }}>
+            {yaHayHoy ? (
+              <>
+                <div style={{ flex: 1, padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 500 }}>Asistencia tomada</span>
+                </div>
+                <button onClick={onConfirmar}
+                  style={{ padding: '0.875rem 1.25rem', background: '#eff6ff', color: '#2563eb', border: '1.5px solid #bfdbfe', borderRadius: '0.875rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+                  Editar
+                </button>
+              </>
+            ) : (
+              <button onClick={onConfirmar} style={{ width: '100%', background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: 'white', border: 'none', borderRadius: '0.875rem', cursor: 'pointer', fontWeight: 700, padding: '0.95rem', fontSize: '0.9rem' }}>
+                Tomar asistencia ahora →
+              </button>
             )}
           </div>
-          <p className="text-white text-2xl font-bold capitalize mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            {new Date().getFullYear()} · {asignatura.nombre}
-          </p>
         </div>
-        <div className="px-6 pb-6" style={{ display: 'flex', gap: '0.75rem' }}>
-          {yaHayHoy ? (
-            <>
-              <div style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="15" height="15" fill="none" stroke="#4ade80" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Asistencia del día tomada</span>
-              </div>
-              <button onClick={onConfirmar}
-                style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-                Editar
-              </button>
-            </>
-          ) : (
-            <button onClick={onConfirmar} className="w-full"
-              style={{ background: 'white', color: '#1e3a5f', border: 'none', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 700, padding: '0.875rem' }}>
-              Tomar asistencia ahora →
-            </button>
-          )}
-        </div>
-      </div>
 
-      <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
-        <div className="px-5 py-4 border-b" style={{ borderColor: '#f1f5f9' }}>
-          <p className="text-sm font-bold" style={{ color: '#1e3a5f' }}>Historial de asistencias</p>
-          <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>Últimas 10 sesiones registradas</p>
-        </div>
-        {loadingHist ? (
-          <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
+        {/* Card derecha — historial */}
+        <div style={{
+          background: 'white', borderRadius: '1rem',
+          border: '1px solid #f0f0f5',
+          overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ padding: '1.5rem 1.75rem', borderBottom: '1px solid #f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>Historial de asistencias</p>
+              <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: '0.2rem 0 0' }}>Últimas 10 sesiones registradas</p>
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" fill="none" stroke="#64748b" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
           </div>
-        ) : historial.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm" style={{ color: '#94a3b8' }}>Sin registros aún</p>
-          </div>
-        ) : (
-          <div>
-            {historial.map((fecha, idx) => {
+
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 420 }}>
+            {loadingHist ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+                <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
+              </div>
+            ) : historial.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '0.5rem' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#c0c0d0" strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>Sin registros aún</p>
+              </div>
+            ) : historial.map((fecha, idx) => {
               const esHoy = fecha === hoy
               return (
-                <div key={fecha} className="flex items-center justify-between px-5 py-3"
-                  style={{ borderBottom: idx < historial.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-                  <div className="flex items-center gap-3">
-                    <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, background: esHoy ? '#eff6ff' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div key={fecha} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.5rem', borderBottom: idx < historial.length - 1 ? '1px solid #f7f7fb' : 'none', transition: 'background 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: esHoy ? '#eff6ff' : '#f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', border: esHoy ? '1px solid #bfdbfe' : '1px solid #ebebf0' }}>
                       <svg width="14" height="14" fill="none" stroke={esHoy ? '#2563eb' : '#94a3b8'} strokeWidth="2" viewBox="0 0 24 24">
                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
                         <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold capitalize" style={{ color: esHoy ? '#2563eb' : '#1e3a5f' }}>{formatFechaLegible(fecha)}</p>
-                      {esHoy && <p className="text-xs" style={{ color: '#2563eb' }}>Hoy</p>}
+                      <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: esHoy ? '#2563eb' : '#1e3a5f', margin: 0, textTransform: 'capitalize' }}>{formatFechaLegible(fecha)}</p>
+                      {esHoy
+                        ? <p style={{ fontSize: '0.7rem', color: '#2563eb', margin: 0, fontWeight: 500 }}>Hoy</p>
+                        : <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>Registrada</p>
+                      }
                     </div>
                   </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#f0fdf4', color: '#16a34a' }}>✓ Registrada</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.25rem 0.625rem', borderRadius: 9999, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>✓</span>
                 </div>
               )
             })}
           </div>
-        )}
+        </div>
+
       </div>
     </div>
   )

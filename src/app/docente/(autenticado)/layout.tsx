@@ -13,6 +13,12 @@ function DocenteLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(145deg, #e8f0fe 0%, #f0f7ff 40%, #e8f4fd 70%, #f5f0ff 100%)' }}>
+      <style>{`
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(32px) } to { opacity: 1; transform: translateX(0) } }
+        @keyframes slideInLeft  { from { opacity: 0; transform: translateX(-32px) } to { opacity: 1; transform: translateX(0) } }
+        .page-slide-right { animation: slideInRight 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+        .page-slide-left  { animation: slideInLeft  0.28s cubic-bezier(0.22,1,0.36,1) both; }
+      `}</style>
       <HeaderDocente nombre={docente?.nombre_completo || 'Docente'} />
       <main className="w-full flex-1">
         {children}
