@@ -88,22 +88,7 @@ function ConfirmarFechaView({
 
 
           <div style={{ padding: '2.5rem 2rem 1.5rem', flex: 1 }}>
-            {/* Estado */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-                background: yaHayHoy ? '#22c55e' : '#e2e8f0',
-                boxShadow: yaHayHoy ? '0 0 0 3px rgba(34,197,94,0.15)' : 'none',
-              }}/>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8' }}>
-                {yaHayHoy ? 'Asistencia registrada' : 'Lista para tomar'}
-              </span>
-              {yaHayHoy && (
-                <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 700, padding: '3px 12px', borderRadius: 9999, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                  ✓ Completada
-                </span>
-              )}
-            </div>
+
 
             {/* Fecha grande */}
             <p style={{ color: '#1e3a5f', fontSize: '2.5rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', lineHeight: 1.1, textTransform: 'capitalize', marginBottom: '0.5rem' }}>
