@@ -7,15 +7,15 @@ import { createClient } from '@/lib/supabase/client'
 import SemanaSlidePanel, { type Semana } from '@/components/dashboard/seguimiento/SemanaSlidePanel'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
-type AsignacionGrupo  = { asignatura: string; asignatura_id: string; docente: string; docente_id: string }
-type Grupo            = { id: string; numero: string; grado: number; ciclo_escolar: string; activo: boolean; plantel_id: string; total_alumnos: number; asignaciones: AsignacionGrupo[] }
-type Alumno           = { id: string; nombre_completo: string; matricula: string | null }
-type ResumenAsistencia= { estudiante_id: string; total: number; presentes: number; ausentes: number; porcentaje: number }
-type RegistroDia      = { fecha: string; estado: string }
-type AsistenciaDiaria = Record<string, RegistroDia[]>
-type Vista            = 'semestres' | 'grupos' | 'alumnos'
-type Direccion        = 'adelante' | 'atras'
-type FiltroPanel      = 'asignaturas' | null
+type AsignacionGrupo   = { asignatura: string; asignatura_id: string; docente: string; docente_id: string }
+type Grupo             = { id: string; numero: string; grado: number; ciclo_escolar: string; activo: boolean; plantel_id: string; total_alumnos: number; asignaciones: AsignacionGrupo[] }
+type Alumno            = { id: string; nombre_completo: string; matricula: string | null }
+type ResumenAsistencia = { estudiante_id: string; total: number; presentes: number; ausentes: number; porcentaje: number }
+type RegistroDia       = { fecha: string; estado: string }
+type AsistenciaDiaria  = Record<string, RegistroDia[]>
+type Vista             = 'semestres' | 'grupos' | 'alumnos'
+type Direccion         = 'adelante' | 'atras'
+type FiltroPanel       = 'asignaturas' | null
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getInicioSemana(fecha: Date): Date {
@@ -180,8 +180,6 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
 
   return (
     <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative' }}>
-
-      {/* Leyenda de estados */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.625rem 1.25rem', borderBottom: '1px solid #f1f5f9', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {[
           { icon: <svg width="12" height="12" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#f0fdf4', label: 'Presente' },
@@ -190,14 +188,11 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
           { icon: <svg width="11" height="11" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg: '#f5f3ff', label: 'Retardo' },
         ].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <div style={{ width: 22, height: 22, borderRadius: '0.375rem', background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {item.icon}
-            </div>
+            <div style={{ width: 22, height: 22, borderRadius: '0.375rem', background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.icon}</div>
             <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>{item.label}</span>
           </div>
         ))}
       </div>
-
       <div style={{ maxHeight: 'calc(8 * 56px + 44px)', overflowY: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -206,9 +201,7 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
               <th style={{ textAlign: 'left', padding: '0.75rem 1.25rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Alumno</th>
               <th style={{ textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Matrícula</th>
               {dias.map(d => (
-                <th key={d.iso} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', minWidth: 36 }}>
-                  {d.letra}
-                </th>
+                <th key={d.iso} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', minWidth: 36 }}>{d.letra}</th>
               ))}
             </tr>
           </thead>
@@ -242,9 +235,7 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
                     return (
                       <td key={d.iso} style={{ textAlign: 'center', padding: '0.875rem 0.5rem' }}>
                         <div
-                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '0.5rem',
-                            background: esPresente ? '#f0fdf4' : esFalta ? '#fef2f2' : esJustif ? '#fefce8' : esRetardo ? '#f5f3ff' : '#f8fafc',
-                          }}
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '0.5rem', background: esPresente ? '#f0fdf4' : esFalta ? '#fef2f2' : esJustif ? '#fefce8' : esRetardo ? '#f5f3ff' : '#f8fafc' }}
                           onMouseEnter={e => {
                             if (!tieneReg) return
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -278,28 +269,87 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
 }
 
 // ─── Vista alumnos ────────────────────────────────────────────────────────────
-function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, loadingAlumnos, volver }: {
+function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   grupo: Grupo
   alumnos: Alumno[]
-  asistencias: ResumenAsistencia[]
-  asistenciaDiaria: AsistenciaDiaria
-  semanas: Semana[]
   loadingAlumnos: boolean
   volver: () => void
 }) {
+  const supabase = createClient()
   const [busqueda, setBusqueda]   = useState('')
   const [searchExp, setSearchExp] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const [panelAbierto, setPanelAbierto] = useState<FiltroPanel>(null)
-  const [asigSelec, setAsigSelec]       = useState<AsignacionGrupo | null>(null)
-  const [semanaSlide, setSemanaSlide]   = useState(false)
-  const [semanaSelec, setSemanaSelec]   = useState<string | null>(null)
+  const [panelAbierto, setPanelAbierto]   = useState<FiltroPanel>(null)
+  const [asigSelec, setAsigSelec]         = useState<AsignacionGrupo | null>(null)
+  const [semanaSlide, setSemanaSlide]     = useState(false)
+  const [semanaSelec, setSemanaSelec]     = useState<string | null>(null)
 
-  const tieneAsig       = asigSelec !== null
-  const asistMap        = Object.fromEntries(asistencias.map(a => [a.estudiante_id, a]))
-  const tieneAsistencias= asistencias.some(a => a.total > 0)
-  const semanaActual    = semanas.find(s => s.inicio === semanaSelec) ?? null
+  // ── Asistencias — cargadas al seleccionar asignatura ──────────────────────
+  const [asistencias, setAsistencias]           = useState<ResumenAsistencia[]>([])
+  const [asistenciaDiaria, setAsistenciaDiaria] = useState<AsistenciaDiaria>({})
+  const [semanas, setSemanas]                   = useState<Semana[]>([])
+  const [loadingAsist, setLoadingAsist]         = useState(false)
+
+  // Cada vez que cambia la asignatura seleccionada, recargar asistencias
+  useEffect(() => {
+    // Capturar valores antes del async para evitar null en closures
+    const asigId    = asigSelec?.asignatura_id ?? null
+    const docenteId = asigSelec?.docente_id ?? null
+
+    async function cargarAsistencias() {
+      setLoadingAsist(true)
+      setAsistencias([])
+      setAsistenciaDiaria({})
+      setSemanas([])
+      setSemanaSelec(null)
+
+      if (!asigId || !docenteId) { setLoadingAsist(false); return }
+
+      // ── FIX PRINCIPAL: filtrar por asignatura_id Y docente_id ──────────────
+      const { data: asistData } = await supabase
+        .from('asistencias')
+        .select('estudiante_id, estado, fecha')
+        .eq('grupo_id', grupo.id)
+        .eq('asignatura_id', asigId)
+        .eq('docente_id', docenteId)
+
+      if (asistData && asistData.length > 0) {
+        // Resumen general
+        const resumen: Record<string, ResumenAsistencia> = {}
+        alumnos.forEach(a => { resumen[a.id] = { estudiante_id: a.id, total: 0, presentes: 0, ausentes: 0, porcentaje: 0 } })
+        asistData.forEach(r => {
+          if (!resumen[r.estudiante_id]) return
+          resumen[r.estudiante_id].total++
+          if (r.estado === 'presente') resumen[r.estudiante_id].presentes++
+          if (r.estado === 'falta')    resumen[r.estudiante_id].ausentes++
+        })
+        Object.values(resumen).forEach(r => { r.porcentaje = r.total > 0 ? Math.round((r.presentes / r.total) * 100) : 0 })
+        setAsistencias(Object.values(resumen))
+
+        // Diaria por alumno
+        const diaria: AsistenciaDiaria = {}
+        alumnos.forEach(a => { diaria[a.id] = [] })
+        asistData.forEach(r => {
+          if (!diaria[r.estudiante_id]) diaria[r.estudiante_id] = []
+          diaria[r.estudiante_id].push({ fecha: r.fecha as string, estado: r.estado as string })
+        })
+        setAsistenciaDiaria(diaria)
+
+        const fechasUnicas = [...new Set(asistData.map(r => r.fecha as string))].sort()
+        setSemanas(generarSemanas(fechasUnicas))
+      }
+
+      setLoadingAsist(false)
+    }
+
+    cargarAsistencias()
+  }, [asigSelec, grupo.id, alumnos, supabase])
+
+  const tieneAsig        = asigSelec !== null
+  const asistMap         = Object.fromEntries(asistencias.map(a => [a.estudiante_id, a]))
+  const tieneAsistencias = asistencias.some(a => a.total > 0)
+  const semanaActual     = semanas.find(s => s.inicio === semanaSelec) ?? null
 
   const filtrados = alumnos.filter(a =>
     a.nombre_completo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -307,10 +357,10 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
   )
 
   const btns = [
-    { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,           activo: true },
-    { id: 'periodo',        label: 'Período',        sub: null,                                    activo: false },
-    { id: 'calificaciones', label: 'Calificaciones', sub: null,                                    activo: false },
-    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null, activo: tieneAsig },
+    { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,            activo: true },
+    { id: 'periodo',        label: 'Período',        sub: null,                                     activo: false },
+    { id: 'calificaciones', label: 'Calificaciones', sub: null,                                     activo: false },
+    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null,  activo: tieneAsig },
   ]
 
   return (
@@ -318,14 +368,12 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        {/* Izquierda: breadcrumb + buscador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexShrink: 0 }}>
           <VolverBtn onClick={volver}/>
           <div style={{ width: 1, height: 14, background: '#e2e8f0' }}/>
           <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e3a5f', margin: 0 }}>Grupo {grupo.numero}</p>
           <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{grupo.grado}° Semestre</span>
           <div style={{ width: 1, height: 14, background: '#e2e8f0' }}/>
-          {/* Buscador — movido aquí */}
           <div style={{ display: 'flex', alignItems: 'center', height: 32, borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: 'white', overflow: 'hidden', transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', width: searchExp ? 180 : 32, cursor: searchExp ? 'text' : 'pointer' }}
             onClick={() => { if (!searchExp) { setSearchExp(true); setTimeout(() => searchRef.current?.focus(), 50) } }}
             onMouseLeave={() => { if (!busqueda) { searchRef.current?.blur(); setSearchExp(false) } }}>
@@ -339,7 +387,6 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
           </div>
         </div>
 
-        {/* Derecha: filtros fijos */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {btns.map(btn => {
             const estaAbierto = panelAbierto === btn.id
@@ -347,41 +394,21 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
             const disabled    = !btn.activo
             return (
               <div key={btn.id} style={{ position: 'relative' }}>
-                <button
-                  disabled={disabled}
+                <button disabled={disabled}
                   onClick={() => {
                     if (disabled) return
-                    if (btn.id === 'asignaturas') {
-                      setPanelAbierto(panelAbierto === 'asignaturas' ? null : 'asignaturas')
-                    } else if (btn.id === 'asistencias') {
-                      setSemanaSlide(true)
-                      setPanelAbierto(null)
-                    }
+                    if (btn.id === 'asignaturas') setPanelAbierto(panelAbierto === 'asignaturas' ? null : 'asignaturas')
+                    else if (btn.id === 'asistencias') { setSemanaSlide(true); setPanelAbierto(null) }
                   }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.375rem',
-                    padding: '0.45rem 0.875rem', borderRadius: '0.75rem', fontSize: '0.8rem',
-                    fontWeight: estaAbierto || tieneValor ? 700 : 500,
-                    color:      disabled ? '#cbd5e1' : (estaAbierto || tieneValor) ? '#1e3a5f' : '#64748b',
-                    background: disabled ? '#fafafa' : (estaAbierto || tieneValor) ? 'white' : '#f8fafc',
-                    border: '1px solid ' + (disabled ? '#f1f5f9' : tieneValor ? '#bfdbfe' : '#e2e8f0'),
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    opacity: disabled ? 0.5 : 1,
-                    boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.2s',
-                    maxWidth: btn.id === 'asignaturas' && tieneValor ? 220 : 'none',
-                    overflow: 'hidden',
-                  }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.45rem 0.875rem', borderRadius: '0.75rem', fontSize: '0.8rem', fontWeight: estaAbierto || tieneValor ? 700 : 500, color: disabled ? '#cbd5e1' : (estaAbierto || tieneValor) ? '#1e3a5f' : '#64748b', background: disabled ? '#fafafa' : (estaAbierto || tieneValor) ? 'white' : '#f8fafc', border: '1px solid ' + (disabled ? '#f1f5f9' : tieneValor ? '#bfdbfe' : '#e2e8f0'), cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition: 'all 0.2s', maxWidth: btn.id === 'asignaturas' && tieneValor ? 220 : 'none', overflow: 'hidden' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{btn.label}{btn.sub ? (' · ' + btn.sub) : ''}</span>
-                  <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
-                    style={{ transform: estaAbierto ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}>
+                  <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ transform: estaAbierto ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', flexShrink: 0 }}>
                     <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>
             )
           })}
-
           {(asigSelec || semanaSelec) && (
             <button onClick={() => { setAsigSelec(null); setSemanaSelec(null); setPanelAbierto(null) }}
               style={{ padding: '0.4rem 0.75rem', borderRadius: '0.75rem', fontSize: '0.75rem', fontWeight: 600, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', cursor: 'pointer', transition: 'all 0.15s' }}
@@ -390,8 +417,6 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
               × Limpiar
             </button>
           )}
-
-
         </div>
       </div>
 
@@ -456,7 +481,7 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
       )}
 
       {/* Contenido principal */}
-      {loadingAlumnos ? (
+      {loadingAlumnos || loadingAsist ? (
         <div style={{ background: 'white', borderRadius: '1rem', padding: '3rem', display: 'flex', justifyContent: 'center', border: '1px solid #f1f5f9' }}>
           <div style={{ width: 36, height: 36, borderRadius: '50%', border: '4px solid #bfdbfe', borderTopColor: '#2563eb', animation: 'spin 0.8s linear infinite' }}/>
         </div>
@@ -473,7 +498,6 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
           <p style={{ fontSize: '0.775rem', color: '#94a3b8', margin: 0 }}>Usa el botón <strong>Asignatura</strong> en la parte superior</p>
         </div>
       ) : !semanaSelec ? (
-        /* Sin semana seleccionada — resumen general */
         <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9' }}>
           {filtrados.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center' }}>
@@ -544,7 +568,6 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
           )}
         </div>
       ) : (
-        /* Semana seleccionada — tabla L/M/M/J/V */
         <TablaAsistenciaSemanal
           alumnos={filtrados}
           asistenciaDiaria={asistenciaDiaria}
@@ -552,7 +575,6 @@ function AlumnosVista({ grupo, alumnos, asistencias, asistenciaDiaria, semanas, 
         />
       )}
 
-      {/* Slide panel de semanas — componente externo */}
       {semanaSlide && (
         <SemanaSlidePanel
           semanas={semanas}
@@ -577,9 +599,6 @@ export default function SeguimientoPage() {
   const [gradoActivo, setGradoActivo]     = useState<number | null>(null)
   const [grupoActivo, setGrupoActivo]     = useState<Grupo | null>(null)
   const [alumnos, setAlumnos]             = useState<Alumno[]>([])
-  const [asistencias, setAsistencias]     = useState<ResumenAsistencia[]>([])
-  const [asistenciaDiaria, setAsistenciaDiaria] = useState<AsistenciaDiaria>({})
-  const [semanas, setSemanas]             = useState<Semana[]>([])
   const [loadingAlumnos, setLoadingAlumnos] = useState(false)
 
   useEffect(() => {
@@ -623,9 +642,10 @@ export default function SeguimientoPage() {
     cargar()
   }, [supabase])
 
+  // ── Cargar alumnos del grupo — ya NO carga asistencias ───────────────────
   const cargarGrupo = useCallback(async (grupo: Grupo) => {
     setLoadingAlumnos(true)
-    setAlumnos([]); setAsistencias([]); setAsistenciaDiaria({}); setSemanas([])
+    setAlumnos([])
 
     const { data: alumnosData } = await supabase
       .from('estudiantes')
@@ -634,41 +654,7 @@ export default function SeguimientoPage() {
       .eq('activo', true)
       .order('nombre_completo')
 
-    if (!alumnosData) { setLoadingAlumnos(false); return }
-    setAlumnos(alumnosData)
-
-    const { data: asistData } = await supabase
-      .from('asistencias')
-      .select('estudiante_id, estado, fecha')
-      .eq('grupo_id', grupo.id)
-
-    if (asistData && asistData.length > 0) {
-      // Resumen general
-      const resumen: Record<string, ResumenAsistencia> = {}
-      alumnosData.forEach(a => { resumen[a.id] = { estudiante_id: a.id, total: 0, presentes: 0, ausentes: 0, porcentaje: 0 } })
-      asistData.forEach(r => {
-        if (!resumen[r.estudiante_id]) return
-        resumen[r.estudiante_id].total++
-        if (r.estado === 'presente') resumen[r.estudiante_id].presentes++
-        if (r.estado === 'falta')    resumen[r.estudiante_id].ausentes++
-      })
-      Object.values(resumen).forEach(r => { r.porcentaje = r.total > 0 ? Math.round((r.presentes / r.total) * 100) : 0 })
-      setAsistencias(Object.values(resumen))
-
-      // Diaria por alumno
-      const diaria: AsistenciaDiaria = {}
-      alumnosData.forEach(a => { diaria[a.id] = [] })
-      asistData.forEach(r => {
-        if (!diaria[r.estudiante_id]) diaria[r.estudiante_id] = []
-        diaria[r.estudiante_id].push({ fecha: r.fecha as string, estado: r.estado as string })
-      })
-      setAsistenciaDiaria(diaria)
-
-      // Semanas automáticas
-      const fechasUnicas = [...new Set(asistData.map(r => r.fecha as string))].sort()
-      setSemanas(generarSemanas(fechasUnicas))
-    }
-
+    setAlumnos(alumnosData ?? [])
     setLoadingAlumnos(false)
   }, [supabase])
 
@@ -676,11 +662,7 @@ export default function SeguimientoPage() {
     setDir(d); transicionar(() => { fn?.(); setVista(nuevaVista) })
   }
 
-  const gradosMap = grupos.reduce((acc, g) => {
-    if (!acc[g.grado]) acc[g.grado] = []
-    acc[g.grado].push(g)
-    return acc
-  }, {} as Record<number, Grupo[]>)
+  const gradosMap       = grupos.reduce((acc, g) => { if (!acc[g.grado]) acc[g.grado] = []; acc[g.grado].push(g); return acc }, {} as Record<number, Grupo[]>)
   const grados          = Object.keys(gradosMap).map(Number).sort()
   const gruposDelGrado  = gradoActivo ? (gradosMap[gradoActivo] ?? []) : []
   const slideIn         = dir === 'adelante' ? 'translateX(18px)' : 'translateX(-18px)'
@@ -695,7 +677,6 @@ export default function SeguimientoPage() {
       <div className="px-4 pb-4 pt-3 flex flex-col" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', gap: '1rem' }}>
         <div style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateX(0) scale(1)' : (slideIn + ' scale(0.985)'), transition: visible ? 'opacity 0.38s cubic-bezier(0.34,1.56,0.64,1),transform 0.38s cubic-bezier(0.34,1.56,0.64,1)' : 'opacity 0.2s ease,transform 0.2s ease' }}>
 
-          {/* Vista semestres */}
           {vista === 'semestres' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {loadingGrupos ? (
@@ -720,7 +701,6 @@ export default function SeguimientoPage() {
             </div>
           )}
 
-          {/* Vista grupos */}
           {vista === 'grupos' && gradoActivo && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -747,7 +727,6 @@ export default function SeguimientoPage() {
                           <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0' }}>{grupo.total_alumnos} alumnos</p>
                         </div>
                       </div>
-                      {/* Contador de asignaturas */}
                       <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                         Asignaturas: <strong style={{ color: '#64748b' }}>{asignaturasUnicas.length}</strong>
                       </span>
@@ -758,14 +737,10 @@ export default function SeguimientoPage() {
             </div>
           )}
 
-          {/* Vista alumnos */}
           {vista === 'alumnos' && grupoActivo && (
             <AlumnosVista
               grupo={grupoActivo}
               alumnos={alumnos}
-              asistencias={asistencias}
-              asistenciaDiaria={asistenciaDiaria}
-              semanas={semanas}
               loadingAlumnos={loadingAlumnos}
               volver={() => nav('grupos', 'atras', () => setGrupoActivo(null))}
             />
