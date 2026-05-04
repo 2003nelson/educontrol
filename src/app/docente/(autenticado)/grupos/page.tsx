@@ -75,7 +75,7 @@ function ConfirmarFechaView({
       </div>
 
       {/* Layout: columnas en desktop, apilado en móvil */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '1.25rem', alignItems: 'stretch' }}>
 
         {/* Card izquierda — acción del día */}
         <div className="rounded-2xl" style={{
