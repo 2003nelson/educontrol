@@ -484,43 +484,55 @@ export default function GruposPage() {
   const [vista, setVista] = useState<Vista>({ tipo: 'grupos' })
 
   // ── Manejo del botón atrás del teléfono ──────────────────────────────────
-  // Al montar, empujamos DOS entradas: una ancla base + la vista actual.
-  // Así el botón atrás siempre consume una entrada nuestra antes de llegar
-  // al historial real del browser.
+  // Estrategia: guardamos la vista en el state del historial.
+  // Al navegar entre vistas empujamos entradas con la vista destino.
+  // Cuando el browser dispara popstate, leemos el state y restauramos.
+  // Desde 'grupos' con un atrás más → login.
   useEffect(() => {
-    // Ancla base — nunca se puede ir más atrás de aquí
-    window.history.replaceState({ vista: 'grupos', ancla: true }, '')
-    // Entrada de la vista actual (ya es 'grupos' al inicio, pero la dejamos lista)
-    window.history.pushState({ vista: 'grupos' }, '')
+    // Reemplazar la entrada actual con la vista inicial
+    window.history.replaceState({ vista: 'grupos' }, '')
+  }, [])
+
+  // Cada vez que la vista cambia por botones internos, empujar al historial
+  const vistaRef = React.useRef<Vista>({ tipo: 'grupos' })
+  const setVistaConHistorial = useCallback((nuevaVista: Vista) => {
+    window.history.pushState({ vista: nuevaVista.tipo, data: JSON.stringify(nuevaVista) }, '')
+    vistaRef.current = nuevaVista
+    setVista(nuevaVista)
   }, [])
 
   const handlePopState = useCallback((e: PopStateEvent) => {
-    const state = e.state as { vista?: string; ancla?: boolean } | null
+    const state = e.state as { vista?: string; data?: string } | null
 
-    // Si llegamos al ancla, volvemos a empujar una entrada para no salir
-    if (state?.ancla) {
-      window.history.pushState({ vista: 'grupos' }, '')
-      setVista({ tipo: 'grupos' })
+    if (!state?.vista) {
+      // Sin estado — salir al login
+      window.location.href = '/login'
       return
     }
 
-    setVista(prev => {
-      if (prev.tipo === 'asistencia') {
-        // Empujar nueva entrada para que el próximo atrás funcione
-        window.history.pushState({ vista: 'confirmar' }, '')
-        return { tipo: 'confirmar', grupo: prev.grupo, asignatura: prev.asignatura, ts: Date.now() }
+    if (state.vista === 'grupos') {
+      // Estamos en grupos y dan atrás → ir al login
+      // Pero si venimos de una vista interior, ir a grupos
+      if (vistaRef.current.tipo === 'grupos') {
+        window.location.href = '/login'
+      } else {
+        setVista({ tipo: 'grupos' })
+        vistaRef.current = { tipo: 'grupos' }
       }
-      if (prev.tipo === 'confirmar') {
-        window.history.pushState({ vista: 'asignaturas' }, '')
-        return { tipo: 'asignaturas', grupo: prev.grupo }
+      return
+    }
+
+    // Restaurar vista desde el state del historial
+    try {
+      if (state.data) {
+        const vistaGuardada = JSON.parse(state.data) as Vista
+        setVista(vistaGuardada)
+        vistaRef.current = vistaGuardada
       }
-      if (prev.tipo === 'asignaturas') {
-        window.history.pushState({ vista: 'grupos' }, '')
-        return { tipo: 'grupos' }
-      }
-      window.history.pushState({ vista: 'grupos' }, '')
-      return { tipo: 'grupos' }
-    })
+    } catch {
+      setVista({ tipo: 'grupos' })
+      vistaRef.current = { tipo: 'grupos' }
+    }
   }, [])
 
   useEffect(() => {
@@ -554,8 +566,8 @@ export default function GruposPage() {
     <AsistenciaView
       asignatura={vista.asignatura}
       grupoId={vista.grupo.id}
-      onBack={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
-      onGuardado={() => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
+      onBack={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
+      onGuardado={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
     />
   )
 
@@ -564,16 +576,16 @@ export default function GruposPage() {
       key={`${vista.grupo.id}-${vista.asignatura.id}-${vista.ts ?? 0}`}
       asignatura={vista.asignatura}
       grupo={vista.grupo}
-      onConfirmar={() => setVista({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
-      onBack={() => setVista({ tipo: 'asignaturas', grupo: vista.grupo })}
+      onConfirmar={() => setVistaConHistorial({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
+      onBack={() => setVistaConHistorial({ tipo: 'asignaturas', grupo: vista.grupo })}
     />
   )
 
   if (vista.tipo === 'asignaturas') return (
     <AsignaturasView
       grupo={vista.grupo}
-      onSelect={asig => setVista({ tipo: 'confirmar', grupo: vista.grupo, asignatura: asig })}
-      onBack={() => setVista({ tipo: 'grupos' })}
+      onSelect={asig => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: asig })}
+      onBack={() => setVistaConHistorial({ tipo: 'grupos' })}
     />
   )
 
@@ -640,7 +652,7 @@ export default function GruposPage() {
                     ))}
                   </div>
                 </div>
-                <MacButton onClick={() => setVista({ tipo: 'asignaturas', grupo })}/>
+                <MacButton onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}/>
               </div>
             </div>
           ))}
