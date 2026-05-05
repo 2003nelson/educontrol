@@ -39,11 +39,23 @@ function ConfirmarFechaView({
 
   useEffect(() => {
     async function cargar() {
+      // Obtener el id del docente autenticado para filtrar solo SUS registros
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoadingHist(false); return }
+
+      const { data: ud } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single()
+      if (!ud?.id) { setLoadingHist(false); return }
+
       const { data } = await supabase
         .from('asistencias')
         .select('fecha')
         .eq('grupo_id', grupo.id)
         .eq('asignatura_id', asignatura.id)
+        .eq('docente_id', ud.id)
         .order('fecha', { ascending: false })
         .limit(1000)
       if (data) {
@@ -508,15 +520,15 @@ function MacButton({ onClick }: { onClick: () => void }) {
         </div>
       </button>
       <button className="mac-btn-mobile" onClick={onClick}
-        style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)', border: 'none', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="15" height="15" fill="none" stroke="#475569" strokeWidth="2.2" viewBox="0 0 24 24">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e3a5f', letterSpacing: '0.01em' }}>Tomar asistencia</span>
+        style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', gap: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        {/* Fecha a la izquierda */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hoy</span>
+          <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', textTransform: 'capitalize' }}>{fechaCorta}</span>
         </div>
-        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', background: 'rgba(0,0,0,0.08)', padding: '3px 9px', borderRadius: 20, letterSpacing: '0.01em', textTransform: 'capitalize', flexShrink: 0 }}>
-          {fechaCorta}
+        {/* Botón a la derecha */}
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', padding: '6px 14px', borderRadius: 9, flexShrink: 0 }}>
+          Tomar asistencia
         </span>
       </button>
     </>
