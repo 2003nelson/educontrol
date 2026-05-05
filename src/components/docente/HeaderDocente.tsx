@@ -89,7 +89,6 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-bold uppercase tracking-wide" style={{ color: '#1e3a5f' }}>{nombre}</p>
-            <p className="text-xs" style={{ color: '#94a3b8' }}>Panel Docente</p>
           </div>
         </div>
 
@@ -159,6 +158,18 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
 
         {/* Right */}
         <div className="flex items-center gap-2">
+          {/* Mensajería Desktop */}
+          <button
+            className="hidden md:flex items-center justify-center"
+            style={{ width: 36, height: 36, borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: '#8e8e93', transition: 'background 0.15s, color 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#f2f2f7'; e.currentTarget.style.color = '#3a3a3c' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#8e8e93' }}
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+
           {/* Salir Desktop — expandible */}
           <button
             onClick={handleLogout}
@@ -241,6 +252,16 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
                 </button>
               )
             })}
+            <div style={{ height: 1, background: '#e5e5ea', margin: '0.25rem 0' }}/>
+            <button
+              onClick={() => setMenuOpen(false)}
+              style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent', color: '#3a3a3c', display: 'flex', alignItems: 'center', gap: '0.625rem' }}
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              Mensajería
+            </button>
             <div style={{ height: 1, background: '#e5e5ea', margin: '0.25rem 0' }}/>
             <button
               onClick={handleLogout}

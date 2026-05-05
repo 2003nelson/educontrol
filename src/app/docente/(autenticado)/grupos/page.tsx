@@ -709,10 +709,14 @@ export default function GruposPage() {
 
               {/* Lista de asignaturas */}
               <div style={{ padding: '0.75rem 1.25rem 1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1rem', maxHeight: 80, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e5e5ea transparent' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem', maxHeight: 112, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e5e5ea transparent' }}>
                   {grupo.asignaturas.map((asig) => (
-                    <div key={asig.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#c7c7cc', flexShrink: 0 }}/>
+                    <div key={asig.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.625rem', borderRadius: 8, background: '#f9f9fb' }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 7, background: '#f2f2f7', border: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="13" height="13" fill="none" stroke="#8e8e93" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                        </svg>
+                      </div>
                       <span style={{ fontSize: '0.775rem', color: '#3a3a3c', fontWeight: 500, lineHeight: 1.3 }}>{asig.nombre}</span>
                     </div>
                   ))}
