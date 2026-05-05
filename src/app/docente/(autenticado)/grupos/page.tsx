@@ -34,7 +34,7 @@ function ConfirmarFechaView({
   onBack: () => void
 }) {
   const supabase = createClient()
-  const [historial, setHistorial]     = useState<string[]>([])
+  const [historial, setHistorial]     = useState<string[] | null>(null)
   const [loadingHist, setLoadingHist] = useState(true)
 
   useEffect(() => {
@@ -56,7 +56,7 @@ function ConfirmarFechaView({
   }, [grupo.id, asignatura.id, supabase])
 
   const hoy      = formatFechaISO()
-  const yaHayHoy = historial.includes(hoy)
+  const yaHayHoy = historial !== null && historial.includes(hoy)
 
   return (
     <div className="p-4 md:p-6" style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -116,7 +116,9 @@ function ConfirmarFechaView({
 
           {/* Botón acción */}
           <div style={{ padding: '0 2rem 2rem', display: 'flex', gap: '0.75rem' }}>
-            {yaHayHoy ? (
+            {historial === null ? (
+              <div style={{ flex: 1, height: 48, borderRadius: '0.875rem', background: '#f4f4f8', animation: 'pulse 1.5s ease-in-out infinite' }}/>
+            ) : yaHayHoy ? (
               <>
                 <div style={{ flex: 1, padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#f0fdf4', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -135,6 +137,7 @@ function ConfirmarFechaView({
               </button>
             )}
           </div>
+          <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
         </div>
 
         {/* Card derecha — historial */}
@@ -163,7 +166,7 @@ function ConfirmarFechaView({
               <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
                 <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
               </div>
-            ) : historial.length === 0 ? (
+            ) : !historial || historial.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '0.5rem' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="18" height="18" fill="none" stroke="#c0c0d0" strokeWidth="2" viewBox="0 0 24 24">
@@ -173,7 +176,7 @@ function ConfirmarFechaView({
                 </div>
                 <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>Sin registros aún</p>
               </div>
-            ) : historial.map((fecha, idx) => {
+            ) : (historial ?? []).map((fecha, idx) => {
               const esHoy = fecha === hoy
               return (
                 <div key={fecha} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.5rem', borderBottom: idx < historial.length - 1 ? '1px solid #f7f7fb' : 'none', transition: 'background 0.12s' }}
@@ -303,6 +306,9 @@ function AsistenciaView({
       if (upsertError) throw upsertError
 
       setGuardado(true)
+      // Reemplazar la entrada actual en el historial para que el botón atrás
+      // no regrese a la vista de tomar asistencia
+      window.history.replaceState({ vista: 'confirmar' }, '')
       setTimeout(() => onGuardado(), 1800)
     } catch (err) {
       console.error('Error al guardar asistencia:', err)
