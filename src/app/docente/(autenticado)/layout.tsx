@@ -12,7 +12,7 @@ function DocenteLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(145deg, #e8f0fe 0%, #f0f7ff 40%, #e8f4fd 70%, #f5f0ff 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#f2f2f7' }}>
       <style>{`
         @keyframes slideInRight { from { opacity: 0; transform: translateX(32px) } to { opacity: 1; transform: translateX(0) } }
         @keyframes slideInLeft  { from { opacity: 0; transform: translateX(-32px) } to { opacity: 1; transform: translateX(0) } }

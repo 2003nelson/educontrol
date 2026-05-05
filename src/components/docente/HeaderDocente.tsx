@@ -1,10 +1,28 @@
 // src/components/docente/HeaderDocente.tsx
 'use client'
-import { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type NavItem = { label: string; href: string }
+
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  '/docente/grupos': (
+    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  ),
+  '/docente/calificaciones': (
+    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+  ),
+  '/docente/ayuda': (
+    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+    </svg>
+  ),
+}
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Asistencia',     href: '/docente/grupos' },
@@ -22,14 +40,37 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
   const router    = useRouter()
   const supabase  = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [salirHover, setSalirHover] = useState(false)
+  const [saliendo, setSaliendo] = useState(false)
 
   const seccionActiva = NAV_ITEMS.find(item => isItemActive(item.href, pathname ?? ''))?.label ?? ''
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const navContainerRef = useRef<HTMLDivElement | null>(null)
+  const [selectorStyle, setSelectorStyle] = useState({ left: 0, width: 0, opacity: 0 })
+
+  useEffect(() => {
+    const activeHref = NAV_ITEMS.find(item => isItemActive(item.href, pathname ?? ''))?.href
+    if (!activeHref) return
+    const btn = btnRefs.current[activeHref]
+    const container = navContainerRef.current
+    if (btn && container) {
+      const btnRect = btn.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      setSelectorStyle({
+        left: btnRect.left - containerRect.left,
+        width: btnRect.width,
+        opacity: 1,
+      })
+    }
+  }, [pathname])
 
   function handleNav(href: string) {
     router.push(href)
   }
 
   async function handleLogout() {
+    if (saliendo) return
+    setSaliendo(true)
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -42,7 +83,7 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #1e3a5f, #2563eb)' }}
+            style={{ background: '#8e8e93' }}
           >
             {nombre.charAt(0).toUpperCase()}
           </div>
@@ -62,49 +103,104 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
           </span>
         )}
 
-        {/* Nav Desktop */}
-        <nav className="hidden md:flex items-center gap-1">
-          {NAV_ITEMS.map(item => {
-            const active = isItemActive(item.href, pathname ?? '')
-            return (
-              <button
-                key={item.href}
-                onClick={() => handleNav(item.href)}
-                className="relative px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-150"
-                style={{
-                  background: active ? '#eff6ff' : 'transparent',
-                  color:      active ? '#2563eb' : '#64748b',
-                }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f8fafc' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-              >
-                {item.label}
-                {active && (
-                  <span
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
-                    style={{ background: '#2563eb' }}
-                  />
-                )}
-              </button>
-            )
-          })}
+        {/* Nav Desktop — segmented control estilo Apple */}
+        <nav className="hidden md:flex">
+          <div
+            ref={navContainerRef}
+            style={{
+              position: 'relative',
+              display: 'flex', alignItems: 'center',
+              background: '#f2f2f7',
+              borderRadius: 10,
+              padding: '3px',
+              gap: 0,
+            }}
+          >
+            {/* Selector blanco animado */}
+            <div style={{
+              position: 'absolute',
+              top: 3, height: 'calc(100% - 6px)',
+              left: selectorStyle.left + 3,
+              width: selectorStyle.width,
+              background: 'white',
+              borderRadius: 8,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.04)',
+              transition: 'left 0.28s cubic-bezier(0.34,1.56,0.64,1), width 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s',
+              opacity: selectorStyle.opacity,
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}/>
+            {NAV_ITEMS.map(item => {
+              const active = isItemActive(item.href, pathname ?? '')
+              return (
+                <button
+                  key={item.href}
+                  ref={el => { btnRefs.current[item.href] = el }}
+                  onClick={() => handleNav(item.href)}
+                  style={{
+                    position: 'relative', zIndex: 1,
+                    padding: '0.375rem 0.875rem',
+                    fontSize: '0.8125rem', fontWeight: 600,
+                    border: 'none', background: 'transparent',
+                    borderRadius: 8, cursor: 'pointer',
+                    color: active ? '#1c1c1e' : '#6e6e73',
+                    transition: 'color 0.2s',
+                    whiteSpace: 'nowrap',
+                    display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  }}
+                >
+                  {NAV_ICONS[item.href]}
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
         </nav>
 
         {/* Right */}
         <div className="flex items-center gap-2">
-          {/* Salir Desktop */}
+          {/* Salir Desktop — expandible */}
           <button
             onClick={handleLogout}
-            className="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all"
-            style={{ background: '#fef2f2', color: '#dc2626' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}
+            onMouseEnter={() => setSalirHover(true)}
+            onMouseLeave={() => { if (!saliendo) setSalirHover(false) }}
+            className="hidden md:flex items-center"
+            style={{
+              gap: salirHover || saliendo ? '0.4rem' : 0,
+              padding: '0.45rem',
+              borderRadius: 10,
+              border: 'none',
+              cursor: saliendo ? 'not-allowed' : 'pointer',
+              background: saliendo ? '#fef2f2' : salirHover ? '#fee2e2' : 'transparent',
+              color: '#dc2626',
+              transition: 'background 0.2s, gap 0.25s, padding 0.25s',
+              overflow: 'hidden',
+              paddingLeft: salirHover || saliendo ? '0.65rem' : '0.45rem',
+              paddingRight: salirHover || saliendo ? '0.75rem' : '0.45rem',
+            }}
           >
-            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Salir
+            {saliendo ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            ) : (
+              <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+              </svg>
+            )}
+            <span style={{
+              fontSize: '0.8125rem', fontWeight: 600,
+              maxWidth: salirHover || saliendo ? '3.5rem' : '0px',
+              opacity: salirHover || saliendo ? 1 : 0,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              transition: 'max-width 0.25s cubic-bezier(0.34,1.2,0.64,1), opacity 0.2s',
+            }}>
+              {saliendo ? 'Saliendo' : 'Salir'}
+            </span>
           </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
           {/* Hamburger Mobile */}
           <button
@@ -124,27 +220,35 @@ export default function HeaderDocente({ nombre }: { nombre: string }) {
 
       {/* Menú Móvil */}
       {menuOpen && (
-        <div className="md:hidden border-t p-2 space-y-1" style={{ borderColor: '#e2e8f0', background: '#fafafa' }}>
-          {NAV_ITEMS.map(item => {
-            const active = isItemActive(item.href, pathname ?? '')
-            return (
-              <button
-                key={item.href}
-                onClick={() => { handleNav(item.href); setMenuOpen(false) }}
-                className="w-full text-left px-4 py-3 text-sm font-semibold rounded-lg transition"
-                style={{ background: active ? '#eff6ff' : 'transparent', color: active ? '#2563eb' : '#64748b' }}
-              >
-                {item.label}
-              </button>
-            )
-          })}
-          <button
-            onClick={handleLogout}
-            className="w-full text-left px-4 py-3 text-sm font-semibold rounded-lg mt-1"
-            style={{ background: '#fef2f2', color: '#dc2626' }}
-          >
-            Cerrar sesión
-          </button>
+        <div className="md:hidden" style={{ padding: '0.5rem 0.75rem 0.75rem', background: '#f2f2f7', borderTop: '1px solid #e5e5ea' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {NAV_ITEMS.map(item => {
+              const active = isItemActive(item.href, pathname ?? '')
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => { handleNav(item.href); setMenuOpen(false) }}
+                  style={{
+                    width: '100%', textAlign: 'left', padding: '0.75rem 1rem',
+                    fontSize: '0.875rem', fontWeight: 600, borderRadius: 10,
+                    border: 'none', cursor: 'pointer', transition: 'background 0.15s',
+                    background: active ? 'white' : 'transparent',
+                    color: active ? '#2563eb' : '#3a3a3c',
+                    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
+            <div style={{ height: 1, background: '#e5e5ea', margin: '0.25rem 0' }}/>
+            <button
+              onClick={handleLogout}
+              style={{ width: '100%', textAlign: 'left', padding: '0.75rem 1rem', fontSize: '0.875rem', fontWeight: 600, borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent', color: '#dc2626' }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       )}
     </header>

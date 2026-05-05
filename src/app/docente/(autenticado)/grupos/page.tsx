@@ -678,43 +678,44 @@ export default function GruposPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {grupos.map(grupo => (
-            <div key={grupo.id} className="rounded-2xl overflow-hidden transition-all"
-              style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,118,255,0.14), 0 2px 4px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(0,118,255,0.3)'; e.currentTarget.style.background = 'rgba(255,255,255,0.72)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,118,255,0.06), 0 1px 2px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}>
+            <div key={grupo.id}
+              style={{ background: 'white', borderRadius: 16, border: '1px solid #e5e5ea', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', overflow: 'hidden' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)' }}>
 
-              <div className="relative px-5 pt-5 pb-8 overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.75) 0%, rgba(96,165,250,0.7) 100%)', backdropFilter: 'blur(8px)' }}>
-                <div style={{ position: 'absolute', right: -20, top: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }}/>
-                <div style={{ position: 'absolute', right: 20, bottom: -30, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }}/>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full mb-3 inline-block"
-                  style={{ background: 'rgba(255,255,255,0.18)', color: 'white' }}>
-                  {grupo.grado}° Semestre
-                </span>
-                <div className="flex items-end justify-between">
+              {/* Cabecera */}
+              <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid #f2f2f7' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
                   <div>
-                    <h3 className="text-2xl font-bold text-white mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>Grupo {grupo.numero}</h3>
-                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                      {grupo.asignaturas.length} {grupo.asignaturas.length === 1 ? 'asignatura' : 'asignaturas'}
-                    </p>
+                    <h3 style={{ fontSize: '1.375rem', fontWeight: 700, color: '#1c1c1e', margin: '0 0 0.3rem', fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>
+                      Grupo {grupo.numero}
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8e8e93', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>
+                        {grupo.grado}° Semestre
+                      </p>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#c7c7cc', display: 'inline-block' }}/>
+                      <p style={{ fontSize: '0.7rem', color: '#8e8e93', margin: 0, fontWeight: 500 }}>
+                        {grupo.asignaturas.length} {grupo.asignaturas.length === 1 ? 'asignatura' : 'asignaturas'}
+                      </p>
+                    </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', padding: '6px 14px', borderRadius: 10, fontWeight: 700, fontSize: '1rem', fontFamily: 'Outfit, sans-serif', minWidth: 48, textAlign: 'center' }}>
-                    {grupo.numero}
+                  {/* Número grande */}
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '1.125rem', fontWeight: 800, color: '#3a3a3c', fontFamily: 'Outfit, sans-serif' }}>{grupo.numero}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="px-5 pt-4 pb-5" style={{ background: 'rgba(255,255,255,0.3)' }}>
-                <div className="mb-4">
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#94a3b8', letterSpacing: '0.06em' }}>ASIGNATURAS</p>
-                  <div className="flex flex-wrap gap-1.5" style={{ maxHeight: '72px', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
-                    {grupo.asignaturas.map(asig => (
-                      <span key={asig.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', fontWeight: 500, padding: '3px 10px 3px 7px', borderRadius: 20, background: 'rgba(59,130,246,0.07)', color: '#4f88e3', border: '1px solid rgba(59,130,246,0.15)', backdropFilter: 'blur(4px)' }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4f88e3', opacity: 0.7, flexShrink: 0, display: 'inline-block' }}/>
-                        {asig.nombre}
-                      </span>
-                    ))}
-                  </div>
+              {/* Lista de asignaturas */}
+              <div style={{ padding: '0.75rem 1.25rem 1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1rem', maxHeight: 80, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e5e5ea transparent' }}>
+                  {grupo.asignaturas.map((asig) => (
+                    <div key={asig.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#c7c7cc', flexShrink: 0 }}/>
+                      <span style={{ fontSize: '0.775rem', color: '#3a3a3c', fontWeight: 500, lineHeight: 1.3 }}>{asig.nombre}</span>
+                    </div>
+                  ))}
                 </div>
                 <MacButton onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}/>
               </div>
