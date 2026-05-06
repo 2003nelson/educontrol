@@ -526,18 +526,18 @@ function MacButton({ onClick }: { onClick: () => void }) {
           </span>
         </div>
       </button>
-      <button className="mac-btn-mobile" onClick={onClick}
-        style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', gap: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        {/* Fecha a la izquierda */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <span style={{ fontSize: '0.65rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hoy</span>
-          <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e3a5f', textTransform: 'capitalize' }}>{fechaCorta}</span>
+      {/* Móvil: 2 cards separadas simétricas */}
+      <div className="mac-btn-mobile" style={{ display: 'none', gap: '0.625rem', width: '100%' }}>
+        {/* Card fecha */}
+        <div style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Hoy</span>
+          <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1c1c1e', textTransform: 'capitalize', marginTop: 2 }}>{fechaCorta}</span>
         </div>
-        {/* Botón a la derecha */}
-        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'white', background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', padding: '6px 14px', borderRadius: 9, flexShrink: 0 }}>
-          Tomar asistencia
-        </span>
-      </button>
+        {/* Card botón */}
+        <button onClick={onClick} style={{ flex: 1, background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', border: 'none', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(30,111,204,0.25)' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Tomar asistencia</span>
+        </button>
+      </div>
     </>
   )
 }
