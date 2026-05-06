@@ -15,7 +15,12 @@ function formatFechaHoy() {
   return new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 }
 function formatFechaISO() {
-  return new Date().toISOString().split('T')[0]
+  // Usar fecha local (México) en lugar de UTC para evitar cambio de día prematuro
+  const hoy = new Date()
+  const y = hoy.getFullYear()
+  const m = String(hoy.getMonth() + 1).padStart(2, '0')
+  const d = String(hoy.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 function formatFechaLegible(iso: string) {
   const [y, m, d] = iso.split('-')
