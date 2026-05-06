@@ -74,7 +74,19 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 1. Borrar asignaciones
+    // 1. Borrar asistencias registradas por el docente (cascada manual)
+    const { error: asistenciasError } = await supabaseAdmin
+      .from('asistencias')
+      .delete()
+      .eq('docente_id', docente_id)
+
+    if (asistenciasError) {
+      return new Response(JSON.stringify({ error: 'Error al borrar asistencias: ' + asistenciasError.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // 2. Borrar asignaciones
     const { error: asigError } = await supabaseAdmin
       .from('asignaciones_docentes')
       .delete()
@@ -82,10 +94,9 @@ Deno.serve(async (req) => {
 
     if (asigError) {
       console.error('Error al borrar asignaciones:', asigError)
-      // No es fatal, continuar
     }
 
-    // 2. Borrar de tabla usuarios
+    // 3. Borrar de tabla usuarios
     const { error: usuarioError } = await supabaseAdmin
       .from('usuarios')
       .delete()
@@ -97,7 +108,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 3. Borrar de auth.users si tiene auth_id
+    // 4. Borrar de auth.users si tiene auth_id
     if (docente.auth_id) {
       const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(docente.auth_id)
       if (authDeleteError) {
