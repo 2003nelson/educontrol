@@ -204,20 +204,20 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
   semanaInicio: string
 }) {
   const dias = diasDeSemana(semanaInicio)
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; texto: string } | null>(null)
+  const [tooltip, setTooltip] = useState<{ id: string; texto: string } | null>(null)
 
   return (
-    <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative' }}>
+    <div style={{ background: 'white', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #f1f5f9', position: 'relative' }} onClick={() => setTooltip(null)}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.625rem 1.25rem', borderBottom: '1px solid #f1f5f9', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         {[
-          { icon: <svg width="12" height="12" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#f0fdf4', label: 'Presente' },
-          { icon: <svg width="11" height="11" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fef2f2', label: 'Falta' },
-          { icon: <svg width="11" height="11" fill="none" stroke="#ca8a04" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fefce8', label: 'Justificada' },
-          { icon: <svg width="11" height="11" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg: '#f5f3ff', label: 'Retardo' },
+          { icon: <svg width="11" height="11" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#f0fdf4', border: '#bbf7d0', label: 'Presente',    color: '#64748b' },
+          { icon: <svg width="10" height="10" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fef2f2', border: '#fecaca', label: 'Falta',       color: '#64748b' },
+          { icon: <svg width="10" height="10" fill="none" stroke="#d97706" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg: '#fffbeb', border: '#fde68a', label: 'Justificada', color: '#64748b' },
+          { icon: <svg width="10" height="10" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg: '#f5f3ff', border: '#ddd6fe', label: 'Retardo',     color: '#64748b' },
         ].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <div style={{ width: 22, height: 22, borderRadius: '0.375rem', background: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.icon}</div>
-            <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>{item.label}</span>
+            <div style={{ width: 20, height: 20, borderRadius: '0.375rem', background: item.bg, border: ('1px solid ' + item.border), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.icon}</div>
+            <span style={{ fontSize: '0.68rem', color: item.color, fontWeight: 500 }}>{item.label}</span>
           </div>
         ))}
       </div>
@@ -231,6 +231,7 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
               {dias.map(d => (
                 <th key={d.iso} style={{ textAlign: 'center', padding: '0.75rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', minWidth: 36 }}>{d.letra}</th>
               ))}
+              <th style={{ textAlign: 'center', padding: '0.75rem 0.75rem', fontSize: '0.65rem', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', minWidth: 48 }}>Faltas</th>
             </tr>
           </thead>
           <tbody>
@@ -260,38 +261,66 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
                     const esJustif   = estado === 'justificada'
                     const esRetardo  = estado === 'retardo'
                     const tieneReg   = !!estado
+                    const tooltipId = alumno.id + d.iso
                     return (
-                      <td key={d.iso} style={{ textAlign: 'center', padding: '0.875rem 0.5rem' }}>
+                      <td key={d.iso} style={{ textAlign: 'center', padding: '0.875rem 0.5rem', position: 'relative' }}>
                         <div
-                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '0.5rem', background: esPresente ? '#f0fdf4' : esFalta ? '#fef2f2' : esJustif ? '#fefce8' : esRetardo ? '#f5f3ff' : '#f8fafc' }}
-                          onMouseEnter={e => {
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: '0.5rem', background: esPresente ? '#16a34a' : esFalta ? '#dc2626' : esJustif ? 'linear-gradient(135deg,#f59e0b,#d97706)' : esRetardo ? '#7c3aed' : '#f1f1f4', border: tieneReg ? 'none' : '1px solid #e5e5ea', cursor: tieneReg ? 'pointer' : 'default' }}
+                          onClick={e => {
                             if (!tieneReg) return
-                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                            const label = esPresente ? ' · Presente' : esFalta ? ' · Falta' : esJustif ? ' · Justificada' : ' · Retardo'
-                            setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 8, texto: formatFechaCorta(d.iso) + label })
+                            e.stopPropagation()
+                            const label = esPresente ? 'Presente' : esFalta ? 'Falta' : esJustif ? 'Justificada' : 'Retardo'
+                            const id = alumno.id + d.iso
+                            setTooltip(prev => prev?.id === id ? null : { id, texto: formatFechaCorta(d.iso) + ' · ' + label })
                           }}
-                          onMouseLeave={() => setTooltip(null)}
                         >
-                          {esPresente && <svg width="13" height="13" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          {esFalta    && <svg width="12" height="12" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          {esJustif   && <svg width="12" height="12" fill="none" stroke="#ca8a04" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          {esRetardo  && <svg width="12" height="12" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>}
+                          {esPresente && <svg width="13" height="13" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esFalta    && <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esJustif   && <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          {esRetardo  && <svg width="12" height="12" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>}
                           {!tieneReg  && <span style={{ fontSize: '0.55rem', color: '#e2e8f0' }}>—</span>}
                         </div>
+                        {tooltip?.id === tooltipId && (
+                          <div
+                            onClick={e => { e.stopPropagation(); setTooltip(null) }}
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              right: '110%',
+                              transform: 'translateY(-50%)',
+                              background: '#1c1c1e',
+                              color: 'white',
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              padding: '4px 10px',
+                              borderRadius: 7,
+                              zIndex: 50,
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                              pointerEvents: 'auto',
+                            }}>
+                            {tooltip.texto}
+                            <div style={{ position: 'absolute', right: -5, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '4px solid #1c1c1e' }}/>
+                          </div>
+                        )}
                       </td>
                     )
                   })}
+                  <td style={{ textAlign: 'center', padding: '0.875rem 0.75rem' }}>
+                    {(() => {
+                      const faltas = dias.filter(d => regMap[d.iso] === 'falta').length
+                      return faltas > 0
+                        ? <span style={{ fontSize: '0.85rem', fontWeight: 700, color: faltas >= 3 ? '#dc2626' : '#f59e0b', background: faltas >= 3 ? '#fef2f2' : '#fffbeb', padding: '2px 10px', borderRadius: 9999, border: faltas >= 3 ? '1px solid #fecaca' : '1px solid #fde68a' }}>{faltas}</span>
+                        : <span style={{ fontSize: '0.75rem', color: '#c7c7cc' }}>—</span>
+                    })()}
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
-      {tooltip && (
-        <div style={{ position: 'fixed', left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)', background: '#1e293b', color: 'white', fontSize: '0.72rem', fontWeight: 500, padding: '4px 10px', borderRadius: 6, pointerEvents: 'none', zIndex: 9999, whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-          {tooltip.texto}
-        </div>
-      )}
+
     </div>
   )
 }
