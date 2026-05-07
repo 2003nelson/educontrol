@@ -132,36 +132,64 @@ function GradoCard({ grado, grupos, onClick, idx }: { grado: number; grupos: Gru
   const totalAlumnos = grupos.reduce((s, g) => s + g.total_alumnos, 0)
   return (
     <>
-      <button onClick={onClick}
-        style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '1.25rem', textAlign: 'left', cursor: 'pointer', padding: 0, overflow: 'hidden', transition: 'all 0.22s ease', animation: ('cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ' + idx * 0.07 + 's both') }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(59,130,246,0.12)' }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
-        <div style={{ background: 'linear-gradient(135deg,#64748b,#94a3b8)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '0.75rem', background: 'rgba(255,255,255,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.125rem', fontWeight: 800, color: '#1e3a5f', fontFamily: 'Outfit,sans-serif', flexShrink: 0 }}>{grado}</div>
-            <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'Outfit,sans-serif' }}>{grado}° Semestre</p>
+      <div
+        style={{ background: 'white', border: '1px solid #e5e5ea', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'transform 0.15s, box-shadow 0.15s', overflow: 'hidden', display: 'flex', flexDirection: 'column', cursor: 'pointer', animation: ('cardIn 0.42s cubic-bezier(0.34,1.56,0.64,1) ' + idx * 0.07 + 's both') }}
+        onClick={onClick}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)' }}>
+
+        {/* Cabecera */}
+        <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid #f2f2f7' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <div>
+              <p style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8e8e93', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0 0 0.25rem' }}>
+                Semestre
+              </p>
+              <h3 style={{ fontSize: '1.375rem', fontWeight: 700, color: '#1c1c1e', margin: 0, fontFamily: 'Outfit, sans-serif', lineHeight: 1.2 }}>
+                {grado}°
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem' }}>
+                <p style={{ fontSize: '0.7rem', color: '#8e8e93', margin: 0, fontWeight: 500 }}>
+                  {grupos.length} {grupos.length === 1 ? 'grupo' : 'grupos'}
+                </p>
+                <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#c7c7cc', display: 'inline-block' }}/>
+                <p style={{ fontSize: '0.7rem', color: '#8e8e93', margin: 0, fontWeight: 500 }}>
+                  {totalAlumnos} alumnos
+                </p>
+              </div>
+            </div>
+            {/* Número grande */}
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: '#f2f2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: '1.125rem', fontWeight: 800, color: '#3a3a3c', fontFamily: 'Outfit, sans-serif' }}>{grado}</span>
+            </div>
           </div>
-          <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
-        <div style={{ padding: '1rem 1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <div>
-            <p style={{ fontSize: '0.65rem', color: '#94a3b8', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Grupos</p>
-            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e3a5f', margin: 0, fontFamily: 'Outfit,sans-serif' }}>{grupos.length}</p>
+
+        {/* Footer con grupos y toggle */}
+        <div style={{ padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Grupos como dots */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', flex: 1 }}>
+            {grupos.slice(0, 3).map(g => (
+              <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#c7c7cc', flexShrink: 0 }}/>
+                <span style={{ fontSize: '0.75rem', color: '#3a3a3c', fontWeight: 500 }}>Grupo {g.numero}</span>
+              </div>
+            ))}
+            {grupos.length > 3 && (
+              <span style={{ fontSize: '0.7rem', color: '#8e8e93', paddingLeft: '0.875rem' }}>+{grupos.length - 3} más</span>
+            )}
           </div>
-          <div style={{ width: 1, alignSelf: 'stretch', background: '#f1f5f9' }}/>
-          <div>
-            <p style={{ fontSize: '0.65rem', color: '#94a3b8', margin: '0 0 0.25rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Alumnos</p>
-            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e3a5f', margin: 0, fontFamily: 'Outfit,sans-serif' }}>{totalAlumnos}</p>
-          </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
-            <div onClick={e => { e.stopPropagation(); setPendiente(!activo); setModal(true) }}
-              style={{ width: 44, height: 24, borderRadius: 9999, background: activo ? '#16a34a' : '#dc2626', position: 'relative', cursor: 'pointer', transition: 'background 0.25s', boxShadow: activo ? '0 0 8px rgba(22,163,74,0.35)' : '0 0 8px rgba(220,38,38,0.25)' }}>
+
+          {/* Toggle */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}
+            onClick={e => { e.stopPropagation(); setPendiente(!activo); setModal(true) }}>
+            <div style={{ width: 44, height: 24, borderRadius: 9999, background: activo ? '#16a34a' : '#dc2626', position: 'relative', cursor: 'pointer', transition: 'background 0.25s', boxShadow: activo ? '0 0 8px rgba(22,163,74,0.3)' : '0 0 8px rgba(220,38,38,0.2)' }}>
               <div style={{ position: 'absolute', top: 3, left: activo ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)' }}/>
             </div>
             <span style={{ fontSize: '0.6rem', fontWeight: 600, color: activo ? '#16a34a' : '#dc2626' }}>{activo ? 'Activo' : 'Inactivo'}</span>
           </div>
         </div>
-      </button>
+      </div>
       {modal && pendiente !== null && (
         <ModalToggle grado={grado} activando={pendiente} onConfirmar={() => setActivo(pendiente!)} onCerrar={() => { setPendiente(null); setModal(false) }}/>
       )}
@@ -449,7 +477,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
                     </td>
                     <td style={{ padding: '0.875rem 1.25rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>{asig.docente.charAt(0)}</div>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>{asig.docente.charAt(0)}</div>
                         <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 500 }}>{asig.docente}</span>
                       </div>
                     </td>
@@ -469,14 +497,18 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
 
       {/* Info asignatura seleccionada */}
       {asigSelec && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 1rem', background: '#eff6ff', borderRadius: '0.875rem', border: '1px solid #bfdbfe', animation: 'cardIn 0.22s cubic-bezier(0.34,1.56,0.64,1)' }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>{asigSelec.docente.charAt(0)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(242,242,247,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 12, border: '1px solid #e5e5ea', animation: 'cardIn 0.22s cubic-bezier(0.34,1.56,0.64,1)', flexWrap: 'wrap' }}>
+          {/* Avatar docente */}
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#8e8e93', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>{asigSelec.docente.charAt(0)}</div>
           <div>
-            <p style={{ fontSize: '0.65rem', color: '#2563eb', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Docente asignado</p>
-            <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e3a5f', margin: 0 }}>{asigSelec.docente}</p>
+            <p style={{ fontSize: '0.6rem', color: '#8e8e93', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>Docente</p>
+            <p style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1c1c1e', margin: 0 }}>{asigSelec.docente}</p>
           </div>
-          <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 9999, background: 'white', color: '#2563eb', border: '1px solid #bfdbfe' }}>{asigSelec.asignatura}</span>
-          {semanaActual && <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 9999, background: 'white', color: '#7c3aed', border: '1px solid #ddd6fe' }}>{semanaActual.label}</span>}
+          {/* Pills */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '4px 12px', borderRadius: 9999, background: 'white', color: '#3a3a3c', border: '1px solid #e5e5ea', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>{asigSelec.asignatura}</span>
+            {semanaActual && <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '4px 12px', borderRadius: 9999, background: 'white', color: '#3a3a3c', border: '1px solid #e5e5ea', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>{semanaActual.label}</span>}
+          </div>
         </div>
       )}
 
@@ -719,7 +751,7 @@ export default function SeguimientoPage() {
                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(59,130,246,0.1)' }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 700, color: 'white', fontFamily: 'Outfit,sans-serif', flexShrink: 0 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '0.875rem', background: '#f2f2f7', border: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', fontWeight: 800, color: '#3a3a3c', fontFamily: 'Outfit,sans-serif', flexShrink: 0 }}>
                           {grupo.numero}
                         </div>
                         <div>
@@ -727,9 +759,16 @@ export default function SeguimientoPage() {
                           <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0' }}>{grupo.total_alumnos} alumnos</p>
                         </div>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        Asignaturas: <strong style={{ color: '#64748b' }}>{asignaturasUnicas.length}</strong>
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {['#ff5f57','#febc2e','#28c840'].map((c,i) => (
+                            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          Asignaturas: <strong style={{ color: '#64748b' }}>{asignaturasUnicas.length}</strong>
+                        </span>
+                      </div>
                     </button>
                   )
                 })}
