@@ -1,8 +1,10 @@
 // src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useDocente } from '@/contexts/DocenteContext'
 import { createClient } from '@/lib/supabase/client'
+import HorarioAhoraWidget from '@/components/docente/HorarioAhoraWidget'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface AsignaturaItem { id: string; nombre: string }
@@ -689,7 +691,21 @@ export default function GruposPage() {
           <h1 className="text-lg md:text-xl font-bold" style={{ color: '#1e3a5f' }}>Mis grupos asignados</h1>
           <p className="text-xs md:text-sm mt-1 capitalize" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
         </div>
+        <Link href="/docente/horario"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: 10, background: 'white', border: '1px solid #e5e5ea', fontSize: '0.78rem', fontWeight: 600, color: '#3a3a3c', textDecoration: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+          onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = '#f2f2f7' }}
+          onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = 'white' }}>
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Configurar mi horario
+        </Link>
       </div>
+
+      {/* Widget horario actual */}
+      {docente && (
+        <HorarioAhoraWidget docenteId={docente.id} nombre={docente.nombre_completo} />
+      )}
 
       {grupos.length === 0 ? (
         <div className="flex items-center justify-center min-h-[40vh]">
