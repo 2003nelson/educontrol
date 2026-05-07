@@ -533,9 +533,31 @@ function MacButton({ onClick }: { onClick: () => void }) {
           <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Hoy</span>
           <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1c1c1e', textTransform: 'capitalize', marginTop: 2 }}>{fechaCorta}</span>
         </div>
-        {/* Card botón */}
-        <button onClick={onClick} style={{ flex: 1, background: 'linear-gradient(135deg, #1e6fcc, #155ca0)', border: 'none', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(30,111,204,0.25)' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>Tomar asistencia</span>
+        {/* Card botón — mismo estilo que card fecha */}
+        <button onClick={onClick} style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          {/* 3 dots + flecha */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['#ff5f57','#febc2e','#28c840'].map((c,i) => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>
+              ))}
+            </div>
+            <svg width="12" height="12" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
+          {/* Emoji 📝 animado */}
+          <span className="emoji-bounce" style={{ fontSize: '1.1rem', lineHeight: 1, display: 'inline-block' }}>📝</span>
+          <style>{`
+            .emoji-bounce { transition: transform 0.2s; }
+            .emoji-bounce:hover { animation: emojiBounce 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+            @keyframes emojiBounce {
+              0%   { transform: scale(1) rotate(0deg); }
+              30%  { transform: scale(1.4) rotate(-15deg); }
+              60%  { transform: scale(0.9) rotate(8deg); }
+              100% { transform: scale(1) rotate(0deg); }
+            }
+          `}</style>
         </button>
       </div>
     </>
