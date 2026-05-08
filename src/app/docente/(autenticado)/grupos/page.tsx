@@ -80,7 +80,7 @@ function MacButton({ onClick }: { onClick: () => void }) {
         @media (max-width: 767px) { .mac-btn-desktop { display: none !important; } .mac-btn-mobile { display: flex !important; } }
         @media (min-width: 768px) { .mac-btn-desktop { display: flex !important; } .mac-btn-mobile { display: none !important; } }
       `}</style>
-      {/* Dessktop */}
+      {/* Desktop */}
       <button className="mac-btn-desktop" onClick={onClick}
         onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
@@ -111,7 +111,7 @@ function MacButton({ onClick }: { onClick: () => void }) {
               <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>
-          <span className="emoji-bounce" style={{ fontSize: '1.1rem', lineHeight: 1, display: 'inline-block' }}>📝</span>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3a3a3c' }}>Ir a mis asignaturas</span>
         </button>
       </div>
     </>
@@ -339,7 +339,7 @@ export default function GruposPage() {
               </div>
 
               <div style={{ padding: '0.75rem 1.25rem 1rem', display: 'flex', flexDirection: 'column', flex: 1, background: 'white' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem', flex: 1, maxHeight: 112, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e5e5ea transparent', background: '#f0fdf4', borderRadius: 10, padding: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem', flex: 1, maxHeight: 160, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#e5e5ea transparent', background: '#f0fdf4', borderRadius: 10, padding: '0.5rem 0.5rem 1.5rem' }}>
                   {[...grupo.asignaturas]
                     .sort((a, b) => {
                       const aActiva = claseActiva?.asignatura_id === a.id && claseActiva?.grupo_id === grupo.id ? -1 : 0
