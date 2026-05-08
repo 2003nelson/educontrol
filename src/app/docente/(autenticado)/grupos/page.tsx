@@ -80,7 +80,7 @@ function MacButton({ onClick }: { onClick: () => void }) {
         @media (max-width: 767px) { .mac-btn-desktop { display: none !important; } .mac-btn-mobile { display: flex !important; } }
         @media (min-width: 768px) { .mac-btn-desktop { display: flex !important; } .mac-btn-mobile { display: none !important; } }
       `}</style>
-      {/* Desktop */}
+      {/* Dessktop */}
       <button className="mac-btn-desktop" onClick={onClick}
         onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ alignItems: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}>
