@@ -23,18 +23,19 @@ interface HorarioItem {
 
 // Colores por índice de asignatura
 const COLORES = [
-  { bg: '#eff6ff', border: '#bfdbfe', text: '#2563eb', dot: '#3b82f6' },
-  { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', dot: '#22c55e' },
-  { bg: '#fdf4ff', border: '#e9d5ff', text: '#7c3aed', dot: '#a855f7' },
-  { bg: '#fff7ed', border: '#fed7aa', text: '#ea580c', dot: '#f97316' },
-  { bg: '#f0fdfa', border: '#99f6e4', text: '#0d9488', dot: '#14b8a6' },
-  { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#ef4444' },
+  { bg: '#e8f4fd', border: '#90c8f0', text: '#0a84ff', dot: '#0a84ff' },  // Azul Apple
+  { bg: '#e8faf0', border: '#86efac', text: '#30d158', dot: '#30d158' },  // Verde Apple
+  { bg: '#f3eeff', border: '#c4b5fd', text: '#bf5af2', dot: '#bf5af2' },  // Morado Apple
+  { bg: '#fff4e6', border: '#fbbf24', text: '#ff9f0a', dot: '#ff9f0a' },  // Naranja Apple
+  { bg: '#e6faf8', border: '#5de0d8', text: '#5ac8fa', dot: '#5ac8fa' },  // Cian Apple
+  { bg: '#ffeef0', border: '#fca5a5', text: '#ff453a', dot: '#ff453a' },  // Rojo Apple
 ]
 
 export default function HorarioPage() {
   const { docente } = useDocente()
   const supabase = createClient()
 
+  const [infoOpen, setInfoOpen]   = useState(false)
   const [horario, setHorario]     = useState<HorarioItem[]>([])
   const [loading, setLoading]     = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -180,7 +181,8 @@ export default function HorarioPage() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.5rem', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+        {/* Izquierda: back + título + toggle descripción */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
           <Link href="/docente/grupos"
             style={{ width: 38, height: 38, borderRadius: 12, background: 'white', border: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#3a3a3c', flexShrink: 0, textDecoration: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -189,11 +191,19 @@ export default function HorarioPage() {
           </Link>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1c1c1e', margin: 0 }}>Mi horario</h1>
-            <p style={{ fontSize: '0.78rem', color: '#8e8e93', margin: '0.25rem 0 0' }}>
-              Selecciona una celda para asignar una materia. Toca un bloque para editarlo o eliminarlo.
-            </p>
+            <button
+              onClick={() => setInfoOpen(v => !v)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '0.2rem' }}>
+              <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 500 }}>¿Cómo funciona?</span>
+              <svg width="12" height="12" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transition: 'transform 0.2s', transform: infoOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* Botón guardar */}
         <Link href="/docente/grupos"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 10, background: '#1c1c1e', border: 'none', fontSize: '0.78rem', fontWeight: 600, color: 'white', textDecoration: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', whiteSpace: 'nowrap', flexShrink: 0 }}>
           <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -203,6 +213,18 @@ export default function HorarioPage() {
         </Link>
       </div>
 
+      {/* Descripción desplegable */}
+      {infoOpen && (
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '0.875rem 1.125rem', marginBottom: '0.5rem', animation: 'fadeIn 0.2s ease' }}>
+          <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }`}</style>
+          <p style={{ fontSize: '0.78rem', color: '#1d4ed8', margin: 0, lineHeight: 1.6 }}>
+            📅 <strong>Configura tu semana:</strong> toca cualquier celda vacía para asignar una materia a ese día y hora.<br/>
+            ✏️ <strong>Editar o eliminar:</strong> toca un bloque ya guardado para modificarlo o borrarlo con el botón ✕.<br/>
+            🔔 <strong>Aviso automático:</strong> al entrar a tus grupos verás un recordatorio de la clase que tienes en curso según este horario.
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ width: 36, height: 36, borderRadius: '50%', border: '4px solid #e5e5ea', borderTopColor: '#3a3a3c', animation: 'spin 0.8s linear infinite' }}/>
@@ -210,20 +232,20 @@ export default function HorarioPage() {
         </div>
       ) : (
         /* Grid horario */
-        <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e5ea', overflow: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+        <div style={{ background: 'white', borderRadius: 14, border: '1.5px solid #d1d1d6', overflow: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #f2f2f7' }}>
-                <th style={{ padding: '0.75rem 1rem', fontSize: '0.65rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', width: 64, background: '#fafafa' }}>Hora</th>
+              <tr style={{ borderBottom: '2px solid #d1d1d6' }}>
+                <th style={{ padding: '0.75rem 1rem', fontSize: '0.65rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'left', width: 64, background: '#f2f2f7' }}>Hora</th>
                 {DIAS.map((d, i) => (
-                  <th key={i} style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#1c1c1e', textAlign: 'center', background: '#fafafa' }}>{d}</th>
+                  <th key={i} style={{ padding: '0.75rem 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#1c1c1e', textAlign: 'center', background: '#f2f2f7' }}>{d}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {HORAS.map((hora, hi) => (
-                <tr key={hora} style={{ borderBottom: '1px solid #f7f7f9' }}>
-                  <td style={{ padding: '0.5rem 1rem', fontSize: '0.7rem', fontWeight: 600, color: '#8e8e93', whiteSpace: 'nowrap', background: '#fafafa', borderRight: '1px solid #f2f2f7' }}>
+                <tr key={hora} style={{ borderBottom: '1px solid #e5e5ea' }}>
+                  <td style={{ padding: '0.5rem 1rem', fontSize: '0.7rem', fontWeight: 600, color: '#8e8e93', whiteSpace: 'nowrap', background: '#f2f2f7', borderRight: '1px solid #d1d1d6' }}>
                     {hora}
                   </td>
                   {DIAS.map((_, di) => {
@@ -243,7 +265,7 @@ export default function HorarioPage() {
                             </button>
                             {/* Emoji + grupo */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <span style={{ fontSize: '0.7rem', lineHeight: 1 }}>📚</span>
+                              <span style={{ fontSize: '1rem', lineHeight: 1 }}>📚</span>
                               <p style={{ fontSize: '0.65rem', fontWeight: 700, color: c!.text, margin: 0, lineHeight: 1.3, paddingRight: 14 }}>
                                 Gpo. {asignaturas.find(a => a.id === bloque.asignatura_id)?.grupo ?? ''}
                               </p>
@@ -276,7 +298,7 @@ export default function HorarioPage() {
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={() => setModal(null)}>
           <div
-            style={{ background: 'white', borderRadius: 20, width: 'calc(100% - 2rem)', maxWidth: 340, padding: '1.75rem', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1)', position: 'relative', zIndex: 100000 }}
+            style={{ background: 'white', borderRadius: 20, width: 'calc(100% - 2rem)', maxWidth: 520, padding: '2rem', boxShadow: '0 32px 80px rgba(0,0,0,0.25)', animation: 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1)', position: 'relative', zIndex: 100000 }}
             onClick={e => e.stopPropagation()}>
             <style>{`@keyframes modalIn { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }`}</style>
 
@@ -298,13 +320,13 @@ export default function HorarioPage() {
 
             {/* Selector asignatura */}
             <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3a3a3c', margin: '0 0 0.5rem' }}>¿Qué materia tienes en este horario?</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem', maxHeight: 220, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.5rem', maxHeight: 320, overflowY: 'auto' }}>
               {asignaturas.map(a => {
                 const sel = modal.asig === a.id
                 const c = colorMap[a.id]
                 return (
                   <button key={a.key} onClick={() => setModal({ ...modal, asig: a.id })}
-                    style={{ padding: '0.75rem 1rem', borderRadius: 12, border: `1.5px solid ${sel ? c.border : '#e5e5ea'}`, background: sel ? c.bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                    style={{ padding: '0.875rem 1rem', borderRadius: 12, border: `1.5px solid ${sel ? c.border : '#e5e5ea'}`, background: sel ? c.bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: sel ? c.dot : '#d1d1d6', flexShrink: 0 }}/>
                     <div>
                       <p style={{ fontSize: '0.8rem', fontWeight: sel ? 700 : 500, color: sel ? c.text : '#1c1c1e', margin: 0, lineHeight: 1.3 }}>{a.nombre}</p>
