@@ -100,18 +100,15 @@ function MacButton({ onClick }: { onClick: () => void }) {
           <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Hoy</span>
           <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1c1c1e', textTransform: 'capitalize', marginTop: 2 }}>{fechaCorta}</span>
         </div>
-        <button onClick={onClick} style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {['#ff5f57', '#febc2e', '#28c840'].map((c, i) => (
-                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>
-              ))}
-            </div>
-            <svg width="12" height="12" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
+        <button onClick={onClick} style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {['#ff5f57', '#febc2e', '#28c840'].map((c, i) => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>
+            ))}
           </div>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3a3a3c' }}>Ir a mis asignaturas</span>
+          <svg width="12" height="12" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
         </button>
       </div>
     </>
