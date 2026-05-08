@@ -85,15 +85,20 @@ export default function ConfirmarFechaView({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '1.25rem', alignItems: 'stretch', minHeight: 'calc(100vh - 200px)' }}>
+      <style>{`
+        @media (min-width: 768px) {
+          .confirmar-grid { min-height: calc(100vh - 200px); }
+          .confirmar-card { min-height: calc(100vh - 200px) !important; }
+        }
+      `}</style>
+      <div className="confirmar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: '1.25rem', alignItems: 'stretch' }}>
 
         {/* Card izquierda — acción del día */}
-        <div className="rounded-2xl" style={{
+        <div className="rounded-2xl confirmar-card" style={{
           background: 'white', border: '1px solid #f0f0f5',
           boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
           display: 'flex', flexDirection: 'column',
           position: 'relative', overflow: 'hidden',
-          minHeight: 'calc(100vh - 200px)',
         }}>
           <div style={{ padding: '3.5rem 2rem 2rem', flex: 1 }}>
             <p style={{ color: '#1e3a5f', fontSize: '2.5rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', lineHeight: 1.1, textTransform: 'capitalize', marginBottom: '0.5rem' }}>
@@ -139,12 +144,11 @@ export default function ConfirmarFechaView({
         </div>
 
         {/* Card derecha — historial */}
-        <div style={{
+        <div className="confirmar-card" style={{
           background: 'white', borderRadius: '1rem',
           border: '1px solid #f0f0f5', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          minHeight: 'calc(100vh - 200px)',
         }}>
           <div style={{ padding: '2rem 1.75rem', borderBottom: '1px solid #f4f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -156,7 +160,7 @@ export default function ConfirmarFechaView({
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 360px)' }}>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320 }}>
             {loadingHist ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
                 <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>

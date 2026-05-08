@@ -21,15 +21,17 @@ interface HorarioItem {
   hora_fin: string
 }
 
-// Colores por índice de asignatura
 const COLORES = [
-  { bg: '#e8f4fd', border: '#90c8f0', text: '#0a84ff', dot: '#0a84ff' },  // Azul Apple
-  { bg: '#e8faf0', border: '#86efac', text: '#30d158', dot: '#30d158' },  // Verde Apple
-  { bg: '#f3eeff', border: '#c4b5fd', text: '#bf5af2', dot: '#bf5af2' },  // Morado Apple
-  { bg: '#fff4e6', border: '#fbbf24', text: '#ff9f0a', dot: '#ff9f0a' },  // Naranja Apple
-  { bg: '#e6faf8', border: '#5de0d8', text: '#5ac8fa', dot: '#5ac8fa' },  // Cian Apple
-  { bg: '#ffeef0', border: '#fca5a5', text: '#ff453a', dot: '#ff453a' },  // Rojo Apple
+  { bg: '#e8f4fd', border: '#90c8f0', text: '#0a84ff', dot: '#0a84ff' },
+  { bg: '#e8faf0', border: '#86efac', text: '#30d158', dot: '#30d158' },
+  { bg: '#f3eeff', border: '#c4b5fd', text: '#bf5af2', dot: '#bf5af2' },
+  { bg: '#fff4e6', border: '#fbbf24', text: '#ff9f0a', dot: '#ff9f0a' },
+  { bg: '#e6faf8', border: '#5de0d8', text: '#5ac8fa', dot: '#5ac8fa' },
+  { bg: '#ffeef0', border: '#fca5a5', text: '#ff453a', dot: '#ff453a' },
 ]
+
+// ── Fallback para asignaturas eliminadas que aún están en el horario ──────────
+const COLOR_FALLBACK = { bg: '#f2f2f7', border: '#d1d1d6', text: '#8e8e93', dot: '#8e8e93' }
 
 export default function HorarioPage() {
   const { docente } = useDocente()
@@ -39,16 +41,13 @@ export default function HorarioPage() {
   const [horario, setHorario]     = useState<HorarioItem[]>([])
   const [loading, setLoading]     = useState(true)
   const [guardando, setGuardando] = useState(false)
-  const [docenteDbId, setDocenteDbId]   = useState<string | null>(null)
-  const [plantelDbId, setPlantelDbId]   = useState<string | null>(null)
+  const [docenteDbId, setDocenteDbId] = useState<string | null>(null)
+  const [plantelDbId, setPlantelDbId] = useState<string | null>(null)
 
-  // Modal para añadir/editar
   const [modal, setModal] = useState<{
     dia: number; hora: string; asig: string; horaFin: string; editId?: string
   } | null>(null)
 
-  // Obtener asignaturas únicas del docente
-  // Cada combinación asignatura+grupo es una entrada única
   const asignaturas: AsignaturaItem[] = docente
     ? docente.asignaciones.map(a => ({
         id: a.asignatura_id,
@@ -62,7 +61,9 @@ export default function HorarioPage() {
     asignaturas.map((a, i) => [a.id, COLORES[i % COLORES.length]])
   )
 
-  // cargar — acepta id explícito para no depender del estado asíncrono
+  // ── Helper seguro: nunca devuelve undefined ───────────────────────────────
+  const getColor = (asignaturaId: string) => colorMap[asignaturaId] ?? COLOR_FALLBACK
+
   const cargar = useCallback(async (id?: string) => {
     const usarId = id ?? docenteDbId
     if (!usarId) return
@@ -78,7 +79,6 @@ export default function HorarioPage() {
     })))
   }, [docenteDbId, supabase])
 
-  // Cargar ids del docente una sola vez y luego el horario
   useEffect(() => {
     let cancelled = false
     async function init() {
@@ -108,7 +108,6 @@ export default function HorarioPage() {
     return () => { cancelled = true }
   }, [docente, supabase])
 
-  // Verificar conflicto
   function hayConflicto(dia: number, horaInicio: string, horaFin: string, excludeId?: string) {
     return horario.some(h => {
       if (h.id === excludeId) return false
@@ -153,7 +152,6 @@ export default function HorarioPage() {
       .select('id, asignatura_id, dia, hora_inicio, hora_fin')
       .eq('docente_id', docenteDbId!)
       .eq('activo', true)
-    // Normalizar horas — Supabase devuelve '08:00:00', necesitamos '08:00'
     setHorario((fresh ?? []).map(h => ({
       ...h,
       hora_inicio: h.hora_inicio.slice(0, 5),
@@ -169,19 +167,17 @@ export default function HorarioPage() {
     await cargar()
   }
 
-  // Obtener bloque para celda
   function bloqueEnCelda(dia: number, hora: string) {
     return horario.find(h => h.dia === dia && h.hora_inicio === hora)
   }
 
-  const nombre = (id: string) => asignaturas.find(a => a.id === id)?.nombre ?? '?'
+  const nombre = (id: string) => asignaturas.find(a => a.id === id)?.nombre ?? '— eliminada —'
 
   return (
     <div className="page-slide-right p-4 md:p-8" style={{ maxWidth: 1400, margin: '0 auto' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.5rem', justifyContent: 'space-between' }}>
-        {/* Izquierda: back + título + toggle descripción */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
           <Link href="/docente/grupos"
             style={{ width: 38, height: 38, borderRadius: 12, background: 'white', border: '1px solid #e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#3a3a3c', flexShrink: 0, textDecoration: 'none', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
@@ -202,8 +198,6 @@ export default function HorarioPage() {
             </button>
           </div>
         </div>
-
-        {/* Botón guardar */}
         <Link href="/docente/grupos"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: 10, background: '#1c1c1e', border: 'none', fontSize: '0.78rem', fontWeight: 600, color: 'white', textDecoration: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', whiteSpace: 'nowrap', flexShrink: 0 }}>
           <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -213,7 +207,6 @@ export default function HorarioPage() {
         </Link>
       </div>
 
-      {/* Descripción desplegable */}
       {infoOpen && (
         <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 12, padding: '0.875rem 1.125rem', marginBottom: '0.5rem', animation: 'fadeIn 0.2s ease' }}>
           <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }`}</style>
@@ -231,7 +224,6 @@ export default function HorarioPage() {
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       ) : (
-        /* Grid horario */
         <div style={{ background: 'white', borderRadius: 14, border: '1.5px solid #d1d1d6', overflow: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
             <thead>
@@ -251,29 +243,41 @@ export default function HorarioPage() {
                   {DIAS.map((_, di) => {
                     const dia = di + 1
                     const bloque = bloqueEnCelda(dia, hora)
-                    const c = bloque ? colorMap[bloque.asignatura_id] : null
+                    const c = bloque ? getColor(bloque.asignatura_id) : null
+                    const eliminada = bloque ? !colorMap[bloque.asignatura_id] : false
                     return (
                       <td key={di} style={{ padding: '0.3rem 0.4rem', textAlign: 'center', verticalAlign: 'middle' }}>
                         {bloque ? (
-                          <div style={{ borderRadius: 8, background: c!.bg, border: `2px solid ${c!.border}`, padding: '0.4rem 0.5rem', cursor: 'pointer', position: 'relative', display: 'flex', flexDirection: 'column', gap: 2, boxShadow: `0 2px 8px ${c!.border}66` }}
-                            onClick={() => setModal({ dia, hora, asig: bloque.asignatura_id, horaFin: bloque.hora_fin, editId: bloque.id })}>
-                            {/* Botón eliminar */}
-                            <button
-                              onClick={e => { e.stopPropagation(); if (bloque.id) eliminarBloque(bloque.id) }}
-                              style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c!.text, fontSize: '0.6rem', lineHeight: 1, padding: 0 }}>
-                              ✕
-                            </button>
-                            {/* Emoji + grupo */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <span style={{ fontSize: '1rem', lineHeight: 1 }}>📚</span>
-                              <p style={{ fontSize: '0.65rem', fontWeight: 700, color: c!.text, margin: 0, lineHeight: 1.3, paddingRight: 14 }}>
-                                Gpo. {asignaturas.find(a => a.id === bloque.asignatura_id)?.grupo ?? ''}
+                          eliminada ? (
+                            // ── Bloque huérfano: solo botón eliminar, sin modal ──
+                            <div style={{ borderRadius: 8, background: c!.bg, border: `2px solid ${c!.border}`, padding: '0.4rem 0.5rem', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44 }}>
+                              <p style={{ fontSize: '0.6rem', color: c!.text, margin: 0, fontWeight: 600, opacity: 0.8 }}>— eliminada —</p>
+                              <button
+                                onClick={e => { e.stopPropagation(); if (bloque.id) eliminarBloque(bloque.id) }}
+                                style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c!.text, fontSize: '0.6rem', lineHeight: 1, padding: 0 }}>
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            // ── Bloque normal: abre modal al hacer clic ──────────
+                            <div style={{ borderRadius: 8, background: c!.bg, border: `2px solid ${c!.border}`, padding: '0.4rem 0.5rem', cursor: 'pointer', position: 'relative', display: 'flex', flexDirection: 'column', gap: 2, boxShadow: `0 2px 8px ${c!.border}66` }}
+                              onClick={() => setModal({ dia, hora, asig: bloque.asignatura_id, horaFin: bloque.hora_fin, editId: bloque.id })}>
+                              <button
+                                onClick={e => { e.stopPropagation(); if (bloque.id) eliminarBloque(bloque.id) }}
+                                style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c!.text, fontSize: '0.6rem', lineHeight: 1, padding: 0 }}>
+                                ✕
+                              </button>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <span style={{ fontSize: '1rem', lineHeight: 1 }}>📚</span>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 700, color: c!.text, margin: 0, lineHeight: 1.3, paddingRight: 14 }}>
+                                  Gpo. {asignaturas.find(a => a.id === bloque.asignatura_id)?.grupo ?? '—'}
+                                </p>
+                              </div>
+                              <p style={{ fontSize: '0.6rem', color: c!.text, margin: 0, opacity: 0.85, lineHeight: 1.2, fontWeight: 500 }}>
+                                {nombre(bloque.asignatura_id).length > 14 ? nombre(bloque.asignatura_id).slice(0, 14) + '…' : nombre(bloque.asignatura_id)}
                               </p>
                             </div>
-                            <p style={{ fontSize: '0.6rem', color: c!.text, margin: 0, opacity: 0.85, lineHeight: 1.2, fontWeight: 500 }}>
-                              {nombre(bloque.asignatura_id).length > 14 ? nombre(bloque.asignatura_id).slice(0, 14) + '…' : nombre(bloque.asignatura_id)}
-                            </p>
-                          </div>
+                          )
                         ) : (
                           <div style={{ height: 36, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.12s' }}
                             onClick={() => setModal({ dia, hora, asig: asignaturas[0]?.id ?? '', horaFin: HORAS[hi + 1] ?? hora })}
@@ -292,7 +296,6 @@ export default function HorarioPage() {
         </div>
       )}
 
-      {/* Modal — centrado, solo asignatura — renderizado en body via portal */}
       {modal && typeof window !== 'undefined' && createPortal(
         <div
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
@@ -302,7 +305,6 @@ export default function HorarioPage() {
             onClick={e => e.stopPropagation()}>
             <style>{`@keyframes modalIn { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }`}</style>
 
-            {/* Día y hora — contexto visual */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <div>
                 <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
@@ -318,12 +320,12 @@ export default function HorarioPage() {
               </button>
             </div>
 
-            {/* Selector asignatura */}
             <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3a3a3c', margin: '0 0 0.5rem' }}>¿Qué materia tienes en este horario?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.5rem', maxHeight: 320, overflowY: 'auto' }}>
               {asignaturas.map(a => {
                 const sel = modal.asig === a.id
-                const c = colorMap[a.id]
+                // ── getColor nunca devuelve undefined ─────────────────────────
+                const c = getColor(a.id)
                 return (
                   <button key={a.key} onClick={() => setModal({ ...modal, asig: a.id })}
                     style={{ padding: '0.875rem 1rem', borderRadius: 12, border: `1.5px solid ${sel ? c.border : '#e5e5ea'}`, background: sel ? c.bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -337,7 +339,6 @@ export default function HorarioPage() {
               })}
             </div>
 
-            {/* Acciones */}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               {modal.editId && (
                 <button onClick={() => { eliminarBloque(modal.editId!); setModal(null) }}
