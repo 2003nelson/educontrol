@@ -74,6 +74,14 @@ export default function HorarioAhoraWidget({
         const asig = (Array.isArray(asigRaw) ? asigRaw[0] : asigRaw) as { nombre: string } | null
         const asignacion = asignaciones.find(a => a.asignatura_id === data.asignatura_id)
 
+        // ── Si la asignación ya no existe (fue eliminada), tratar como sin clase
+        if (!asignacion) {
+          setBloque(null)
+          onClaseActiva?.(null)
+          setProxima(null)
+          return
+        }
+
         const b: Bloque = {
           asignatura_id:     data.asignatura_id,
           asignatura_nombre: asig?.nombre ?? '—',

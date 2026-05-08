@@ -356,16 +356,58 @@ export default function GruposPage() {
                     })
                   }
                 </div>
-                {grupo.asignaturas.every(a => completadas.has(`${grupo.id}:${a.id}`)) ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '8px 12px', borderRadius: 12, background: '#f0fdf4', border: '1px solid #86efac' }}>
-                    <svg width="14" height="14" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6L9 17l-5-5"/>
-                    </svg>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#16a34a' }}>Asistencia completada</span>
-                  </div>
-                ) : (
-                  <MacButton onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}/>
-                )}
+                {(() => {
+                  const todasCompletas = grupo.asignaturas.length > 0 &&
+                    grupo.asignaturas.every(a => completadas.has(`${grupo.id}:${a.id}`))
+                  return todasCompletas ? (
+                    <>
+                      <style>{`.completada-mobile{display:flex!important;} .completada-desktop{display:none!important;} @media(min-width:768px){.completada-mobile{display:none!important;} .completada-desktop{display:flex!important;}}`}</style>
+                      {/* Mobile — pill encima + fila de 2 botones */}
+                      <div className="completada-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '6px 12px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #86efac' }}>
+                          <svg width="12" height="12" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6L9 17l-5-5"/>
+                          </svg>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#16a34a' }}>Asistencia completada</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.625rem', width: '100%' }}
+                          onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}>
+                          <div style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Hoy</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1c1c1e', textTransform: 'capitalize', marginTop: 2 }}>{new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                          </div>
+                          <div style={{ flex: 1, background: 'white', border: '1px solid #e5e5ea', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              {['#ff5f57','#febc2e','#28c840'].map((c, i) => (
+                                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }}/>
+                              ))}
+                            </div>
+                            <svg width="12" height="12" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Desktop — dots + pill verde clickeable en la misma fila */}
+                      <div className="completada-desktop" style={{ display: 'none', alignItems: 'center', gap: '10px', padding: '6px 4px', cursor: 'pointer' }}
+                        onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {['#ff5f57','#febc2e','#28c840'].map((c, i) => (
+                            <div key={i} style={{ width: 13, height: 13, borderRadius: '50%', background: c }}/>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '3px 10px', borderRadius: 9999, background: '#f0fdf4', border: '1px solid #86efac' }}>
+                          <svg width="11" height="11" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6L9 17l-5-5"/>
+                          </svg>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#16a34a' }}>Asistencia completada</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <MacButton onClick={() => setVistaConHistorial({ tipo: 'asignaturas', grupo })}/>
+                  )
+                })()}
               </div>
             </div>
           ))}
