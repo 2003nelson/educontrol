@@ -199,22 +199,92 @@ function CeldaFecha({ fecha, updatedAt, createdAt }: { fecha: string | null; upd
 }
 
 // ─── Tabla asistencia semanal ─────────────────────────────────────────────────
-function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
+function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaInicial, semanaInicio, grupoId, asigId, docenteId }: {
   alumnos: Alumno[]
   asistenciaDiaria: AsistenciaDiaria
   semanaInicio: string
+  grupoId: string
+  asigId: string
+  docenteId: string
 }) {
+  const supabase = createClient()
   const dias = diasDeSemana(semanaInicio)
   const [tooltip, setTooltip] = useState<{ id: string; texto: string } | null>(null)
+  const [asistenciaDiaria, setAsistenciaDiaria] = useState(asistenciaDiariaInicial)
+  const [refreshCount, setRefreshCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [cooldown, setCooldown] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState(0)
 
-  // ── Día seleccionado: hoy si está en la semana, si no el viernes ──────────
   const hoyISO = formatISO(new Date())
   const diaDefault = dias.find(d => d.iso === hoyISO)?.iso ?? dias[4].iso
   const [diaSelec, setDiaSelec] = useState(diaDefault)
 
+  // Reset contador cada 60s
+  useEffect(() => {
+    const t = setInterval(() => setRefreshCount(0), 60_000)
+    return () => clearInterval(t)
+  }, [])
+
+  async function handleRefresh() {
+    if (refreshing || cooldown) return
+    if (refreshCount >= 5) { setCooldown(true); setSecondsLeft(60); return }
+
+    setRefreshing(true)
+    setRefreshCount(c => c + 1)
+
+    const { data } = await supabase
+      .from('asistencias')
+      .select('estudiante_id, estado, fecha, updated_at, created_at')
+      .eq('grupo_id', grupoId)
+      .eq('asignatura_id', asigId)
+      .eq('docente_id', docenteId)
+
+    if (data) {
+      const diaria: AsistenciaDiaria = {}
+      alumnos.forEach(a => { diaria[a.id] = [] })
+      data.forEach(r => {
+        if (!diaria[r.estudiante_id]) diaria[r.estudiante_id] = []
+        diaria[r.estudiante_id].push({
+          fecha: r.fecha as string, estado: r.estado as string,
+          updated_at: r.updated_at as string | null, created_at: r.created_at as string | null,
+        })
+      })
+      setAsistenciaDiaria(diaria)
+    }
+    setRefreshing(false)
+  }
+
+  // Countdown cuando llega al límite
+  useEffect(() => {
+    if (!cooldown) return
+    const t = setTimeout(() => {
+      if (secondsLeft <= 1) {
+        setCooldown(false)
+        setRefreshCount(0)
+        setSecondsLeft(0)
+      } else {
+        setSecondsLeft(s => s - 1)
+      }
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [cooldown, secondsLeft])
+
   return (
     <div style={{ background:'white', borderRadius:'1rem', overflow:'hidden', border:'1px solid #f1f5f9', position:'relative' }} onClick={() => setTooltip(null)}>
-      <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.625rem 1.25rem', borderBottom:'1px solid #f1f5f9', justifyContent:'flex-end', flexWrap:'wrap' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.625rem 1.25rem', borderBottom:'1px solid #f1f5f9', justifyContent:'space-between', flexWrap:'wrap' }}>
+        {/* Botón refresh — esquina izquierda */}
+        <button onClick={handleRefresh} disabled={refreshing || cooldown}
+          title={cooldown ? `Límite alcanzado, espera ${secondsLeft}s` : `Actualizar (${5 - refreshCount} restantes)`}
+          style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8, border:'1px solid #e2e8f0', background: cooldown?'#fef2f2':refreshing?'#f8fafc':'white', color: cooldown?'#dc2626':'#475569', fontSize:'0.7rem', fontWeight:600, cursor: (refreshing||cooldown)?'not-allowed':'pointer', transition:'all 0.15s', opacity: (refreshing||cooldown)?0.7:1 }}>
+          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
+            style={{ animation: refreshing?'spin 0.7s linear infinite':'none' }}>
+            <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {cooldown ? `${secondsLeft}s` : refreshing ? 'Actualizando…' : 'Actualizar'}
+        </button>
+        {/* Leyendas — derecha */}
+        <div style={{ display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap' }}>
         {[
           { icon:<svg width="11" height="11" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#f0fdf4', border:'#bbf7d0', label:'Presente', color:'#64748b' },
           { icon:<svg width="10" height="10" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#fef2f2', border:'#fecaca', label:'Falta', color:'#64748b' },
@@ -226,6 +296,7 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria, semanaInicio }: {
             <span style={{ fontSize:'0.68rem', color:item.color, fontWeight:500 }}>{item.label}</span>
           </div>
         ))}
+        </div>
       </div>
       <div style={{ maxHeight:'calc(8 * 56px + 44px)', overflowY:'auto' }}>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -637,7 +708,14 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
           )}
         </div>
       ) : (
-        <TablaAsistenciaSemanal alumnos={filtrados} asistenciaDiaria={asistenciaDiaria} semanaInicio={semanaSelec}/>
+        <TablaAsistenciaSemanal
+          alumnos={filtrados}
+          asistenciaDiaria={asistenciaDiaria}
+          semanaInicio={semanaSelec}
+          grupoId={grupo.id}
+          asigId={asigSelec.asignatura_id}
+          docenteId={asigSelec.docente_id}
+        />
       )}
 
       {semanaSlide && (
