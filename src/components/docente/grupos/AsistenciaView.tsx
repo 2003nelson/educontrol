@@ -4,28 +4,34 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { AsignaturaItem } from './ConfirmarFechaView'
 
-type Alumno    = { id: string; nombre_completo: string; matricula?: string }
+type Alumno     = { id: string; nombre_completo: string; matricula?: string }
 type Asistencia = Record<string, 'P' | 'A' | 'J' | 'R'>
 
 function formatFechaHoy() {
   return new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-function formatFechaISO() {
+function formatFechaISO(fecha?: string) {
+  if (fecha) return fecha
   const hoy = new Date()
-  const y = hoy.getFullYear()
-  const m = String(hoy.getMonth() + 1).padStart(2, '0')
-  const d = String(hoy.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+}
+
+function formatFechaLegible(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('es-MX', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  })
 }
 
 export default function AsistenciaView({
-  asignatura, grupoId, onBack, onGuardado,
+  asignatura, grupoId, onBack, onGuardado, fechaEditar,
 }: {
   asignatura: AsignaturaItem
   grupoId: string
   onBack: () => void
-  onGuardado: () => void
+  onGuardado: (fechaGuardada?: string) => void
+  fechaEditar?: string  // si viene, editamos esa fecha en lugar de hoy
 }) {
   const supabase = createClient()
   const [alumnos, setAlumnos]       = useState<Alumno[]>([])
@@ -34,19 +40,21 @@ export default function AsistenciaView({
   const [guardando, setGuardando]   = useState(false)
   const [guardado, setGuardado]     = useState(false)
 
+  const fechaObjetivo = formatFechaISO(fechaEditar)
+  const esEdicion     = !!fechaEditar
+
   useEffect(() => {
     async function cargar() {
       setLoading(true)
       const { data, error } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: grupoId })
       if (!error && data) {
         setAlumnos(data)
-        const hoy = formatFechaISO()
         const { data: prevData } = await supabase
           .from('asistencias')
           .select('estudiante_id, estado')
           .eq('grupo_id', grupoId)
           .eq('asignatura_id', asignatura.id)
-          .eq('fecha', hoy)
+          .eq('fecha', fechaObjetivo)
         const init: Asistencia = {}
         data.forEach((a: Alumno) => { init[a.id] = 'P' })
         const estadoInverso: Record<string, 'P' | 'A' | 'J' | 'R'> = {
@@ -62,7 +70,7 @@ export default function AsistenciaView({
       setLoading(false)
     }
     cargar()
-  }, [grupoId, asignatura.id, supabase])
+  }, [grupoId, asignatura.id, fechaObjetivo, supabase])
 
   function marcarTodos(estado: 'P' | 'A' | 'J' | 'R') {
     const nuevo: Asistencia = {}
@@ -77,18 +85,11 @@ export default function AsistenciaView({
   async function guardar() {
     setGuardando(true)
     try {
-      const hoy = formatFechaISO()
-
-      // Obtener datos del docente autenticado
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('No autenticado')
 
-      // ── FIX: obtener plantel_id E id del docente ──────────────────────────
       const { data: ud, error: udError } = await supabase
-        .from('usuarios')
-        .select('plantel_id, id')
-        .eq('auth_id', user.id)
-        .single()
+        .from('usuarios').select('plantel_id, id').eq('auth_id', user.id).single()
       if (udError || !ud?.plantel_id || !ud?.id) throw new Error('No se pudo obtener datos del docente')
 
       const estadoMap: Record<'P' | 'A' | 'J' | 'R', string> = {
@@ -99,29 +100,28 @@ export default function AsistenciaView({
         estudiante_id: a.id,
         grupo_id:      grupoId,
         asignatura_id: asignatura.id,
-        fecha:         hoy,
+        fecha:         fechaObjetivo,
         estado:        estadoMap[asistencia[a.id] ?? 'P'],
         plantel_id:    ud.plantel_id,
-        docente_id:    ud.id,          // ── FIX: docente_id requerido ─────────
+        docente_id:    ud.id,
+        updated_at:    new Date().toISOString(),
       }))
 
       const { error: upsertError } = await supabase
         .from('asistencias')
         .upsert(registros, {
-          onConflict: 'estudiante_id,asignatura_id,fecha,docente_id',
+          onConflict:       'estudiante_id,asignatura_id,fecha,docente_id',
           ignoreDuplicates: false,
         })
 
       if (upsertError) throw upsertError
 
       setGuardado(true)
-      // Reemplazar la entrada actual en el historial para que el botón atrás
-      // no regrese a la vista de tomar asistencia
       window.history.replaceState({ vista: 'confirmar' }, '')
-      setTimeout(() => onGuardado(), 1800)
+      setTimeout(() => onGuardado(fechaObjetivo), 1800)
     } catch (err) {
       console.error('Error al guardar asistencia:', err)
-      alert('No se pudo guardar la asistencia. Revisa la consola para más detalles.')
+      alert('No se pudo guardar la asistencia. Revisa la consola.')
     } finally {
       setGuardando(false)
     }
@@ -142,7 +142,7 @@ export default function AsistenciaView({
     }[estado]
     return (
       <button onClick={() => marcar(alumnoId, estado)}
-        style={{ width: 36, height: 36, borderRadius: 10, background: cfg.bg, color: cfg.color, border: ('1.5px solid ' + cfg.border), fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        style={{ width: 36, height: 36, borderRadius: 10, background: cfg.bg, color: cfg.color, border: `1.5px solid ${cfg.border}`, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {estado}
       </button>
     )
@@ -160,11 +160,18 @@ export default function AsistenciaView({
         </button>
         <div>
           <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>{asignatura.nombre}</h1>
-          <p className="text-xs capitalize" style={{ color: '#94a3b8' }}>{formatFechaHoy()}</p>
+          <p className="text-xs capitalize" style={{ color: '#94a3b8' }}>
+            {esEdicion
+              ? <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                  <span style={{ background:'#fffbeb', border:'1px solid #fde68a', color:'#d97706', borderRadius:9999, padding:'1px 7px', fontSize:'0.65rem', fontWeight:700 }}>✏️ Editando</span>
+                  {formatFechaLegible(fechaObjetivo)}
+                </span>
+              : formatFechaHoy()
+            }
+          </p>
         </div>
       </div>
 
-      {/* Layout PC: 2 columnas — móvil: apilado */}
       <style>{`
         .asist-layout { display: flex; flex-direction: column; gap: 1rem; }
         @media (min-width: 768px) {
@@ -175,20 +182,17 @@ export default function AsistenciaView({
       `}</style>
 
       <div className="asist-layout">
-
-        {/* ── Card izquierda: indicadores + marcar todos ── */}
+        {/* Sidebar */}
         <div className="asist-sidebar">
           <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e5e5ea', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-            {/* Título */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.75rem' }}>Resumen</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {[
-                  { label: 'Presentes', val: presentes, color: '#16a34a', dot: '#22c55e', bg: '#f0fdf4' },
-                  { label: 'Ausentes',  val: ausentes,  color: '#dc2626', dot: '#ef4444', bg: '#fef2f2' },
-                  { label: 'Justificadas', val: justif, color: '#d97706', dot: '#f59e0b', bg: '#fffbeb' },
-                  { label: 'Retardos',  val: retardos,  color: '#7c3aed', dot: '#a78bfa', bg: '#f5f3ff' },
+                  { label: 'Presentes',    val: presentes, color: '#16a34a', dot: '#22c55e', bg: '#f0fdf4' },
+                  { label: 'Ausentes',     val: ausentes,  color: '#dc2626', dot: '#ef4444', bg: '#fef2f2' },
+                  { label: 'Justificadas', val: justif,    color: '#d97706', dot: '#f59e0b', bg: '#fffbeb' },
+                  { label: 'Retardos',     val: retardos,  color: '#7c3aed', dot: '#a78bfa', bg: '#f5f3ff' },
                 ].map(s => (
                   <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderRadius: 10, background: s.bg }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -201,11 +205,10 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Marcar todos */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.375rem' }}>Marcar todos</p>
               <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.625rem', lineHeight: 1.4 }}>
-                Pulsa un botón para marcar a <strong style={{ color: '#64748b' }}>todos los alumnos</strong> con ese estado de un solo toque.
+                Pulsa un botón para marcar a <strong style={{ color: '#64748b' }}>todos los alumnos</strong> con ese estado.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {(['P', 'A', 'J', 'R'] as const).map(e => {
@@ -226,17 +229,16 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Botón guardar — solo visible en sidebar desktop */}
             {alumnos.length > 0 && (
               <button onClick={guardar} disabled={guardando}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.85rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
-                {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : 'Guardar asistencia'}
+                {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
               </button>
             )}
           </div>
         </div>
 
-        {/* ── Lista de alumnos ── */}
+        {/* Lista de alumnos */}
         <div className="asist-main">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -269,13 +271,13 @@ export default function AsistenciaView({
             </div>
           )}
 
-          {/* Botón guardar móvil — solo en móvil */}
+          {/* Botón guardar móvil */}
           {alumnos.length > 0 && (
             <div style={{ marginTop: '1rem' }}>
               <style>{`.guardar-mobile { display: block; } @media (min-width: 768px) { .guardar-mobile { display: none; } }`}</style>
               <button className="guardar-mobile" onClick={guardar} disabled={guardando}
                 style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
-                {guardando ? 'Guardando...' : guardado ? '✓ Asistencia guardada' : 'Guardar asistencia'}
+                {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
               </button>
             </div>
           )}

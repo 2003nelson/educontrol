@@ -10,7 +10,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']
 const HORAS = Array.from({ length: 14 }, (_, i) => {
   const h = 7 + i
   return `${String(h).padStart(2, '0')}:00`
-}) // 07:00 – 20:00
+})
 
 interface AsignaturaItem { id: string; nombre: string; grupo: string; key: string }
 interface HorarioItem {
@@ -30,7 +30,6 @@ const COLORES = [
   { bg: '#ffeef0', border: '#fca5a5', text: '#ff453a', dot: '#ff453a' },
 ]
 
-// ── Fallback para asignaturas eliminadas que aún están en el horario ──────────
 const COLOR_FALLBACK = { bg: '#f2f2f7', border: '#d1d1d6', text: '#8e8e93', dot: '#8e8e93' }
 
 export default function HorarioPage() {
@@ -48,21 +47,26 @@ export default function HorarioPage() {
     dia: number; hora: string; asig: string; horaFin: string; editId?: string
   } | null>(null)
 
+  // ── Asignaturas del docente — key única por asignatura+grupo ─────────────
   const asignaturas: AsignaturaItem[] = docente
     ? docente.asignaciones.map(a => ({
-        id: a.asignatura_id,
+        id:     a.asignatura_id,
         nombre: a.asignatura_nombre,
-        grupo: a.grupo_numero,
-        key: `${a.asignatura_id}-${a.grupo_id}`,
+        grupo:  a.grupo_numero,
+        key:    `${a.asignatura_id}-${a.grupo_id}`,
       }))
     : []
 
+  // colorMap usa key (asignatura_id-grupo_id) para distinguir misma asignatura en grupos distintos
   const colorMap = Object.fromEntries(
-    asignaturas.map((a, i) => [a.id, COLORES[i % COLORES.length]])
+    asignaturas.map((a, i) => [a.key, COLORES[i % COLORES.length]])
   )
 
-  // ── Helper seguro: nunca devuelve undefined ───────────────────────────────
-  const getColor = (asignaturaId: string) => colorMap[asignaturaId] ?? COLOR_FALLBACK
+  const getColor = (key: string) => colorMap[key] ?? COLOR_FALLBACK
+
+  // Dado un asignatura_id guardado en horario_docente, encontrar su key completa
+  const getKeyFromAsigId = (asignaturaId: string) =>
+    asignaturas.find(a => a.id === asignaturaId)?.key ?? asignaturaId
 
   const cargar = useCallback(async (id?: string) => {
     const usarId = id ?? docenteDbId
@@ -118,7 +122,10 @@ export default function HorarioPage() {
 
   async function guardarBloque() {
     if (!modal || !docente) return
-    const { dia, hora: horaInicio, asig, horaFin, editId } = modal
+    const { dia, hora: horaInicio, asig: asigKey, horaFin, editId } = modal
+    // asigKey es "asignatura_id-grupo_id" → extraer asignatura_id real
+    const asignaturaId = asignaturas.find(a => a.key === asigKey)?.id ?? asigKey
+
     if (hayConflicto(dia, horaInicio, horaFin, editId)) {
       alert('Ya hay una asignatura en ese horario')
       return
@@ -129,20 +136,20 @@ export default function HorarioPage() {
     if (editId) {
       const { error } = await supabase
         .from('horario_docente')
-        .update({ asignatura_id: asig, hora_inicio: horaInicio, hora_fin: horaFin })
+        .update({ asignatura_id: asignaturaId, hora_inicio: horaInicio, hora_fin: horaFin })
         .eq('id', editId)
       if (error) { alert('Error al actualizar: ' + error.message); setGuardando(false); return }
     } else {
       const { error } = await supabase
         .from('horario_docente')
         .insert({
-          docente_id: docenteDbId,
-          asignatura_id: asig,
-          plantel_id: plantelDbId,
+          docente_id:    docenteDbId,
+          asignatura_id: asignaturaId,
+          plantel_id:    plantelDbId,
           dia,
-          hora_inicio: horaInicio,
-          hora_fin: horaFin,
-          activo: true,
+          hora_inicio:   horaInicio,
+          hora_fin:      horaFin,
+          activo:        true,
         })
       if (error) { alert('Error al guardar: ' + error.message); setGuardando(false); return }
     }
@@ -171,7 +178,8 @@ export default function HorarioPage() {
     return horario.find(h => h.dia === dia && h.hora_inicio === hora)
   }
 
-  const nombre = (id: string) => asignaturas.find(a => a.id === id)?.nombre ?? '— eliminada —'
+  const nombreAsig = (asignaturaId: string) =>
+    asignaturas.find(a => a.id === asignaturaId)?.nombre ?? '— eliminada —'
 
   return (
     <div className="page-slide-right p-4 md:p-8" style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -187,8 +195,7 @@ export default function HorarioPage() {
           </Link>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1c1c1e', margin: 0 }}>Mi horario</h1>
-            <button
-              onClick={() => setInfoOpen(v => !v)}
+            <button onClick={() => setInfoOpen(v => !v)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '0.2rem' }}>
               <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 500 }}>¿Cómo funciona?</span>
               <svg width="12" height="12" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
@@ -243,13 +250,14 @@ export default function HorarioPage() {
                   {DIAS.map((_, di) => {
                     const dia = di + 1
                     const bloque = bloqueEnCelda(dia, hora)
-                    const c = bloque ? getColor(bloque.asignatura_id) : null
-                    const eliminada = bloque ? !colorMap[bloque.asignatura_id] : false
+                    const bloqueKey = bloque ? getKeyFromAsigId(bloque.asignatura_id) : null
+                    const eliminada = bloque ? !colorMap[bloqueKey ?? ''] : false
+                    const c = bloque ? getColor(bloqueKey ?? '') : null
                     return (
                       <td key={di} style={{ padding: '0.3rem 0.4rem', textAlign: 'center', verticalAlign: 'middle' }}>
                         {bloque ? (
                           eliminada ? (
-                            // ── Bloque huérfano: solo botón eliminar, sin modal ──
+                            // Bloque huérfano — sin modal, solo eliminar
                             <div style={{ borderRadius: 8, background: c!.bg, border: `2px solid ${c!.border}`, padding: '0.4rem 0.5rem', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 44 }}>
                               <p style={{ fontSize: '0.6rem', color: c!.text, margin: 0, fontWeight: 600, opacity: 0.8 }}>— eliminada —</p>
                               <button
@@ -259,9 +267,9 @@ export default function HorarioPage() {
                               </button>
                             </div>
                           ) : (
-                            // ── Bloque normal: abre modal al hacer clic ──────────
+                            // Bloque normal — abre modal
                             <div style={{ borderRadius: 8, background: c!.bg, border: `2px solid ${c!.border}`, padding: '0.4rem 0.5rem', cursor: 'pointer', position: 'relative', display: 'flex', flexDirection: 'column', gap: 2, boxShadow: `0 2px 8px ${c!.border}66` }}
-                              onClick={() => setModal({ dia, hora, asig: bloque.asignatura_id, horaFin: bloque.hora_fin, editId: bloque.id })}>
+                              onClick={() => setModal({ dia, hora, asig: bloqueKey!, horaFin: bloque.hora_fin, editId: bloque.id })}>
                               <button
                                 onClick={e => { e.stopPropagation(); if (bloque.id) eliminarBloque(bloque.id) }}
                                 style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: '50%', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c!.text, fontSize: '0.6rem', lineHeight: 1, padding: 0 }}>
@@ -270,17 +278,17 @@ export default function HorarioPage() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                 <span style={{ fontSize: '1rem', lineHeight: 1 }}>📚</span>
                                 <p style={{ fontSize: '0.65rem', fontWeight: 700, color: c!.text, margin: 0, lineHeight: 1.3, paddingRight: 14 }}>
-                                  Gpo. {asignaturas.find(a => a.id === bloque.asignatura_id)?.grupo ?? '—'}
+                                  Gpo. {asignaturas.find(a => a.key === bloqueKey)?.grupo ?? '—'}
                                 </p>
                               </div>
                               <p style={{ fontSize: '0.6rem', color: c!.text, margin: 0, opacity: 0.85, lineHeight: 1.2, fontWeight: 500 }}>
-                                {nombre(bloque.asignatura_id).length > 14 ? nombre(bloque.asignatura_id).slice(0, 14) + '…' : nombre(bloque.asignatura_id)}
+                                {nombreAsig(bloque.asignatura_id).length > 14 ? nombreAsig(bloque.asignatura_id).slice(0, 14) + '…' : nombreAsig(bloque.asignatura_id)}
                               </p>
                             </div>
                           )
                         ) : (
                           <div style={{ height: 36, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.12s' }}
-                            onClick={() => setModal({ dia, hora, asig: asignaturas[0]?.id ?? '', horaFin: HORAS[hi + 1] ?? hora })}
+                            onClick={() => setModal({ dia, hora, asig: asignaturas[0]?.key ?? '', horaFin: HORAS[hi + 1] ?? hora })}
                             onMouseEnter={e => (e.currentTarget.style.background = '#f2f2f7')}
                             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                             <span style={{ fontSize: '0.8rem', color: '#d1d1d6' }}>+</span>
@@ -296,6 +304,7 @@ export default function HorarioPage() {
         </div>
       )}
 
+      {/* Modal */}
       {modal && typeof window !== 'undefined' && createPortal(
         <div
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
@@ -323,11 +332,10 @@ export default function HorarioPage() {
             <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3a3a3c', margin: '0 0 0.5rem' }}>¿Qué materia tienes en este horario?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.5rem', maxHeight: 320, overflowY: 'auto' }}>
               {asignaturas.map(a => {
-                const sel = modal.asig === a.id
-                // ── getColor nunca devuelve undefined ─────────────────────────
-                const c = getColor(a.id)
+                const sel = modal.asig === a.key
+                const c = getColor(a.key)
                 return (
-                  <button key={a.key} onClick={() => setModal({ ...modal, asig: a.id })}
+                  <button key={a.key} onClick={() => setModal({ ...modal, asig: a.key })}
                     style={{ padding: '0.875rem 1rem', borderRadius: 12, border: `1.5px solid ${sel ? c.border : '#e5e5ea'}`, background: sel ? c.bg : 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: sel ? c.dot : '#d1d1d6', flexShrink: 0 }}/>
                     <div>
