@@ -31,7 +31,7 @@ export default function AsistenciaView({
   grupoId: string
   onBack: () => void
   onGuardado: (fechaGuardada?: string) => void
-  fechaEditar?: string  // si viene, editamos esa fecha en lugar de hoy
+  fechaEditar?: string
 }) {
   const supabase = createClient()
   const [alumnos, setAlumnos]       = useState<Alumno[]>([])
@@ -87,15 +87,12 @@ export default function AsistenciaView({
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('No autenticado')
-
       const { data: ud, error: udError } = await supabase
         .from('usuarios').select('plantel_id, id').eq('auth_id', user.id).single()
       if (udError || !ud?.plantel_id || !ud?.id) throw new Error('No se pudo obtener datos del docente')
-
       const estadoMap: Record<'P' | 'A' | 'J' | 'R', string> = {
         P: 'presente', A: 'falta', J: 'justificada', R: 'retardo',
       }
-
       const registros = alumnos.map(a => ({
         estudiante_id: a.id,
         grupo_id:      grupoId,
@@ -106,16 +103,10 @@ export default function AsistenciaView({
         docente_id:    ud.id,
         updated_at:    new Date().toISOString(),
       }))
-
       const { error: upsertError } = await supabase
         .from('asistencias')
-        .upsert(registros, {
-          onConflict:       'estudiante_id,asignatura_id,fecha,docente_id',
-          ignoreDuplicates: false,
-        })
-
+        .upsert(registros, { onConflict: 'estudiante_id,asignatura_id,fecha,docente_id', ignoreDuplicates: false })
       if (upsertError) throw upsertError
-
       setGuardado(true)
       window.history.replaceState({ vista: 'confirmar' }, '')
       setTimeout(() => onGuardado(fechaObjetivo), 1800)
@@ -149,21 +140,33 @@ export default function AsistenciaView({
   }
 
   return (
-    <div className="p-4 md:p-6" style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f4fa', padding: '1.25rem 0.75rem 2rem' }}>
+      <style>{`
+        .asist-layout { display: flex; flex-direction: column; gap: 1rem; }
+        @media (min-width: 768px) {
+          .asist-layout { flex-direction: row; align-items: flex-start; gap: 1.25rem; padding: 0; }
+          .asist-sidebar { width: 240px; flex-shrink: 0; position: sticky; top: 80px; }
+          .asist-main    { flex: 1; min-width: 0; }
+          .asist-wrap    { padding: 1.5rem 1.25rem 3rem; }
+        }
+        .guardar-mobile { display: block; }
+        @media (min-width: 768px) { .guardar-mobile { display: none; } }
+      `}</style>
+
       {/* Header */}
-      <div className="flex items-center gap-3" style={{ marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
         <button onClick={onBack}
-          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
-          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          style={{ width: 36, height: 36, borderRadius: 10, background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         <div>
-          <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>{asignatura.nombre}</h1>
-          <p className="text-xs capitalize" style={{ color: '#94a3b8' }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#1e3a5f', margin: 0, fontFamily: 'Outfit, sans-serif' }}>{asignatura.nombre}</h1>
+          <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>
             {esEdicion
-              ? <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                  <span style={{ background:'#fffbeb', border:'1px solid #fde68a', color:'#d97706', borderRadius:9999, padding:'1px 7px', fontSize:'0.65rem', fontWeight:700 }}>✏️ Editando</span>
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#d97706', borderRadius: 9999, padding: '1px 7px', fontSize: '0.65rem', fontWeight: 700 }}>✏️ Editando</span>
                   {formatFechaLegible(fechaObjetivo)}
                 </span>
               : formatFechaHoy()
@@ -172,22 +175,14 @@ export default function AsistenciaView({
         </div>
       </div>
 
-      <style>{`
-        .asist-layout { display: flex; flex-direction: column; gap: 1rem; }
-        @media (min-width: 768px) {
-          .asist-layout { flex-direction: row; align-items: flex-start; gap: 1.5rem; }
-          .asist-sidebar { width: 260px; flex-shrink: 0; position: sticky; top: 80px; }
-          .asist-main    { flex: 1; min-width: 0; }
-        }
-      `}</style>
-
       <div className="asist-layout">
+
         {/* Sidebar */}
         <div className="asist-sidebar">
-          <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e5e5ea', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e5ea', padding: '1.125rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.75rem' }}>Resumen</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
                   { label: 'Presentes',    val: presentes, color: '#16a34a', dot: '#22c55e', bg: '#f0fdf4' },
                   { label: 'Ausentes',     val: ausentes,  color: '#dc2626', dot: '#ef4444', bg: '#fef2f2' },
@@ -238,29 +233,31 @@ export default function AsistenciaView({
           </div>
         </div>
 
-        {/* Lista de alumnos */}
+        {/* Lista alumnos */}
         <div className="asist-main">
           {loading ? (
-            <div className="flex justify-center py-12">
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
               <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"/>
             </div>
           ) : alumnos.length === 0 ? (
-            <div className="text-center py-12 text-sm" style={{ color: '#94a3b8' }}>No hay alumnos en este grupo</div>
+            <div style={{ textAlign: 'center', padding: '3rem', fontSize: '0.875rem', color: '#94a3b8' }}>
+              No hay alumnos en este grupo
+            </div>
           ) : (
-            <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #e2e8f0' }}>
+            <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               {alumnos.map((alumno, idx) => (
-                <div key={alumno.id} className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: idx < alumnos.length - 1 ? '1px solid #f1f5f9' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                  <div className="flex items-center gap-3 min-w-0">
+                <div key={alumno.id}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: idx < alumnos.length - 1 ? '1px solid #f1f5f9' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
                       {alumno.nombre_completo.charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: '#1e3a5f' }}>{alumno.nombre_completo}</p>
-                      {alumno.matricula && <p className="text-xs" style={{ color: '#94a3b8' }}>{alumno.matricula}</p>}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a5f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alumno.nombre_completo}</p>
+                      {alumno.matricula && <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>{alumno.matricula}</p>}
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
                     <BtnEstado estado="P" alumnoId={alumno.id}/>
                     <BtnEstado estado="A" alumnoId={alumno.id}/>
                     <BtnEstado estado="J" alumnoId={alumno.id}/>
@@ -271,10 +268,9 @@ export default function AsistenciaView({
             </div>
           )}
 
-          {/* Botón guardar móvil */}
+          {/* Guardar móvil */}
           {alumnos.length > 0 && (
             <div style={{ marginTop: '1rem' }}>
-              <style>{`.guardar-mobile { display: block; } @media (min-width: 768px) { .guardar-mobile { display: none; } }`}</style>
               <button className="guardar-mobile" onClick={guardar} disabled={guardando}
                 style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
                 {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}

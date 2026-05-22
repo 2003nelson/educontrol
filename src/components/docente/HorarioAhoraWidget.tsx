@@ -45,6 +45,23 @@ export default function HorarioAhoraWidget({
   const [proxima, setProxima]           = useState<Bloque | null>(null)
   const [tieneHorario, setTieneHorario] = useState(false)
 
+  // ── Estado minimizado ──────────────────────────────────────────────────────
+  const [minimizado, setMinimizado] = useState(false)
+  const [animando, setAnimando]     = useState(false) // true durante la animación
+
+  function minimizar() {
+    setAnimando(true)
+    // Fase 1: contrae (200ms) → Fase 2: desaparece (150ms)
+    setTimeout(() => setMinimizado(true), 200)
+    setTimeout(() => setAnimando(false), 360)
+  }
+
+  function expandir() {
+    setMinimizado(false)
+    setAnimando(true)
+    setTimeout(() => setAnimando(false), 360)
+  }
+
   useEffect(() => {
     async function verificar() {
       const dia = diaActual()
@@ -74,12 +91,8 @@ export default function HorarioAhoraWidget({
         const asig = (Array.isArray(asigRaw) ? asigRaw[0] : asigRaw) as { nombre: string } | null
         const asignacion = asignaciones.find(a => a.asignatura_id === data.asignatura_id)
 
-        // ── Si la asignación ya no existe (fue eliminada), tratar como sin clase
         if (!asignacion) {
-          setBloque(null)
-          onClaseActiva?.(null)
-          setProxima(null)
-          return
+          setBloque(null); onClaseActiva?.(null); setProxima(null); return
         }
 
         const b: Bloque = {
@@ -91,15 +104,10 @@ export default function HorarioAhoraWidget({
           dia:               data.dia,
         }
         setBloque(b)
-        onClaseActiva?.(
-          asignacion
-            ? { asignatura_id: data.asignatura_id, grupo_id: asignacion.grupo_id }
-            : null
-        )
+        onClaseActiva?.(asignacion ? { asignatura_id: data.asignatura_id, grupo_id: asignacion.grupo_id } : null)
         setProxima(null)
       } else {
-        setBloque(null)
-        onClaseActiva?.(null)
+        setBloque(null); onClaseActiva?.(null)
 
         const { data: todasHoy } = await supabase
           .from('horario_docente')
@@ -140,25 +148,107 @@ export default function HorarioAhoraWidget({
 
   if (bloque === undefined || !tieneHorario) return null
 
-  const hora = horaActual()
+  const hora          = horaActual()
   const esFinDeSemana = diaActual() === 0 || diaActual() === 6
-  const hayClase = !!bloque && !esFinDeSemana
+  const hayClase      = !!bloque && !esFinDeSemana
 
+  // ── Botón expandir (cuando está minimizado) ────────────────────────────────
+  if (minimizado && !animando) {
+    return (
+      <>
+        <style>{`
+          @keyframes expandBtn {
+            from { opacity:0; transform:scale(0.6) translateY(4px) }
+            to   { opacity:1; transform:scale(1) translateY(0) }
+          }
+        `}</style>
+        {/* Solo desktop — en móvil no mostramos el botón expandir */}
+        <div className="hw-expand-btn" style={{ marginBottom: '0.75rem' }}>
+          <style>{`.hw-expand-btn { display:none; } @media(min-width:640px){ .hw-expand-btn { display:flex; } }`}</style>
+          <button
+            onClick={expandir}
+            title="Mostrar horario"
+            style={{
+              width: 28, height: 28,
+              borderRadius: '50%',
+              background: '#28c840',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(40,200,64,0.45)',
+              animation: 'expandBtn 0.32s cubic-bezier(0.34,1.56,0.64,1)',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(40,200,64,0.55)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(40,200,64,0.45)' }}
+          >
+            {/* Icono expand: dos flechas hacia afuera */}
+            <svg width="13" height="13" fill="none" stroke="white" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9"/>
+              <polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  // ── Widget completo ────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
-        @keyframes pulseGreen { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        @keyframes pulseGreen  { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes slideWidget { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+        /* Animación minimizar estilo macOS — contrae hacia arriba-izquierda */
+        @keyframes macMinimize {
+          0%   { opacity:1; transform: scale(1) translateY(0); }
+          40%  { opacity:1; transform: scale(0.85) translateY(-4px) scaleX(0.9); }
+          70%  { opacity:0.6; transform: scale(0.4) translateY(-20px) scaleX(0.3); }
+          100% { opacity:0; transform: scale(0.05) translateY(-40px) scaleX(0.05); }
+        }
+
+        /* Animación expandir — efecto rebote desde el punto */
+        @keyframes macExpand {
+          0%   { opacity:0; transform: scale(0.05) translateY(-40px); }
+          60%  { opacity:1; transform: scale(1.04) translateY(2px); }
+          100% { opacity:1; transform: scale(1) translateY(0); }
+        }
+
+        .hw-root {
+          animation: slideWidget 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .hw-root.minimizando {
+          animation: macMinimize 0.32s cubic-bezier(0.4,0,0.2,1) forwards;
+          pointer-events: none;
+        }
+        .hw-root.expandiendo {
+          animation: macExpand 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+
+        /* Botón minimizar — solo visible en sm+ */
+        .hw-min-btn { display:none; }
+        @media(min-width:640px){ .hw-min-btn { display:flex; } }
       `}</style>
-      <div style={{
-        borderRadius: 16, overflow: 'hidden',
-        border: hayClase ? '1px solid #86efac' : '1px solid #e5e5ea',
-        boxShadow: hayClase ? '0 4px 20px rgba(22,163,74,0.12)' : '0 2px 8px rgba(0,0,0,0.05)',
-        animation: 'slideWidget 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-        marginBottom: '0.75rem',
-      }}>
-        {/* Barra superior */}
-        <div style={{ background: hayClase ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#f2f2f7', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+      <div
+        className={`hw-root${animando && !minimizado ? ' minimizando' : ''}${animando && minimizado ? ' expandiendo' : ''}`}
+        style={{
+          borderRadius: 16, overflow: 'hidden',
+          border: hayClase ? '1px solid #86efac' : '1px solid #e5e5ea',
+          boxShadow: hayClase ? '0 4px 20px rgba(22,163,74,0.12)' : '0 2px 8px rgba(0,0,0,0.05)',
+          marginBottom: '0.75rem',
+          position: 'relative',
+        }}
+      >
+        {/* ── Barra superior ── */}
+        <div style={{
+          background: hayClase ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#f2f2f7',
+          padding: '0.5rem 1rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, gap: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 600, color: hayClase ? 'rgba(255,255,255,0.9)' : '#3a3a3c' }}>
               Hola, {primerNombre(nombre)} · {saludo()}
@@ -169,13 +259,56 @@ export default function HorarioAhoraWidget({
               </span>
             )}
           </div>
-          <span style={{ fontSize: '0.65rem', fontWeight: 600, color: hayClase ? 'rgba(255,255,255,0.8)' : '#8e8e93', letterSpacing: '0.06em', textTransform: 'uppercase', flexShrink: 0 }}>
-            {hora}
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 600, color: hayClase ? 'rgba(255,255,255,0.8)' : '#8e8e93', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {hora}
+            </span>
+
+            {/* Botón minimizar — solo desktop */}
+            <button
+              className="hw-min-btn"
+              onClick={minimizar}
+              title="Minimizar"
+              style={{
+                width: 16, height: 16,
+                borderRadius: '50%',
+                background: '#febc2e',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 1px 4px rgba(254,188,46,0.5)',
+                flexShrink: 0,
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                position: 'relative',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(1.2)'
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(254,188,46,0.7)'
+                const icon = e.currentTarget.querySelector('svg') as SVGElement | null
+                if (icon) icon.style.opacity = '1'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = '0 1px 4px rgba(254,188,46,0.5)'
+                const icon = e.currentTarget.querySelector('svg') as SVGElement | null
+                if (icon) icon.style.opacity = '0'
+              }}
+            >
+              {/* Icono guión — aparece en hover */}
+              <svg width="8" height="2" viewBox="0 0 8 2" fill="none" style={{ opacity: 0, transition: 'opacity 0.15s', position: 'absolute' }}>
+                <line x1="1" y1="1" x2="7" y2="1" stroke="#92400e" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Contenido */}
-        <div style={{ background: hayClase ? '#f0fdf4' : 'white', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* ── Contenido ── */}
+        <div style={{
+          background: hayClase ? '#f0fdf4' : 'white',
+          padding: '1rem 1.25rem',
+          display: 'flex', alignItems: 'center', gap: '1rem',
+        }}>
           <span style={{ fontSize: '2rem', lineHeight: 1, flexShrink: 0 }}>
             {esFinDeSemana ? '🏖️' : hayClase ? '📚' : '☕'}
           </span>

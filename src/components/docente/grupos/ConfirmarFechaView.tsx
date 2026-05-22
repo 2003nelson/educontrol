@@ -51,7 +51,6 @@ export default function ConfirmarFechaView({
   const hoy = formatFechaISO()
   const totalPaginas = Math.ceil(total / POR_PAGINA)
 
-  // Obtener docente id una sola vez
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
@@ -63,8 +62,6 @@ export default function ConfirmarFechaView({
   const cargar = useCallback(async (pag: number) => {
     if (!docenteId) return
     setLoadingHist(true)
-
-    // Contar total de fechas únicas
     const { data: todas } = await supabase
       .from('asistencias')
       .select('fecha, updated_at')
@@ -74,26 +71,19 @@ export default function ConfirmarFechaView({
       .order('fecha', { ascending: false })
 
     if (todas) {
-      // Deduplicar por fecha, conservar el updated_at más reciente
       const mapaFechas: Record<string, string | null> = {}
       todas.forEach(r => {
         const f = r.fecha as string
         const u = r.updated_at as string | null
-        if (!(f in mapaFechas)) {
-          mapaFechas[f] = u
-        } else {
-          // si hay updated_at más reciente, usarlo
-          if (u && (!mapaFechas[f] || u > mapaFechas[f]!)) mapaFechas[f] = u
-        }
+        if (!(f in mapaFechas)) { mapaFechas[f] = u }
+        else { if (u && (!mapaFechas[f] || u > mapaFechas[f]!)) mapaFechas[f] = u }
       })
       const fechasUnicas = Object.entries(mapaFechas)
         .map(([fecha, updated_at]) => ({ fecha, updated_at }))
         .sort((a, b) => b.fecha.localeCompare(a.fecha))
-
       setTotal(fechasUnicas.length)
       const inicio = (pag - 1) * POR_PAGINA
       setRegistros(fechasUnicas.slice(inicio, inicio + POR_PAGINA))
-
       onEstadoHoy(grupo.id, asignatura.id, fechasUnicas.some(f => f.fecha === hoy))
     }
     setLoadingHist(false)
@@ -101,15 +91,11 @@ export default function ConfirmarFechaView({
 
   useEffect(() => {
     let cancelled = false
-    async function run() {
-      if (cancelled) return
-      await cargar(pagina)
-    }
+    async function run() { if (cancelled) return; await cargar(pagina) }
     if (docenteId) run()
     return () => { cancelled = true }
   }, [docenteId, pagina, cargar])
 
-  // Para saber si hoy existe sin importar la página
   const [hayHoy, setHayHoy] = useState(false)
   useEffect(() => {
     if (!docenteId) return
@@ -120,34 +106,37 @@ export default function ConfirmarFechaView({
   }, [docenteId, grupo.id, asignatura.id, hoy, supabase])
 
   return (
-    <div className="p-4 md:p-6" style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f4fa', padding: '1.25rem 0.75rem 2rem' }}>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        .confirmar-grid { display:grid; gap:1rem; }
+        @media(min-width:768px) {
+          .confirmar-grid { grid-template-columns:1fr 1fr; gap:1.25rem; }
+          .confirmar-wrap { padding: 1.5rem 1.25rem 3rem; }
+        }
+      `}</style>
+
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
+      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.25rem' }}>
         <button onClick={onBack}
-          style={{ width: 38, height: 38, borderRadius: 12, background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0 }}>
-          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          style={{ width:36, height:36, borderRadius:10, background:'white', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
         <div>
-          <h1 className="text-lg font-bold" style={{ color: '#1e3a5f' }}>{asignatura.nombre}</h1>
-          <p className="text-xs" style={{ color: '#94a3b8' }}>Grupo {grupo.numero} · {grupo.grado}° Semestre</p>
+          <h1 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0, fontFamily:'Outfit, sans-serif' }}>{asignatura.nombre}</h1>
+          <p style={{ fontSize:'0.72rem', color:'#94a3b8', margin:0 }}>Grupo {grupo.numero} · {grupo.grado}° Semestre</p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .confirmar-grid { display:grid; gap:1.25rem; align-items:stretch; }
-        @media(min-width:768px) { .confirmar-grid { grid-template-columns:1fr 1fr; min-height:calc(100vh - 200px); } .confirmar-card { min-height:calc(100vh - 200px) !important; } }
-      `}</style>
 
       <div className="confirmar-grid">
 
         {/* Card izquierda — acción del día */}
-        <div className="rounded-2xl confirmar-card" style={{ background:'white', border:'1px solid #f0f0f5', boxShadow:'0 4px 20px rgba(0,0,0,0.05)', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
-          <div style={{ padding:'3.5rem 2rem 2rem', flex:1 }}>
-            <p style={{ color:'#1e3a5f', fontSize:'2.5rem', fontWeight:800, fontFamily:'Outfit, sans-serif', lineHeight:1.1, textTransform:'capitalize', marginBottom:'0.5rem' }}>
+        <div style={{ background:'white', border:'1px solid #f0f0f5', borderRadius:'1rem', boxShadow:'0 4px 20px rgba(0,0,0,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <div style={{ padding:'2.5rem 1.5rem 1.5rem', flex:1 }}>
+            <p style={{ color:'#1e3a5f', fontSize:'2.25rem', fontWeight:800, fontFamily:'Outfit, sans-serif', lineHeight:1.1, textTransform:'capitalize', marginBottom:'0.5rem' }}>
               {new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' })}
             </p>
             <p style={{ fontSize:'0.8rem', color:'#94a3b8', marginBottom:'0.25rem' }}>{new Date().getFullYear()}</p>
@@ -160,7 +149,7 @@ export default function ConfirmarFechaView({
             </div>
           </div>
 
-          <div style={{ padding:'0 2rem 2.5rem', display:'flex', gap:'0.75rem' }}>
+          <div style={{ padding:'0 1.5rem 2rem', display:'flex', gap:'0.75rem' }}>
             {!docenteId || loadingHist ? (
               <div style={{ flex:1, height:48, borderRadius:'0.875rem', background:'#f4f4f8', animation:'pulse 1.5s ease-in-out infinite' }}/>
             ) : hayHoy ? (
@@ -185,8 +174,8 @@ export default function ConfirmarFechaView({
         </div>
 
         {/* Card derecha — historial */}
-        <div className="confirmar-card" style={{ background:'white', borderRadius:'1rem', border:'1px solid #f0f0f5', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 4px 20px rgba(0,0,0,0.05)' }}>
-          <div style={{ padding:'1.25rem 1.75rem', borderBottom:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ background:'white', borderRadius:'1rem', border:'1px solid #f0f0f5', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 4px 20px rgba(0,0,0,0.05)' }}>
+          <div style={{ padding:'1.25rem 1.25rem', borderBottom:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
               <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Historial de asistencias</p>
               <p style={{ fontSize:'0.72rem', color:'#94a3b8', margin:'0.2rem 0 0' }}>
@@ -198,9 +187,8 @@ export default function ConfirmarFechaView({
             </div>
           </div>
 
-          {/* Notificación de edición exitosa */}
           {fechaEditadaExito && (
-            <div style={{ margin:'0.75rem 1.25rem 0', padding:'0.625rem 0.875rem', borderRadius:10, background:'#f0fdf4', border:'1px solid #86efac', display:'flex', alignItems:'center', gap:'0.5rem', animation:'slideIn 0.3s ease' }}>
+            <div style={{ margin:'0.75rem 1rem 0', padding:'0.625rem 0.875rem', borderRadius:10, background:'#f0fdf4', border:'1px solid #86efac', display:'flex', alignItems:'center', gap:'0.5rem', animation:'slideIn 0.3s ease' }}>
               <svg width="13" height="13" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
@@ -252,8 +240,7 @@ export default function ConfirmarFechaView({
                   <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}>
                     <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 8px', borderRadius:9999, background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0' }}>✓</span>
                     {onEditarFecha && (
-                      <button
-                        onClick={() => onEditarFecha(reg.fecha)}
+                      <button onClick={() => onEditarFecha(reg.fecha)}
                         style={{ fontSize:'0.68rem', fontWeight:600, color:'#2563eb', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, padding:'3px 10px', cursor:'pointer', whiteSpace:'nowrap' }}>
                         Editar
                       </button>
@@ -264,7 +251,6 @@ export default function ConfirmarFechaView({
             })}
           </div>
 
-          {/* Paginación */}
           {totalPaginas > 1 && (
             <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.375rem' }}>
               <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
