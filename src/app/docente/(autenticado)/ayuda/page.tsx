@@ -89,220 +89,251 @@ const ESTADOS = [
 ]
 
 export default function AyudaPage() {
-  const [openId, setOpenId] = useState<number | null>(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [openId, setOpenId] = useState<number | null>(1)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const toggleFaq = (id: number) => {
-    setOpenId(openId === id ? null : id);
-  };
+  const toggleFaq = (id: number) => setOpenId(openId === id ? null : id)
 
-  // Prevenir scroll en el body cuando el modal está abierto (Buena práctica de UX)
   useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset' };
-  }, [isModalOpen]);
+    document.body.style.overflow = isModalOpen ? 'hidden' : 'unset'
+    return () => { document.body.style.overflow = 'unset' }
+  }, [isModalOpen])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 lg:p-12 relative">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12">
-        
-        {/* Columna Izquierda: Encabezado y Contexto (Sticky) */}
-        {/* Usamos h-max y top-12 para asegurar que se quede pegada correctamente al hacer scroll */}
-        <div className="lg:w-1/3 flex flex-col gap-6 lg:sticky lg:top-12 h-max">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-4 text-xs font-bold tracking-widest text-blue-700 uppercase bg-blue-100/80 rounded-full border border-blue-200">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-              Soporte EduControl
-            </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight leading-tight">
-              ¿En qué podemos <br className="hidden lg:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                ayudarte hoy?
-              </span>
-            </h1>
-            <p className="mt-4 text-slate-500 text-lg leading-relaxed">
-              Encuentra respuestas rápidas a las dudas más comunes sobre el uso de la plataforma.
-            </p>
-          </div>
+    <>
+      <style>{`
+        .ayuda-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+          padding: 1.5rem 1rem 2rem;
+          min-height: calc(100vh - 64px);
+          background: #f8fafc;
+        }
+        @media (min-width: 1024px) {
+          .ayuda-layout {
+            flex-direction: row;
+            align-items: stretch;
+            gap: 3rem;
+            padding: 2rem 2.5rem;
+            /* altura exacta del viewport menos el header */
+            height: calc(100vh - 64px);
+            overflow: hidden;
+          }
+          .ayuda-left {
+            width: 340px;
+            flex-shrink: 0;
+            /* sticky nativo — se queda fija mientras el lado derecho scrollea */
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            height: 100%;
+          }
+          .ayuda-right {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+            /* scrollbar discreta */
+            scrollbar-width: thin;
+            scrollbar-color: #e2e8f0 transparent;
+          }
+          .ayuda-right::-webkit-scrollbar { width: 5px; }
+          .ayuda-right::-webkit-scrollbar-track { background: transparent; }
+          .ayuda-right::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 9999px; }
+        }
+      `}</style>
 
-          {/* Tarjeta de Contacto Directo */}
-          <div className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm mt-4 transition-transform hover:scale-[1.02] duration-300">
-            <h3 className="font-bold text-slate-800 mb-2">¿No encuentras lo que buscas?</h3>
-            <p className="text-sm text-slate-500 mb-6">Nuestro equipo de soporte técnico está disponible para atender casos específicos.</p>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-semibold rounded-2xl transition-all flex items-center justify-center gap-2"
-            >
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              Contactar a Sistemas
-            </button>
+      <div className="ayuda-layout">
+
+        {/* ── Columna izquierda — estática ── */}
+        <div className="ayuda-left">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%' }}>
+
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', marginBottom: '1rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', color: '#2563eb', background: 'rgba(219,234,254,0.7)', borderRadius: 9999, border: '1px solid #bfdbfe', textTransform: 'uppercase' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', display: 'inline-block', animation: 'pulse 2s infinite' }}/>
+                Soporte EduControl
+              </div>
+              <h1 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.75rem)', fontWeight: 800, color: '#1e293b', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 1rem' }}>
+                ¿En qué podemos<br/>
+                <span style={{ backgroundImage: 'linear-gradient(135deg, #2563eb, #4f46e5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  ayudarte hoy?
+                </span>
+              </h1>
+              <p style={{ fontSize: '0.975rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>
+                Encuentra respuestas rápidas a las dudas más comunes sobre el uso de la plataforma.
+              </p>
+            </div>
+
+            {/* Tarjeta contacto */}
+            <div style={{ background: 'white', borderRadius: '1.5rem', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ fontWeight: 700, color: '#1e293b', margin: '0 0 0.5rem', fontSize: '0.95rem' }}>¿No encuentras lo que buscas?</h3>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
+                Nuestro equipo de soporte técnico está disponible para atender casos específicos.
+              </p>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                style={{ width: '100%', padding: '0.875rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '0.875rem', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#1e293b')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#0f172a')}
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                Contactar a Sistemas
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Columna Derecha: Acordeón de Preguntas (Esta es la que hace Scroll) */}
-        <div className="lg:w-2/3 flex flex-col gap-3 pb-20">
-          {FAQS.map((faq) => {
-            const isOpen = openId === faq.id;
-
-            return (
-              <div 
-                key={faq.id}
-                className={`group border rounded-[1.5rem] transition-all duration-300 overflow-hidden ${
-                  isOpen 
-                    ? 'bg-white border-blue-200 shadow-md ring-4 ring-blue-50/50' 
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                }`}
-              >
-                {/* Botón Cabecera */}
-                <button
-                  onClick={() => toggleFaq(faq.id)}
-                  className="w-full flex items-center justify-between p-5 md:p-6 text-left focus:outline-none"
+        {/* ── Columna derecha — scrollable ── */}
+        <div className="ayuda-right">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '2rem' }}>
+            {FAQS.map((faq) => {
+              const isOpen = openId === faq.id
+              return (
+                <div
+                  key={faq.id}
+                  style={{
+                    background: 'white',
+                    border: `1px solid ${isOpen ? '#bfdbfe' : '#e2e8f0'}`,
+                    borderRadius: '1.25rem',
+                    overflow: 'hidden',
+                    boxShadow: isOpen ? '0 4px 20px rgba(37,99,235,0.08), 0 0 0 4px rgba(219,234,254,0.4)' : '0 1px 4px rgba(0,0,0,0.04)',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                  }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div 
-                      className={`flex-shrink-0 w-12 h-12 rounded-[1rem] flex items-center justify-center transition-transform duration-300 ${isOpen ? 'scale-110' : ''}`}
-                      style={{ backgroundColor: faq.bg, color: faq.color }}
-                    >
-                      {faq.icon}
+                  <button
+                    onClick={() => toggleFaq(faq.id)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 1.375rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                      <div style={{
+                        flexShrink: 0, width: 44, height: 44, borderRadius: '0.875rem',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: faq.bg, color: faq.color,
+                        transform: isOpen ? 'scale(1.08)' : 'scale(1)',
+                        transition: 'transform 0.2s cubic-bezier(0.34,1.4,0.64,1)',
+                      }}>
+                        {faq.icon}
+                      </div>
+                      <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: isOpen ? '#1d4ed8' : '#334155', transition: 'color 0.15s' }}>
+                        {faq.q}
+                      </span>
                     </div>
-                    <span className={`text-base md:text-lg font-bold transition-colors ${isOpen ? 'text-blue-700' : 'text-slate-700 group-hover:text-slate-900'}`}>
-                      {faq.q}
-                    </span>
-                  </div>
-                  
-                  {/* Flecha Animada */}
-                  <div className={`flex-shrink-0 ml-4 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : 'text-slate-400'}`}>
-                    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-                  </div>
-                </button>
+                    <div style={{ flexShrink: 0, marginLeft: '1rem', color: isOpen ? '#2563eb' : '#94a3b8', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease, color 0.15s' }}>
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </button>
 
-                {/* Contenido Desplegable */}
-                <div 
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div className="px-5 md:px-6 pb-6 pt-0 md:pl-22">
-                      {/* Respuesta en Texto */}
-                      {faq.a && (
-                        <p className="text-slate-600 leading-relaxed mb-3 md:ml-16">
-                          {faq.a}
-                        </p>
-                      )}
-
-                      {/* Elementos Extras */}
-                      {faq.extra === 'estados' && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 md:ml-16">
-                          {ESTADOS.map(e => (
-                            <div 
-                              key={e.letra} 
-                              className="flex items-center gap-2.5 p-2.5 rounded-xl border"
-                              style={{ backgroundColor: e.bg, borderColor: e.border }}
-                            >
-                              <span 
-                                className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm shadow-sm bg-white"
-                                style={{ color: e.color }}
-                              >
-                                {e.letra}
-                              </span>
-                              <span className="font-semibold text-sm" style={{ color: e.color }}>
-                                {e.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {faq.extra === 'dots' && (
-                        <div className="flex gap-2 mt-4 md:ml-16">
-                          {DOTS_DECO.map((c, di) => (
-                            <div 
-                              key={di} 
-                              className="w-2 h-2 rounded-full animate-pulse" 
-                              style={{ backgroundColor: c, opacity: 0.6, animationDelay: `${di * 150}ms` }}
-                            />
-                          ))}
-                        </div>
-                      )}
+                  {/* Contenido desplegable */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateRows: isOpen ? '1fr' : '0fr',
+                    opacity: isOpen ? 1 : 0,
+                    transition: 'grid-template-rows 0.28s ease, opacity 0.22s ease',
+                  }}>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ padding: '0 1.375rem 1.375rem', paddingLeft: 'calc(1.375rem + 44px + 0.875rem)' }}>
+                        {faq.a && (
+                          <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.7, margin: '0 0 0.75rem' }}>
+                            {faq.a}
+                          </p>
+                        )}
+                        {faq.extra === 'estados' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem', marginTop: '0.5rem' }}>
+                            {ESTADOS.map(e => (
+                              <div key={e.letra} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.75rem', borderRadius: '0.75rem', border: `1px solid ${e.border}`, background: e.bg }}>
+                                <span style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', background: 'white', color: e.color, fontWeight: 800, fontSize: '0.85rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+                                  {e.letra}
+                                </span>
+                                <span style={{ fontWeight: 600, fontSize: '0.82rem', color: e.color }}>{e.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {faq.extra === 'dots' && (
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            {DOTS_DECO.map((col, i) => (
+                              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: col, opacity: 0.6, animation: `pulse 1.5s ${i * 150}ms infinite` }}/>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {/* MODAL DE CONTACTO (Apple Style Spring Animation) */}
-      <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
-          isModalOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
-        }`}
-      >
-        {/* Fondo oscuro borroso (Backdrop) */}
-        <div 
-          className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
-          onClick={() => setIsModalOpen(false)}
-        ></div>
+      {/* Modal contacto */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+        opacity: isModalOpen ? 1 : 0,
+        visibility: isModalOpen ? 'visible' : 'hidden',
+        transition: 'opacity 0.25s, visibility 0.25s',
+      }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.35)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+          onClick={() => setIsModalOpen(false)} />
 
-        {/* Tarjeta del Modal con animación Spring */}
-        {/* ease-[cubic-bezier(0.34,1.56,0.64,1)] es la magia para el efecto resorte */}
-        <div 
-          className={`relative w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
-            isModalOpen ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-24 scale-90 opacity-0'
-          }`}
-        >
-          {/* Botón Cerrar (Estilo iOS) */}
-          <button 
+        <div style={{
+          position: 'relative', width: '100%', maxWidth: 380,
+          background: 'white', borderRadius: '2rem', padding: '2rem',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.2)',
+          transform: isModalOpen ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.92)',
+          opacity: isModalOpen ? 1 : 0,
+          transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease',
+        }}>
+          <button
             onClick={() => setIsModalOpen(false)}
-            className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors"
+            style={{ position: 'absolute', top: '1.125rem', right: '1.125rem', width: 30, height: 30, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}
           >
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
           </button>
 
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-[1.2rem] flex items-center justify-center mx-auto mb-4">
-              <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+            <div style={{ width: 60, height: 60, background: '#eff6ff', borderRadius: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', color: '#2563eb' }}>
+              <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
             </div>
-            <h2 className="text-2xl font-bold text-slate-800">Soporte Técnico</h2>
-            <p className="text-slate-500 text-sm mt-2">Comunícate con nosotros para resolver cualquier inconveniente con EduControl.</p>
+            <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.375rem' }}>Soporte Técnico</h2>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, lineHeight: 1.55 }}>Comunícate con nosotros para resolver cualquier inconveniente con EduControl.</p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {/* Campo Teléfono */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {[
+              { icon: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>, label: 'Teléfono', value: '+52 (55) 1234 5678', dotBg: '#dcfce7', dotColor: '#16a34a' },
+              { icon: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></>, label: 'Correo', value: 'soporte@educontrol.com', dotBg: '#e0e7ff', dotColor: '#4f46e5' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#f8fafc')}
+              >
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: item.dotBg, color: item.dotColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">{item.icon}</svg>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: '0.62rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1px' }}>{item.label}</p>
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1e293b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Teléfono</p>
-                <p className="text-slate-800 font-semibold text-lg">+52 (55) 1234 5678</p>
-              </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Campo Correo */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Correo Electrónico</p>
-                <p className="text-slate-800 font-semibold text-base truncate">soporte@educontrol.com</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-6 text-center">
-            <span className="text-xs text-slate-400 font-medium">Horario de atención: Lunes a Viernes, 8am - 4pm</span>
-          </div>
+          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#94a3b8', marginTop: '1.25rem', fontWeight: 500 }}>
+            Horario de atención: Lunes a Viernes, 8am – 4pm
+          </p>
         </div>
       </div>
-
-    </div>
+    </>
   )
 }

@@ -216,6 +216,25 @@ function GrupoCard({
 
 // ── Vista de asignaturas ──────────────────────────────────────────────────────
 function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; onSelect: (a: AsignaturaItem) => void; onBack: () => void }) {
+  const supabase = createClient()
+  const [alumnosPorAsig, setAlumnosPorAsig] = React.useState<Record<string, number>>({})
+
+  React.useEffect(() => {
+    async function cargarAlumnos() {
+      const { data } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: grupo.id })
+      if (data) {
+        // El RPC devuelve los alumnos del grupo — el conteo es el mismo para todas las asignaturas del grupo
+        const total = (data as { id: string }[]).length
+        const mapa: Record<string, number> = {}
+        grupo.asignaturas.forEach(a => { mapa[a.id] = total })
+        setAlumnosPorAsig(mapa)
+      }
+    }
+    cargarAlumnos()
+  }, [grupo.id, grupo.asignaturas, supabase])
+
+  const fechaHoy = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+
   return (
     <div style={{ padding: '1.25rem 0.75rem 2rem', minHeight: '100vh', background: '#f0f4fa' }}>
       <style>{`
@@ -249,34 +268,53 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
 
       {/* Grid de asignaturas */}
       <div className="asig-grid-wrap">
-        {grupo.asignaturas.map((asig: AsignaturaItem) => (
-          <button key={asig.id} onClick={() => onSelect(asig)}
-            style={{ background: 'white', border: '1px solid #e5e5ea', borderRadius: 14, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', textAlign: 'left', width: '100%' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+        {grupo.asignaturas.map((asig: AsignaturaItem) => {
+          const totalAlumnos = alumnosPorAsig[asig.id]
+          return (
+            <button key={asig.id} onClick={() => onSelect(asig)}
+              style={{ background: 'white', border: '1px solid #e5e5ea', borderRadius: 14, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', textAlign: 'left', width: '100%', display: 'flex', flexDirection: 'column' }}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)' }}>
 
-            {/* Desktop: centrado vertical */}
-            <div className="asig-pc2" style={{ padding: '1.75rem 1rem', gap: '0.75rem', width: '100%' }}>
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>📒</span>
-              </div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4, textAlign: 'center' }}>{asig.nombre}</span>
-            </div>
-
-            {/* Móvil: fila horizontal */}
-            <div className="asig-mobile2" style={{ padding: '0.875rem 1rem', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>📒</span>
+              {/* Desktop: centrado vertical */}
+              <div className="asig-pc2" style={{ padding: '1.75rem 1rem 0', gap: '0.75rem', width: '100%' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>📒</span>
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a5f' }}>{asig.nombre}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4, textAlign: 'center', padding: '0 0.5rem' }}>{asig.nombre}</span>
               </div>
-              <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </button>
-        ))}
+
+              {/* Móvil: fila horizontal */}
+              <div className="asig-mobile2" style={{ padding: '0.875rem 1rem 0', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>📒</span>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a5f' }}>{asig.nombre}</span>
+                </div>
+                <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                  <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+
+              {/* Footer: alumnos + fecha — igual en móvil y desktop */}
+              <div style={{ width: '100%', borderTop: '1px solid #f0f0f5', marginTop: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
+                    {totalAlumnos !== undefined ? `${totalAlumnos} alumno${totalAlumnos !== 1 ? 's' : ''}` : '…'}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500, textTransform: 'capitalize' }}>
+                  {fechaHoy}
+                </span>
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
