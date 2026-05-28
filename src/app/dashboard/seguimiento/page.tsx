@@ -478,8 +478,8 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   const btns = [
     { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,            activo: true },
     { id: 'periodo',        label: 'Período',        sub: null,                                     activo: false },
-    { id: 'calificaciones', label: 'Calificaciones', sub: mostrarCal ? asigSelec?.asignatura ?? null : null, activo: tieneAsig },
-    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null,  activo: tieneAsig },
+    { id: 'calificaciones', label: 'Calificaciones', sub: mostrarCal ? asigSelec?.asignatura ?? null : null, activo: tieneAsig && !semanaSelec },
+    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null,  activo: tieneAsig && !mostrarCal },
   ]
 
   return (
@@ -514,9 +514,9 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
                   onClick={() => {
                     if (disabled) return
                     if (btn.id === 'asignaturas') setPanelAbierto(panelAbierto === 'asignaturas' ? null : 'asignaturas')
-                    else if (btn.id === 'asistencias') { setSemanaSlide(true); setPanelAbierto(null) }
+                    else if (btn.id === 'asistencias') { setSemanaSlide(true); setPanelAbierto(null); setMostrarCal(false) }
                     // ── NUEVO: abrir/cerrar panel calificaciones ──
-                    else if (btn.id === 'calificaciones') { setMostrarCal(v => !v); setPanelAbierto(null) }
+                    else if (btn.id === 'calificaciones') { setMostrarCal(v => !v); setPanelAbierto(null); if (!mostrarCal) { setSemanaSelec(null) } }
                   }}
                   style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.45rem 0.875rem', borderRadius:'0.75rem', fontSize:'0.8rem', fontWeight: estaAbierto||tieneValor ? 700 : 500, color: disabled ? '#cbd5e1' : (estaAbierto||tieneValor) ? '#1e3a5f' : '#64748b', background: disabled ? '#fafafa' : (estaAbierto||tieneValor) ? 'white' : '#f8fafc', border:`1px solid ${disabled ? '#f1f5f9' : tieneValor ? '#bfdbfe' : '#e2e8f0'}`, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition:'all 0.2s', maxWidth: btn.id==='asignaturas'&&tieneValor ? 220 : 'none', overflow:'hidden' }}>
                   <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{btn.label}{btn.sub ? (' · ' + btn.sub) : ''}</span>
@@ -604,7 +604,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
               <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 2px' }}>Calificaciones</p>
               <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>{asigSelec.asignatura}</p>
             </div>
-            <button onClick={() => setMostrarCal(false)}
+            <button onClick={() => { setMostrarCal(false) }}
               style={{ width:28, height:28, borderRadius:'50%', background:'#f4f4f8', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#6b7280', fontWeight:700, fontSize:'0.85rem' }}>
               ✕
             </button>
@@ -711,7 +711,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
       ))}
 
       {semanaSlide && (
-        <SemanaSlidePanel semanas={semanas} semanaSelec={semanaSelec} onSelec={setSemanaSelec} onCerrar={() => setSemanaSlide(false)}/>
+        <SemanaSlidePanel semanas={semanas} semanaSelec={semanaSelec} onSelec={s => { setSemanaSelec(s); setMostrarCal(false) }} onCerrar={() => setSemanaSlide(false)}/>
       )}
     </div>
   )

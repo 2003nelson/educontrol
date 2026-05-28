@@ -1,13 +1,13 @@
 // src/components/docente/calificaciones/CalificacionesView.tsx
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import type { Trabajo, Alumno, ContextoCalificacion } from './types'
 
-function colorNota(v: number | null) { return v === null ? '#94a3b8' : v >= 70 ? '#16a34a' : '#dc2626' }
-function bgNota(v: number | null)    { return v === null ? '#f8fafc' : v >= 70 ? '#f0fdf4' : '#fef2f2' }
-function bdNota(v: number | null)    { return v === null ? '#e2e8f0' : v >= 70 ? '#bbf7d0' : '#fecaca' }
+function colorNota(v: number | null) { return v === null ? '#94a3b8' : v >= 60 ? '#16a34a' : '#dc2626' }
+function bgNota(v: number | null)    { return v === null ? '#f8fafc' : v >= 60 ? '#f0fdf4' : '#fef2f2' }
+function bdNota(v: number | null)    { return v === null ? '#e2e8f0' : v >= 60 ? '#bbf7d0' : '#fecaca' }
 
 function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, number | null>): number | null {
   if (trabajos.length === 0) return null
@@ -188,6 +188,34 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
   const [docenteId, setDocenteId] = useState<string | null>(null)
   const [plantelId, setPlantelId] = useState<string | null>(null)
 
+  // Pushear entrada al historial para interceptar el botón atrás
+  const haycambiosRef = useRef(false)
+  useEffect(() => {
+    // Al montar, empujar un estado para poder interceptar el popstate
+    window.history.pushState({ calView: true }, '')
+  }, [])
+
+  // Mantener ref sincronizada con el estado (para usarla en el handler)
+  useEffect(() => {
+    haycambiosRef.current = haycambios
+  }, [haycambios])
+
+  // Interceptar botón atrás del navegador/teléfono
+  const handlePopState = useCallback(() => {
+    if (haycambiosRef.current) {
+      // Volver a empujar el estado para que no avance en el historial
+      window.history.pushState({ calView: true }, '')
+      setModalSalir(true)
+    } else {
+      onBack()
+    }
+  }, [onBack])
+
+  useEffect(() => {
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [handlePopState])
+
   useEffect(() => {
     void Promise.resolve(supabase.auth.getUser()).then(({ data: { user } }) => {
       if (!user) return
@@ -259,7 +287,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
     await supabase.from('calificaciones')
       .upsert(calFinals, { onConflict: 'estudiante_id,asignatura_id,grupo_id,periodo', ignoreDuplicates: false })
     setGuardando(false); setGuardado(true); setHayCambios(false)
-    setTimeout(() => setGuardado(false), 3000)
+    setTimeout(() => { setGuardado(false); onBack() }, 1200)
   }
 
   const PERIODO_LABEL: Record<string, string> = { '1': '1er Parcial', '2': '2do Parcial', '3': '3er Parcial' }
@@ -270,7 +298,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
   })
   const notasValidas = notasTodos.filter((n): n is number => n !== null)
   const promedio = notasValidas.length > 0 ? Math.round(notasValidas.reduce((s, n) => s + n, 0) / notasValidas.length * 10) / 10 : null
-  const aprobados = notasValidas.filter(n => n >= 70).length
+  const aprobados = notasValidas.filter(n => n >= 60).length
   const sumaPesos = trabajos.reduce((s, t) => s + t.peso, 0)
 
   return (

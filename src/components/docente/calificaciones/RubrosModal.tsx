@@ -13,12 +13,15 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
   onGuardado: () => void
 }) {
   const supabase = createClient()
-  const [trabajos, setTrabajos] = useState<Trabajo[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [guardando, setGuardando] = useState(false)
+  const [trabajos, setTrabajos]         = useState<Trabajo[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [guardando, setGuardando]       = useState(false)
+  const [parcialesToCopy, setParcialesToCopy] = useState<{ periodo: string; label: string; count: number }[]>([])
+  const [copiando, setCopiando]         = useState(false)
 
   useEffect(() => {
-    void Promise.resolve(
+    // Cargar trabajos del parcial actual
+    const p1 = Promise.resolve(
       supabase.from('calificacion_rubros')
         .select('id, nombre, peso, orden')
         .eq('grupo_id', ctx.grupo_id)
@@ -26,10 +29,29 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
         .eq('periodo', ctx.periodo)
         .eq('docente_id', docenteId)
         .order('orden')
-    ).then(({ data }) => {
-      setTrabajos((data ?? []) as Trabajo[])
+    )
+    // Cargar parciales que tienen trabajos (para opción de copiar)
+    const p2 = Promise.resolve(
+      supabase.from('calificacion_rubros')
+        .select('periodo')
+        .eq('grupo_id', ctx.grupo_id)
+        .eq('asignatura_id', ctx.asignatura_id)
+        .eq('docente_id', docenteId)
+        .neq('periodo', ctx.periodo)
+    )
+    Promise.all([p1, p2]).then(([r1, r2]) => {
+      setTrabajos((r1.data ?? []) as Trabajo[])
+      // Agrupar por periodo y contar
+      const map: Record<string, number> = {}
+      for (const r of (r2.data ?? [])) {
+        map[r.periodo] = (map[r.periodo] ?? 0) + 1
+      }
+      const LABELS: Record<string, string> = { '1': '1er Parcial', '2': '2do Parcial', '3': '3er Parcial' }
+      setParcialesToCopy(
+        Object.entries(map).map(([periodo, count]) => ({ periodo, label: LABELS[periodo] ?? `Parcial ${periodo}`, count }))
+      )
       setLoading(false)
-    })
+    }).catch(console.error)
   }, [supabase, ctx, docenteId])
 
   const sumaPesos = trabajos.reduce((s, t) => s + (Number(t.peso) || 0), 0)
@@ -37,6 +59,21 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
 
   function addTrabajo() {
     setTrabajos(prev => [...prev, { id: `new-${Date.now()}`, nombre: '', peso: 0, orden: prev.length }])
+  }
+
+  async function copiarDeParcial(periodo: string) {
+    setCopiando(true)
+    const { data } = await supabase.from('calificacion_rubros')
+      .select('nombre, peso, orden')
+      .eq('grupo_id', ctx.grupo_id)
+      .eq('asignatura_id', ctx.asignatura_id)
+      .eq('periodo', periodo)
+      .eq('docente_id', docenteId)
+      .order('orden')
+    if (data && data.length > 0) {
+      setTrabajos(data.map((t, i) => ({ id: `new-${Date.now()}-${i}`, nombre: t.nombre, peso: t.peso, orden: t.orden })))
+    }
+    setCopiando(false)
   }
   function update(idx: number, campo: keyof Trabajo, valor: string | number) {
     setTrabajos(prev => prev.map((t, i) => i === idx ? { ...t, [campo]: valor } : t))
@@ -128,6 +165,26 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                   <button onClick={() => remove(i)} style={{ width:22, height:22, borderRadius:'50%', background:'rgba(220,38,38,0.08)', border:'none', cursor:'pointer', color:'#dc2626', fontSize:'0.7rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
                 </div>
               ))}
+
+              {/* Copiar de otro parcial */}
+              {parcialesToCopy.length > 0 && trabajos.length === 0 && (
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.625rem 0.75rem', borderRadius:10, background:'#f0f4fa', border:'1px solid #dde3ea', marginBottom:'0.25rem' }}>
+                  <svg width="13" height="13" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  <span style={{ fontSize:'0.75rem', color:'#1e3a5f', fontWeight:500, flex:1 }}>Copiar trabajos de:</span>
+                  {parcialesToCopy.map(p => (
+                    <button key={p.periodo} onClick={() => void copiarDeParcial(p.periodo)} disabled={copiando}
+                      style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:7, border:'1px solid #bfdbfe', background:'white', color:'#2563eb', fontSize:'0.72rem', fontWeight:600, cursor: copiando ? 'not-allowed' : 'pointer', opacity: copiando ? 0.6 : 1 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/>
+                        <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"/>
+                        <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/>
+                        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+                      </svg>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <button onClick={addTrabajo} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.625rem', borderRadius:10, border:'1.5px dashed #e2e8f0', background:'transparent', cursor:'pointer', color:'#94a3b8', fontSize:'0.8rem', fontWeight:600, marginTop:'0.25rem' }}>
                 <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>

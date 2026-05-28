@@ -43,17 +43,17 @@ type RubroRaw = { id: string; nombre: string; peso: number }
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function colorNota(v: number | null) {
   if (v === null) return '#94a3b8'
-  if (v >= 70) return '#16a34a'
+  if (v >= 60) return '#16a34a'
   return '#dc2626'
 }
 function bgNota(v: number | null) {
   if (v === null) return '#f8fafc'
-  if (v >= 70) return '#f0fdf4'
+  if (v >= 60) return '#f0fdf4'
   return '#fef2f2'
 }
 function bdNota(v: number | null) {
   if (v === null) return '#e2e8f0'
-  if (v >= 70) return '#bbf7d0'
+  if (v >= 60) return '#bbf7d0'
   return '#fecaca'
 }
 
@@ -105,8 +105,8 @@ function FilaAlumno({ alumno, nota, trabajos, detalle, idx }: {
           </span>
         </td>
         <td style={{ padding: '0.875rem 1.25rem', textAlign: 'center' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: nota !== null && nota >= 70 ? '#16a34a' : nota !== null ? '#dc2626' : '#94a3b8' }}>
-            {nota === null ? '—' : nota >= 70 ? 'Aprobado' : 'Reprobado'}
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: nota !== null && nota >= 60 ? '#16a34a' : nota !== null ? '#dc2626' : '#94a3b8' }}>
+            {nota === null ? '—' : nota >= 60 ? 'Aprobado' : 'Reprobado'}
           </span>
         </td>
         {trabajos.length > 0 && (
@@ -289,8 +289,8 @@ export default function CalificacionesPanel({
   const notaMap    = Object.fromEntries(notas.map(n => [n.estudiante_id, n.calificacion]))
   const detalleMap = Object.fromEntries(detalles.map(d => [d.estudiante_id, d]))
 
-  const aprobados = alumnos.filter(a => (notaMap[a.id] ?? null) !== null && (notaMap[a.id] as number) >= 70).length
-  const reprobados = alumnos.filter(a => (notaMap[a.id] ?? null) !== null && (notaMap[a.id] as number) < 70).length
+  const aprobados = alumnos.filter(a => (notaMap[a.id] ?? null) !== null && (notaMap[a.id] as number) >= 60).length
+  const reprobados = alumnos.filter(a => (notaMap[a.id] ?? null) !== null && (notaMap[a.id] as number) < 60).length
   const notasConValor = notas.filter(n => n.calificacion !== null)
   const promedio = notasConValor.length > 0
     ? Math.round(notasConValor.reduce((s, n) => s + (n.calificacion as number), 0) / notasConValor.length * 10) / 10
@@ -326,7 +326,7 @@ export default function CalificacionesPanel({
             <p style={{ fontSize: '0.62rem', fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Promedio</p>
             <p style={{ fontSize: '2rem', fontWeight: 700, color: colorNota(promedio), margin: '0 0 0.5rem', lineHeight: 1, fontFamily: 'Outfit, sans-serif' }}>{promedio ?? '—'}</p>
             <div style={{ height: 3, borderRadius: 9999, background: '#f2f2f7', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${promedio ?? 0}%`, background: promedio !== null && promedio >= 70 ? '#34c759' : '#ff3b30', borderRadius: 9999, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }}/>
+              <div style={{ height: '100%', width: `${promedio ?? 0}%`, background: promedio !== null && promedio >= 60 ? '#34c759' : '#ff3b30', borderRadius: 9999, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }}/>
             </div>
           </div>
 

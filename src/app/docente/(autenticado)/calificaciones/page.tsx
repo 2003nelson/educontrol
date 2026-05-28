@@ -1,5 +1,6 @@
+// src/app/docente/(autenticado)/calificaciones/page.tsx
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDocente } from '@/contexts/DocenteContext'
 import CalificacionesView from '@/components/docente/calificaciones/CalificacionesView'
@@ -40,8 +41,9 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform='translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow='0 6px 20px rgba(107,114,128,0.25)' }}>
 
       {/* Parte color — clickeable → navega a asignaturas */}
-      <div onClick={() => onNavegar({ tipo:'asignaturas', grupo })}
+      <div
         className="cal-card-top"
+        onClick={() => onNavegar({ tipo:'asignaturas', grupo })}
         style={{ background:'linear-gradient(135deg,#6b7280 0%,#9ca3af 100%)', padding:'1.25rem 1.25rem 1.125rem', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer' }}>
         <div style={{ position:'absolute', top:-30, right:-30, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.08)', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', bottom:-20, left:-10, width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.05)', pointerEvents:'none' }}/>
@@ -131,7 +133,7 @@ export default function CalificacionesPage() {
     })
   }, [supabase])
 
-  const grupos: GrupoItem[] = docente
+  const grupos: GrupoItem[] = useMemo(() => docente
     ? Object.values(
         docente.asignaciones.reduce((acc: Record<string, GrupoItem>, a) => {
           if (!acc[a.grupo_id]) acc[a.grupo_id] = { id: a.grupo_id, numero: a.grupo_numero, grado: a.grupo_grado, asignaturas: [] }
@@ -139,7 +141,7 @@ export default function CalificacionesPage() {
           return acc
         }, {})
       )
-    : []
+    : [], [docente])
 
   const fetchRubrosCount = useCallback(() => {
     if (!docenteId) return Promise.resolve(null)
@@ -175,7 +177,54 @@ export default function CalificacionesPage() {
     }).catch(console.error)
   , [fetchRubrosCount])
 
-  function navegar(v: Vista) { window.scrollTo({ top: 0, behavior: 'smooth' }); setVista(v) }
+  const vistaRef = useRef<Vista>({ tipo: 'grupos' })
+
+  function navegar(v: Vista) {
+    window.history.pushState({ vista: v.tipo, data: JSON.stringify(v) }, '')
+    vistaRef.current = v
+    setVista(v)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Inicializar historial en grupos
+  useEffect(() => {
+    window.history.replaceState({ vista: 'grupos', data: JSON.stringify({ tipo: 'grupos' }) }, '')
+  }, [])
+
+  // Escuchar botón atrás del navegador/teléfono
+  const handlePopState = useCallback((e: PopStateEvent) => {
+    const state = e.state as { vista?: string; data?: string } | null
+    if (!state?.vista || state.vista === 'grupos') {
+      setVista({ tipo: 'grupos' })
+      vistaRef.current = { tipo: 'grupos' }
+      return
+    }
+    try {
+      if (state.data) {
+        const v = JSON.parse(state.data) as Vista
+        // Reconstruir grupo completo si es necesario
+        if ((v.tipo === 'asignaturas' || v.tipo === 'parcial' || v.tipo === 'notas') && grupos.length > 0) {
+          const grupoId = v.tipo === 'notas' ? v.ctx.grupo_id : v.grupo.id
+          const grupoCompleto = grupos.find(g => g.id === grupoId)
+          if (grupoCompleto) {
+            if (v.tipo === 'asignaturas') v.grupo = grupoCompleto
+            else if (v.tipo === 'parcial') v.grupo = grupoCompleto
+            else if (v.tipo === 'notas') v.grupo = grupoCompleto
+          }
+        }
+        setVista(v)
+        vistaRef.current = v
+      }
+    } catch {
+      setVista({ tipo: 'grupos' })
+      vistaRef.current = { tipo: 'grupos' }
+    }
+  }, [grupos])
+
+  useEffect(() => {
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [handlePopState])
 
   // Buscar grupo completo con asignaturas
   function getGrupoCompleto(grupoId: string): GrupoItem {
@@ -322,26 +371,30 @@ export default function CalificacionesPage() {
                 periodo: p.key,
               }
               return (
-                <div key={p.key} style={{ background:'white', borderRadius:16, border:'1px solid #e8eaf0', overflow:'hidden', animation:`cardIn 0.35s ${idx*0.07}s both`, boxShadow:'0 1px 6px rgba(0,0,0,0.05)' }}>
+                <div key={p.key} style={{ background:'white', borderRadius:16, overflow:'hidden', animation:`cardIn 0.35s ${idx*0.07}s both`, boxShadow:'0 2px 10px rgba(0,0,0,0.06)', border: count > 0 ? '1px solid #e2e8f0' : '1px solid #f0f0f5' }}>
+                  {/* Fila principal */}
                   <button onClick={() => navegar({ tipo:'notas', ctx, grupo:vista.grupo })}
-                    style={{ width:'100%', display:'flex', alignItems:'center', padding:'1rem 1.25rem', background:'none', border:'none', cursor:'pointer', textAlign:'left', transition:'background 0.12s' }}
+                    style={{ width:'100%', display:'flex', alignItems:'center', padding:'1rem 1.125rem', background:'none', border:'none', cursor:'pointer', textAlign:'left', transition:'background 0.15s', gap:'0.875rem' }}
                     onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
                     onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
-                    <div style={{ width:46, height:46, borderRadius:13, background: count > 0 ? 'linear-gradient(135deg,#1e3a5f,#2d5a8e)' : '#f4f5f7', border:`1.5px solid ${count > 0 ? 'transparent' : '#e2e8f0'}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginRight:'1rem' }}>
-                      <span style={{ fontSize:'0.82rem', fontWeight:800, color: count > 0 ? 'white' : '#94a3b8', fontFamily:'Outfit, sans-serif' }}>{p.short}</span>
+                    {/* Badge número */}
+                    <div style={{ width:44, height:44, borderRadius:12, background: count > 0 ? '#1e3a5f' : '#f4f5f7', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:'0.8rem', fontWeight:800, color: count > 0 ? 'white' : '#b0b8c8', fontFamily:'Outfit, sans-serif', letterSpacing:'-0.01em' }}>{p.short}</span>
                     </div>
+                    {/* Info */}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <p style={{ fontSize:'0.9rem', fontWeight:600, color:'#1e3a5f', margin:'0 0 2px' }}>{p.label}</p>
-                      <p style={{ fontSize:'0.7rem', margin:0, color: count > 0 ? '#16a34a' : '#94a3b8', fontWeight:500 }}>
-                        {count > 0 ? `${count} ${count === 1 ? 'trabajo' : 'trabajos'} · Listo para capturar` : 'Sin trabajos — configura primero'}
-                      </p>
+                      <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:'0 0 3px' }}>{p.label}</p>
+                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        <div style={{ width:6, height:6, borderRadius:'50%', background: count > 0 ? '#16a34a' : '#d1d5db', flexShrink:0 }}/>
+                        <p style={{ fontSize:'0.7rem', margin:0, color: count > 0 ? '#16a34a' : '#94a3b8', fontWeight:500 }}>
+                          {count > 0 ? `${count} ${count === 1 ? 'trabajo' : 'trabajos'} configurados` : 'Sin trabajos — configura primero'}
+                        </p>
+                      </div>
                     </div>
-                    {count > 0 && (
-                      <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'3px 10px', borderRadius:9999, background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0', flexShrink:0, marginRight:'0.5rem' }}>Activo</span>
-                    )}
-                    <svg width="14" height="14" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M9 18l6-6-6-6"/></svg>
+                    <svg width="14" height="14" fill="none" stroke="#d1d5db" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M9 18l6-6-6-6"/></svg>
                   </button>
-                  <div style={{ borderTop:'1px solid #f4f5f7', padding:'0.5rem 1.25rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  {/* Footer acciones */}
+                  <div style={{ borderTop:'1px solid #f4f5f7', padding:'0.5rem 1.125rem', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#fafafa' }}>
                     <button onClick={() => setModalCtx(ctx)}
                       style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:'#2563eb', fontSize:'0.72rem', fontWeight:600, padding:'3px 0' }}>
                       <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
