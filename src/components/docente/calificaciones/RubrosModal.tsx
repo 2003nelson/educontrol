@@ -89,11 +89,33 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
     const existentes = trabajos.filter(t => !t.id.startsWith('new-') && t.nombre.trim())
     const nuevos     = trabajos.filter(t => t.id.startsWith('new-') && t.nombre.trim())
 
+    // IDs de los rubros que siguen en la lista (no fueron eliminados)
+    const idsActuales = existentes.map(t => t.id)
+
+    // DELETE: rubros que ya no están en la lista
+    const { data: rubrosOriginales } = await supabase.from('calificacion_rubros')
+      .select('id')
+      .eq('grupo_id', ctx.grupo_id)
+      .eq('asignatura_id', ctx.asignatura_id)
+      .eq('periodo', ctx.periodo)
+      .eq('docente_id', docenteId)
+
+    const idsEliminar = (rubrosOriginales ?? [])
+      .map(r => r.id as string)
+      .filter(id => !idsActuales.includes(id))
+
+    if (idsEliminar.length > 0) {
+      await supabase.from('calificacion_rubros').delete().in('id', idsEliminar)
+    }
+
+    // UPDATE: rubros existentes modificados
     for (const t of existentes) {
       await supabase.from('calificacion_rubros')
         .update({ nombre: t.nombre, peso: t.peso, orden: t.orden, updated_at: new Date().toISOString() })
         .eq('id', t.id)
     }
+
+    // INSERT: rubros nuevos
     if (nuevos.length > 0) {
       await supabase.from('calificacion_rubros').insert(
         nuevos.map((t, i) => ({
@@ -104,6 +126,7 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
         }))
       )
     }
+
     setGuardando(false)
     onGuardado()
     onClose()
@@ -186,10 +209,13 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 </div>
               )}
 
-              <button onClick={addTrabajo} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.625rem', borderRadius:10, border:'1.5px dashed #e2e8f0', background:'transparent', cursor:'pointer', color:'#94a3b8', fontSize:'0.8rem', fontWeight:600, marginTop:'0.25rem' }}>
-                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                Agregar trabajo
-              </button>
+              {/* Solo mostrar si el último trabajo tiene nombre y peso */}
+              {(trabajos.length === 0 || (trabajos[trabajos.length-1].nombre.trim() !== '' && Number(trabajos[trabajos.length-1].peso) > 0)) && (
+                <button onClick={addTrabajo} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.625rem', borderRadius:10, border:'1.5px dashed #e2e8f0', background:'transparent', cursor:'pointer', color:'#94a3b8', fontSize:'0.8rem', fontWeight:600, marginTop:'0.25rem' }}>
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Agregar trabajo
+                </button>
+              )}
             </div>
           )}
         </div>

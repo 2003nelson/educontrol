@@ -148,7 +148,6 @@ export default function HorarioAhoraWidget({
 
   if (bloque === undefined || !tieneHorario) return null
 
-  const hora          = horaActual()
   const esFinDeSemana = diaActual() === 0 || diaActual() === 6
   const hayClase      = !!bloque && !esFinDeSemana
 
@@ -164,7 +163,7 @@ export default function HorarioAhoraWidget({
         `}</style>
         {/* Solo desktop — en móvil no mostramos el botón expandir */}
         <div className="hw-expand-btn" style={{ marginBottom: '0.75rem' }}>
-          <style>{`.hw-expand-btn { display:none; } @media(min-width:640px){ .hw-expand-btn { display:flex; } }`}</style>
+          <style>{`.hw-expand-btn { display:flex; }`}</style>
           <button
             onClick={expandir}
             title="Mostrar horario"
@@ -229,8 +228,7 @@ export default function HorarioAhoraWidget({
         }
 
         /* Botón minimizar — solo visible en sm+ */
-        .hw-min-btn { display:none; }
-        @media(min-width:640px){ .hw-min-btn { display:flex; } }
+        .hw-min-btn { display:flex; }
       `}</style>
 
       <div
@@ -254,18 +252,18 @@ export default function HorarioAhoraWidget({
               Hola, {primerNombre(nombre)} · {saludo()}
             </span>
             {!hayClase && proxima && (
-              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 10px', borderRadius: 9999, whiteSpace: 'nowrap' }}>
-                📖 Tu próxima clase: {proxima.asignatura_nombre.split(' ')[0]}{proxima.grupo_numero ? ` · Grupo ${proxima.grupo_numero}` : ''} a las {proxima.hora_inicio}
+              <span style={{ display:'inline-flex', alignItems:'center', gap:'0.375rem', fontSize:'0.7rem', fontWeight:700, color:'#92400e', background:'linear-gradient(135deg,#fef3c7,#fde68a)', border:'1px solid #f59e0b', padding:'4px 10px', borderRadius:9, whiteSpace:'nowrap', boxShadow:'0 1px 4px rgba(245,158,11,0.2)' }}>
+                <svg width="11" height="11" fill="none" stroke="#d97706" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}>
+                  <circle cx="12" cy="12" r="9"/>
+                  <path d="M12 7v5l3 3"/>
+                </svg>
+                {proxima.asignatura_nombre.split(' ')[0]}{proxima.grupo_numero ? ` · G${proxima.grupo_numero}` : ''} · {proxima.hora_inicio}
               </span>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 600, color: hayClase ? 'rgba(255,255,255,0.8)' : '#8e8e93', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              {hora}
-            </span>
-
-            {/* Botón minimizar — solo desktop */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: '0.75rem' }}>
+            {/* Botón minimizar */}
             <button
               className="hw-min-btn"
               onClick={minimizar}

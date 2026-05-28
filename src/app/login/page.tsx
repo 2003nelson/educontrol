@@ -116,7 +116,10 @@ function LoginContent() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #818cf8 100%);
+          background:
+          radial-gradient(ellipse at 15% 10%, rgba(255,255,255,0.6) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 90%, rgba(186,210,255,0.35) 0%, transparent 55%),
+          linear-gradient(150deg, #dce8f7 0%, #b0c8e8 30%, #7aaad4 60%, #4a7db5 100%);
           font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
           padding: 1rem;
         }

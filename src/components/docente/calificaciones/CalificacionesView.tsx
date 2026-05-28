@@ -13,7 +13,11 @@ function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, numb
   if (trabajos.length === 0) return null
   const suma = trabajos.reduce((s, t) => s + t.peso, 0)
   if (suma === 0) return null
-  const total = trabajos.reduce((s, t) => s + (notas.get(`${t.id}:${alumnoId}`) ?? 0), 0)
+  // Cada rubro no puede contribuir más que su peso máximo (evita notas > 100 por datos históricos)
+  const total = trabajos.reduce((s, t) => {
+    const puntos = notas.get(`${t.id}:${alumnoId}`) ?? 0
+    return s + Math.min(puntos, t.peso)
+  }, 0)
   return Math.round(total * 10) / 10
 }
 
@@ -267,7 +271,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
     if (!docenteId || !plantelId) return
     void Promise.resolve(
       supabase.from('calificaciones_detalle').upsert(
-        [{ actividad_id: trabajoId, estudiante_id: alumnoId, plantel_id: plantelId, puntos: pts, updated_at: new Date().toISOString() }],
+        [{ actividad_id: trabajoId, estudiante_id: alumnoId, plantel_id: plantelId, puntos: Math.min(pts, trabajos.find(t => t.id === trabajoId)?.peso ?? pts), updated_at: new Date().toISOString() }],
         { onConflict: 'actividad_id,estudiante_id', ignoreDuplicates: false }
       )
     )
