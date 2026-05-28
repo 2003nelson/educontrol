@@ -365,6 +365,29 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         )}
       </div>
 
+      {/* Modal confirmar salida */}
+      {modalSalir && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'1rem' }}>
+          <div style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:340, padding:'1.75rem', boxShadow:'0 24px 64px rgba(0,0,0,0.18)' }}>
+            <div style={{ width:48, height:48, borderRadius:14, background:'#fffbeb', border:'1px solid #fde68a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
+              <svg width="22" height="22" fill="none" stroke="#d97706" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            </div>
+            <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.5rem' }}>¿Salir sin guardar?</h3>
+            <p style={{ fontSize:'0.8rem', color:'#64748b', textAlign:'center', margin:'0 0 1.375rem', lineHeight:1.55 }}>
+              Las notas individuales ya se guardaron, pero la calificación final del parcial no.
+            </p>
+            <div style={{ display:'flex', gap:'0.625rem' }}>
+              <button onClick={() => setModalSalir(false)} style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { setModalSalir(false); onBack() }} style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'none', background:'#1e3a5f', color:'white', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
+                Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Botón cerrar parcial flotante */}
       {alumnos.length > 0 && trabajos.length > 0 && (
         <div style={{ position:'fixed', bottom:'1.25rem', left:'50%', transform:'translateX(-50%)', zIndex:40, width:'calc(100% - 1.5rem)', maxWidth:460 }}>

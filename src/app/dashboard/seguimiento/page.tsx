@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Header from '@/components/Header'
 import { createClient } from '@/lib/supabase/client'
 import SemanaSlidePanel, { type Semana } from '@/components/dashboard/seguimiento/SemanaSlidePanel'
+import CalificacionesPanel from '@/components/dashboard/seguimiento/CalificacionesPanel'
 
 type AsignacionGrupo   = { asignatura: string; asignatura_id: string; docente: string; docente_id: string }
 type Grupo             = { id: string; numero: string; grado: number; ciclo_escolar: string; activo: boolean; plantel_id: string; total_alumnos: number; asignaciones: AsignacionGrupo[] }
@@ -173,15 +174,11 @@ function GradoCard({ grado, grupos, onClick, idx }: { grado: number; grupos: Gru
   )
 }
 
-// ─── Celda fecha toma/edición ─────────────────────────────────────────────────
 function CeldaFecha({ fecha, updatedAt, createdAt }: { fecha: string | null; updatedAt: string | null; createdAt?: string | null }) {
   if (!fecha) return <span style={{ fontSize:'0.72rem', color:'#c7c7cc' }}>—</span>
-
   const fueEditado = updatedAt &&
     new Date(updatedAt).toDateString() !== new Date(fecha + 'T12:00:00').toDateString()
-
   const fechaToma = createdAt ? formatFechaHora(createdAt) : formatFechaCorta(fecha)
-
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
       <div style={{ display:'flex', alignItems:'center', gap:4 }}>
@@ -198,7 +195,6 @@ function CeldaFecha({ fecha, updatedAt, createdAt }: { fecha: string | null; upd
   )
 }
 
-// ─── Tabla asistencia semanal ─────────────────────────────────────────────────
 function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaInicial, semanaInicio, grupoId, asigId, docenteId }: {
   alumnos: Alumno[]
   asistenciaDiaria: AsistenciaDiaria
@@ -215,12 +211,10 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
   const [refreshing, setRefreshing] = useState(false)
   const [cooldown, setCooldown] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(0)
-
   const hoyISO = formatISO(new Date())
   const diaDefault = dias.find(d => d.iso === hoyISO)?.iso ?? dias[4].iso
   const [diaSelec, setDiaSelec] = useState(diaDefault)
 
-  // Reset contador cada 60s
   useEffect(() => {
     const t = setInterval(() => setRefreshCount(0), 60_000)
     return () => clearInterval(t)
@@ -229,17 +223,14 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
   async function handleRefresh() {
     if (refreshing || cooldown) return
     if (refreshCount >= 5) { setCooldown(true); setSecondsLeft(60); return }
-
     setRefreshing(true)
     setRefreshCount(c => c + 1)
-
     const { data } = await supabase
       .from('asistencias')
       .select('estudiante_id, estado, fecha, updated_at, created_at')
       .eq('grupo_id', grupoId)
       .eq('asignatura_id', asigId)
       .eq('docente_id', docenteId)
-
     if (data) {
       const diaria: AsistenciaDiaria = {}
       alumnos.forEach(a => { diaria[a.id] = [] })
@@ -255,17 +246,11 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
     setRefreshing(false)
   }
 
-  // Countdown cuando llega al límite
   useEffect(() => {
     if (!cooldown) return
     const t = setTimeout(() => {
-      if (secondsLeft <= 1) {
-        setCooldown(false)
-        setRefreshCount(0)
-        setSecondsLeft(0)
-      } else {
-        setSecondsLeft(s => s - 1)
-      }
+      if (secondsLeft <= 1) { setCooldown(false); setRefreshCount(0); setSecondsLeft(0) }
+      else { setSecondsLeft(s => s - 1) }
     }, 1000)
     return () => clearTimeout(t)
   }, [cooldown, secondsLeft])
@@ -273,7 +258,6 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
   return (
     <div style={{ background:'white', borderRadius:'1rem', overflow:'hidden', border:'1px solid #f1f5f9', position:'relative' }} onClick={() => setTooltip(null)}>
       <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.625rem 1.25rem', borderBottom:'1px solid #f1f5f9', justifyContent:'space-between', flexWrap:'wrap' }}>
-        {/* Botón refresh — esquina izquierda */}
         <button onClick={handleRefresh} disabled={refreshing || cooldown}
           title={cooldown ? `Límite alcanzado, espera ${secondsLeft}s` : `Actualizar (${5 - refreshCount} restantes)`}
           style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8, border:'1px solid #e2e8f0', background: cooldown?'#fef2f2':refreshing?'#f8fafc':'white', color: cooldown?'#dc2626':'#475569', fontSize:'0.7rem', fontWeight:600, cursor: (refreshing||cooldown)?'not-allowed':'pointer', transition:'all 0.15s', opacity: (refreshing||cooldown)?0.7:1 }}>
@@ -283,19 +267,18 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
           </svg>
           {cooldown ? `${secondsLeft}s` : refreshing ? 'Actualizando…' : 'Actualizar'}
         </button>
-        {/* Leyendas — derecha */}
         <div style={{ display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap' }}>
-        {[
-          { icon:<svg width="11" height="11" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#f0fdf4', border:'#bbf7d0', label:'Presente', color:'#64748b' },
-          { icon:<svg width="10" height="10" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#fef2f2', border:'#fecaca', label:'Falta', color:'#64748b' },
-          { icon:<svg width="10" height="10" fill="none" stroke="#d97706" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#fffbeb', border:'#fde68a', label:'Justificada', color:'#64748b' },
-          { icon:<svg width="10" height="10" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg:'#f5f3ff', border:'#ddd6fe', label:'Retardo', color:'#64748b' },
-        ].map(item => (
-          <div key={item.label} style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
-            <div style={{ width:20, height:20, borderRadius:'0.375rem', background:item.bg, border:`1px solid ${item.border}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{item.icon}</div>
-            <span style={{ fontSize:'0.68rem', color:item.color, fontWeight:500 }}>{item.label}</span>
-          </div>
-        ))}
+          {[
+            { icon:<svg width="11" height="11" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#f0fdf4', border:'#bbf7d0', label:'Presente', color:'#64748b' },
+            { icon:<svg width="10" height="10" fill="none" stroke="#dc2626" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#fef2f2', border:'#fecaca', label:'Falta', color:'#64748b' },
+            { icon:<svg width="10" height="10" fill="none" stroke="#d97706" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/></svg>, bg:'#fffbeb', border:'#fde68a', label:'Justificada', color:'#64748b' },
+            { icon:<svg width="10" height="10" fill="none" stroke="#7c3aed" strokeWidth="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>, bg:'#f5f3ff', border:'#ddd6fe', label:'Retardo', color:'#64748b' },
+          ].map(item => (
+            <div key={item.label} style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
+              <div style={{ width:20, height:20, borderRadius:'0.375rem', background:item.bg, border:`1px solid ${item.border}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{item.icon}</div>
+              <span style={{ fontSize:'0.68rem', color:item.color, fontWeight:500 }}>{item.label}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div style={{ maxHeight:'calc(8 * 56px + 44px)', overflowY:'auto' }}>
@@ -339,7 +322,6 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
               const registros = asistenciaDiaria[alumno.id] ?? []
               const regMap = Object.fromEntries(registros.map(r => [r.fecha, r]))
               const regDia = regMap[diaSelec] ?? null
-
               return (
                 <tr key={alumno.id} style={{ borderBottom:'1px solid #f8fafc' }}
                   onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
@@ -399,11 +381,7 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
                     })()}
                   </td>
                   <td style={{ padding:'0.875rem 1rem' }}>
-                    <CeldaFecha
-                      fecha={regDia?.fecha ?? null}
-                      updatedAt={regDia?.updated_at ?? null}
-                      createdAt={regDia?.created_at ?? null}
-                    />
+                    <CeldaFecha fecha={regDia?.fecha ?? null} updatedAt={regDia?.updated_at ?? null} createdAt={regDia?.created_at ?? null}/>
                   </td>
                 </tr>
               )
@@ -415,7 +393,6 @@ function TablaAsistenciaSemanal({ alumnos, asistenciaDiaria: asistenciaDiariaIni
   )
 }
 
-// ─── Vista alumnos ────────────────────────────────────────────────────────────
 function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   grupo: Grupo; alumnos: Alumno[]; loadingAlumnos: boolean; volver: () => void
 }) {
@@ -428,6 +405,8 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   const [asigSelec, setAsigSelec]       = useState<AsignacionGrupo | null>(null)
   const [semanaSlide, setSemanaSlide]   = useState(false)
   const [semanaSelec, setSemanaSelec]   = useState<string | null>(null)
+  // ── NUEVO: estado panel calificaciones ──
+  const [mostrarCal, setMostrarCal]     = useState(false)
 
   const [asistencias, setAsistencias]           = useState<ResumenAsistencia[]>([])
   const [asistenciaDiaria, setAsistenciaDiaria] = useState<AsistenciaDiaria>({})
@@ -453,12 +432,8 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
       if (asistData && asistData.length > 0) {
         const resumen: Record<string, ResumenAsistencia> = {}
         alumnos.forEach(a => {
-          resumen[a.id] = {
-            estudiante_id: a.id, total: 0, presentes: 0, ausentes: 0, porcentaje: 0,
-            ultima_fecha: null, ultima_updated_at: null, ultima_created_at: null,
-          }
+          resumen[a.id] = { estudiante_id: a.id, total: 0, presentes: 0, ausentes: 0, porcentaje: 0, ultima_fecha: null, ultima_updated_at: null, ultima_created_at: null }
         })
-
         asistData.forEach(r => {
           if (!resumen[r.estudiante_id]) return
           resumen[r.estudiante_id].total++
@@ -475,20 +450,13 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
         })
         Object.values(resumen).forEach(r => { r.porcentaje = r.total > 0 ? Math.round((r.presentes / r.total) * 100) : 0 })
         setAsistencias(Object.values(resumen))
-
         const diaria: AsistenciaDiaria = {}
         alumnos.forEach(a => { diaria[a.id] = [] })
         asistData.forEach(r => {
           if (!diaria[r.estudiante_id]) diaria[r.estudiante_id] = []
-          diaria[r.estudiante_id].push({
-            fecha:      r.fecha as string,
-            estado:     r.estado as string,
-            updated_at: r.updated_at as string | null,
-            created_at: r.created_at as string | null,
-          })
+          diaria[r.estudiante_id].push({ fecha: r.fecha as string, estado: r.estado as string, updated_at: r.updated_at as string | null, created_at: r.created_at as string | null })
         })
         setAsistenciaDiaria(diaria)
-
         const fechasUnicas = [...new Set(asistData.map(r => r.fecha as string))].sort()
         setSemanas(generarSemanas(fechasUnicas))
       }
@@ -508,10 +476,10 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   )
 
   const btns = [
-    { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,           activo: true },
-    { id: 'periodo',        label: 'Período',        sub: null,                                    activo: false },
-    { id: 'calificaciones', label: 'Calificaciones', sub: null,                                    activo: false },
-    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null, activo: tieneAsig },
+    { id: 'asignaturas',    label: 'Asignatura',    sub: asigSelec?.asignatura ?? null,            activo: true },
+    { id: 'periodo',        label: 'Período',        sub: null,                                     activo: false },
+    { id: 'calificaciones', label: 'Calificaciones', sub: mostrarCal ? asigSelec?.asignatura ?? null : null, activo: tieneAsig },
+    { id: 'asistencias',    label: 'Asistencias',    sub: semanaActual ? semanaActual.label : null,  activo: tieneAsig },
   ]
 
   return (
@@ -537,7 +505,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexWrap:'wrap', justifyContent:'flex-end' }}>
           {btns.map(btn => {
-            const estaAbierto = panelAbierto === btn.id
+            const estaAbierto = panelAbierto === btn.id || (btn.id === 'calificaciones' && mostrarCal)
             const tieneValor  = btn.sub !== null
             const disabled    = !btn.activo
             return (
@@ -547,6 +515,8 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
                     if (disabled) return
                     if (btn.id === 'asignaturas') setPanelAbierto(panelAbierto === 'asignaturas' ? null : 'asignaturas')
                     else if (btn.id === 'asistencias') { setSemanaSlide(true); setPanelAbierto(null) }
+                    // ── NUEVO: abrir/cerrar panel calificaciones ──
+                    else if (btn.id === 'calificaciones') { setMostrarCal(v => !v); setPanelAbierto(null) }
                   }}
                   style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.45rem 0.875rem', borderRadius:'0.75rem', fontSize:'0.8rem', fontWeight: estaAbierto||tieneValor ? 700 : 500, color: disabled ? '#cbd5e1' : (estaAbierto||tieneValor) ? '#1e3a5f' : '#64748b', background: disabled ? '#fafafa' : (estaAbierto||tieneValor) ? 'white' : '#f8fafc', border:`1px solid ${disabled ? '#f1f5f9' : tieneValor ? '#bfdbfe' : '#e2e8f0'}`, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, boxShadow: estaAbierto ? '0 2px 8px rgba(0,0,0,0.08)' : 'none', transition:'all 0.2s', maxWidth: btn.id==='asignaturas'&&tieneValor ? 220 : 'none', overflow:'hidden' }}>
                   <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{btn.label}{btn.sub ? (' · ' + btn.sub) : ''}</span>
@@ -558,7 +528,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
             )
           })}
           {(asigSelec || semanaSelec) && (
-            <button onClick={() => { setAsigSelec(null); setSemanaSelec(null); setPanelAbierto(null) }}
+            <button onClick={() => { setAsigSelec(null); setSemanaSelec(null); setPanelAbierto(null); setMostrarCal(false) }}
               style={{ padding:'0.4rem 0.75rem', borderRadius:'0.75rem', fontSize:'0.75rem', fontWeight:600, color:'#dc2626', background:'#fef2f2', border:'1px solid #fecaca', cursor:'pointer', transition:'all 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.background='#fee2e2' }}
               onMouseLeave={e => { e.currentTarget.style.background='#fef2f2' }}>
@@ -588,7 +558,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
                 const sel = asigSelec?.asignatura_id === asig.asignatura_id && asigSelec?.docente_id === asig.docente_id
                 return (
                   <tr key={idx} style={{ borderBottom:'1px solid #f8fafc', background: sel ? '#eff6ff' : 'white', cursor:'pointer', transition:'background 0.15s' }}
-                    onClick={() => { setAsigSelec(sel ? null : asig); setPanelAbierto(null) }}
+                    onClick={() => { setAsigSelec(sel ? null : asig); setPanelAbierto(null); setMostrarCal(false) }}
                     onMouseEnter={e => { if (!sel) e.currentTarget.style.background='#f8fafc' }}
                     onMouseLeave={e => { if (!sel) e.currentTarget.style.background='white' }}>
                     <td style={{ padding:'0.875rem 1.25rem' }}><span style={{ fontSize:'0.8125rem', fontWeight: sel?700:500, color: sel?'#1e3a5f':'#334155' }}>{asig.asignatura}</span></td>
@@ -626,7 +596,29 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
         </div>
       )}
 
-      {loadingAlumnos || loadingAsist ? (
+      {/* ── NUEVO: Panel de Calificaciones ── */}
+      {mostrarCal && asigSelec && (
+        <div style={{ background:'white', borderRadius:'1rem', border:'1px solid #f1f5f9', padding:'1.25rem', animation:'cardIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1rem' }}>
+            <div>
+              <p style={{ fontSize:'0.65rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 2px' }}>Calificaciones</p>
+              <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>{asigSelec.asignatura}</p>
+            </div>
+            <button onClick={() => setMostrarCal(false)}
+              style={{ width:28, height:28, borderRadius:'50%', background:'#f4f4f8', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#6b7280', fontWeight:700, fontSize:'0.85rem' }}>
+              ✕
+            </button>
+          </div>
+          <CalificacionesPanel
+            grupoId={grupo.id}
+            asignaturaId={asigSelec.asignatura_id}
+            docenteId={asigSelec.docente_id}
+            nombreAsignatura={asigSelec.asignatura}
+          />
+        </div>
+      )}
+
+      {!mostrarCal && (loadingAlumnos || loadingAsist ? (
         <div style={{ background:'white', borderRadius:'1rem', padding:'3rem', display:'flex', justifyContent:'center', border:'1px solid #f1f5f9' }}>
           <div style={{ width:36, height:36, borderRadius:'50%', border:'4px solid #bfdbfe', borderTopColor:'#2563eb', animation:'spin 0.8s linear infinite' }}/>
         </div>
@@ -716,7 +708,7 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
           asigId={asigSelec.asignatura_id}
           docenteId={asigSelec.docente_id}
         />
-      )}
+      ))}
 
       {semanaSlide && (
         <SemanaSlidePanel semanas={semanas} semanaSelec={semanaSelec} onSelec={setSemanaSelec} onCerrar={() => setSemanaSlide(false)}/>
@@ -725,7 +717,6 @@ function AlumnosVista({ grupo, alumnos, loadingAlumnos, volver }: {
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SeguimientoPage() {
   const supabase = createClient()
   const [vista, setVista] = useState<Vista>('semestres')

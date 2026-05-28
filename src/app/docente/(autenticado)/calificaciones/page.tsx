@@ -1,4 +1,3 @@
-// src/app/docente/(autenticado)/calificaciones/page.tsx
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -42,8 +41,8 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
 
       {/* Parte color — clickeable → navega a asignaturas */}
       <div onClick={() => onNavegar({ tipo:'asignaturas', grupo })}
-        className="card-color-top"
-        style={{ background:'linear-gradient(135deg,#6b7280 0%,#9ca3af 100%)', padding:'1.25rem 1.25rem 1.125rem', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'space-between', minHeight:120, cursor:'pointer' }}>
+        className="cal-card-top"
+        style={{ background:'linear-gradient(135deg,#6b7280 0%,#9ca3af 100%)', padding:'1.25rem 1.25rem 1.125rem', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer' }}>
         <div style={{ position:'absolute', top:-30, right:-30, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.08)', pointerEvents:'none' }}/>
         <div style={{ position:'absolute', bottom:-20, left:-10, width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.05)', pointerEvents:'none' }}/>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', zIndex:1, position:'relative' }}>
@@ -227,7 +226,13 @@ export default function CalificacionesPage() {
           {grupos.length === 0 ? (
             <p style={{ textAlign:'center', color:'#94a3b8', fontSize:'0.875rem', padding:'4rem 0' }}>Sin grupos asignados</p>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'1rem' }}>
+            <div className="cal-grupos-grid" style={{ display:'grid', gridTemplateColumns:'1fr', gap:'1.125rem' }}>
+              <style>{`
+                @media(min-width:640px){ .cal-grupos-grid { grid-template-columns: repeat(2,1fr) !important; gap: 1.375rem !important; } }
+                @media(min-width:1024px){ .cal-grupos-grid { grid-template-columns: repeat(3,1fr) !important; gap: 1.5rem !important; } }
+                .cal-card-top { min-height: 120px; }
+                @media(min-width:640px){ .cal-card-top { min-height: 140px; } }
+              `}</style>
               {grupos.map((g, idx) => (
                 <GrupoCardCal key={g.id} grupo={g} idx={idx} onNavegar={navegar} />
               ))}
@@ -249,32 +254,46 @@ export default function CalificacionesPage() {
             </div>
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:'1rem' }}>
-            {vista.grupo.asignaturas.map((asig, idx) => (
-              <div key={asig.id}
-                style={{ borderRadius:18, overflow:'hidden', boxShadow:'0 3px 14px rgba(30,58,95,0.11)', animation:`cardIn 0.35s ${idx*0.06}s both`, cursor:'pointer', transition:'transform 0.18s, box-shadow 0.18s', display:'flex', flexDirection:'column' }}
-                onClick={() => navegar({ tipo:'parcial', grupo:vista.grupo, asignatura:asig })}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow='0 10px 28px rgba(30,58,95,0.2)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform='translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow='0 3px 14px rgba(30,58,95,0.11)' }}>
-                {/* Parte color — cuadrada */}
-                <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#2d5a8e 100%)', padding:'1.25rem 1rem', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'0.75rem', position:'relative', overflow:'hidden', flex:1, minHeight:110 }}>
-                  <div style={{ position:'absolute', top:-20, right:-20, width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.08)', pointerEvents:'none' }}/>
-                  <div style={{ width:44, height:44, borderRadius:13, background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <svg width="19" height="19" fill="none" stroke="white" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round">
-                      <path d="M2 4.5A2.5 2.5 0 0 1 4.5 2H11v18H4.5A2.5 2.5 0 0 1 2 17.5V4.5z"/>
-                      <path d="M22 4.5A2.5 2.5 0 0 0 19.5 2H13v18h6.5A2.5 2.5 0 0 0 22 17.5V4.5z"/>
-                    </svg>
+          <div className="cal-asig-grid" style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
+            <style>{`
+              @media(min-width:640px){ .cal-asig-grid { display:grid !important; grid-template-columns:repeat(2,1fr); gap:0.875rem; } }
+              @media(min-width:1024px){ .cal-asig-grid { grid-template-columns:repeat(4,1fr); gap:1rem; } }
+              .cal-asig-pc { display:none; }
+              .cal-asig-mob { display:flex; }
+              @media(min-width:640px){ .cal-asig-pc { display:flex !important; flex-direction:column; align-items:center; } .cal-asig-mob { display:none !important; } }
+            `}</style>
+            {vista.grupo.asignaturas.map((asig) => (
+              <button key={asig.id} onClick={() => navegar({ tipo:'parcial', grupo:vista.grupo, asignatura:asig })}
+                style={{ background:'white', border:'1px solid #e5e5ea', borderRadius:14, cursor:'pointer', transition:'all 0.15s', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', textAlign:'left', width:'100%', display:'flex', flexDirection:'column' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.boxShadow='0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform='translateY(-2px)' }}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform='translateY(0)' }}>
+                {/* Desktop */}
+                <div className="cal-asig-pc" style={{ padding:'1.75rem 1rem 0', gap:'0.75rem', width:'100%' }}>
+                  <div style={{ width:52, height:52, borderRadius:14, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:'1.5rem', lineHeight:1 }}>📒</span>
                   </div>
-                  <p style={{ fontSize:'0.72rem', fontWeight:700, color:'white', margin:0, textAlign:'center', lineHeight:1.3, position:'relative' }}>{asig.nombre}</p>
+                  <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#1e3a5f', lineHeight:1.4, textAlign:'center', padding:'0 0.5rem' }}>{asig.nombre}</span>
                 </div>
-                {/* Parte blanca */}
-                <div style={{ background:'white', padding:'0.5rem 0.75rem', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#2563eb', display:'flex', alignItems:'center', gap:3 }}>
-                    Seleccionar
-                    <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                {/* Móvil */}
+                <div className="cal-asig-mob" style={{ padding:'0.875rem 1rem 0', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', width:'100%' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div style={{ width:40, height:40, borderRadius:11, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:'1.2rem', lineHeight:1 }}>📒</span>
+                    </div>
+                    <span style={{ fontSize:'0.85rem', fontWeight:600, color:'#1e3a5f' }}>{asig.nombre}</span>
+                  </div>
+                  <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink:0 }} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
+                {/* Footer */}
+                <div style={{ width:'100%', borderTop:'1px solid #f0f0f5', marginTop:'0.875rem', padding:'0.5rem 1rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b' }}>3 parciales</span>
+                  <span style={{ fontSize:'0.65rem', color:'#94a3b8', fontWeight:500 }}>
+                    {new Date().toLocaleDateString('es-MX', { weekday:'short', day:'numeric', month:'short' })}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </>
