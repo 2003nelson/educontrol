@@ -374,19 +374,19 @@ export default function CalificacionesPage() {
                 <div key={p.key} style={{ background:'white', borderRadius:16, overflow:'hidden', animation:`cardIn 0.35s ${idx*0.07}s both`, boxShadow:'0 2px 10px rgba(0,0,0,0.06)', border: count > 0 ? '1px solid #e2e8f0' : '1px solid #f0f0f5' }}>
                   {/* Fila principal */}
                   <button onClick={() => navegar({ tipo:'notas', ctx, grupo:vista.grupo })}
-                    style={{ width:'100%', display:'flex', alignItems:'center', padding:'1rem 1.125rem', background:'none', border:'none', cursor:'pointer', textAlign:'left', transition:'background 0.15s', gap:'0.875rem' }}
+                    style={{ width:'100%', display:'flex', alignItems:'center', padding:'2.25rem 1.375rem', background:'none', border:'none', cursor:'pointer', textAlign:'left', transition:'background 0.15s', gap:'1rem' }}
                     onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
                     onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
                     {/* Badge número */}
-                    <div style={{ width:44, height:44, borderRadius:12, background: count > 0 ? '#1e3a5f' : '#f4f5f7', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontSize:'0.8rem', fontWeight:800, color: count > 0 ? 'white' : '#b0b8c8', fontFamily:'Outfit, sans-serif', letterSpacing:'-0.01em' }}>{p.short}</span>
+                    <div style={{ width:50, height:50, borderRadius:14, background: count > 0 ? '#1e3a5f' : '#f4f5f7', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:'0.875rem', fontWeight:800, color: count > 0 ? 'white' : '#b0b8c8', fontFamily:'Outfit, sans-serif', letterSpacing:'-0.01em' }}>{p.short}</span>
                     </div>
                     {/* Info */}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <p style={{ fontSize:'0.875rem', fontWeight:600, color:'#1e3a5f', margin:'0 0 3px' }}>{p.label}</p>
+                      <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 5px' }}>{p.label}</p>
                       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                         <div style={{ width:6, height:6, borderRadius:'50%', background: count > 0 ? '#16a34a' : '#d1d5db', flexShrink:0 }}/>
-                        <p style={{ fontSize:'0.7rem', margin:0, color: count > 0 ? '#16a34a' : '#94a3b8', fontWeight:500 }}>
+                        <p style={{ fontSize:'0.75rem', margin:0, color: count > 0 ? '#16a34a' : '#94a3b8', fontWeight:500 }}>
                           {count > 0 ? `${count} ${count === 1 ? 'trabajo' : 'trabajos'} configurados` : 'Sin trabajos — configura primero'}
                         </p>
                       </div>
