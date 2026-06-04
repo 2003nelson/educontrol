@@ -29,7 +29,7 @@ function ModalEvaluar({ alumno, trabajo, valorActual, onGuardar, onCerrar }: {
   onGuardar: (puntos: number) => void
   onCerrar: () => void
 }) {
-  const [valor, setValor] = useState(valorActual ?? 0)
+  const [valor, setValor] = useState(Math.min(valorActual ?? 0, trabajo.peso))
 
   if (typeof window === 'undefined') return null
   return createPortal(
