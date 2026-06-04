@@ -125,7 +125,8 @@ function FilaAlumno({ alumno, nota, trabajos, detalle, idx }: {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingTop: '0.5rem' }}>
               {trabajos.map(t => {
                 const d = detalle.trabajos.find(x => x.trabajo_id === t.id)
-                const pts = d?.puntos ?? null
+                const rawPts = d?.puntos ?? null
+                const pts = rawPts !== null ? Math.min(rawPts, t.peso) : null
                 return (
                   <div key={t.id} style={{
                     display: 'flex', alignItems: 'center', gap: '0.5rem',
