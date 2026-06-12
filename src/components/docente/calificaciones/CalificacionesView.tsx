@@ -1,177 +1,25 @@
 // src/components/docente/calificaciones/CalificacionesView.tsx
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import TablaCalificaciones from './TablaCalificaciones'
 import type { Trabajo, Alumno, ContextoCalificacion } from './types'
 
 function colorNota(v: number | null) { return v === null ? '#94a3b8' : v >= 60 ? '#16a34a' : '#dc2626' }
 function bgNota(v: number | null)    { return v === null ? '#f8fafc' : v >= 60 ? '#f0fdf4' : '#fef2f2' }
-function bdNota(v: number | null)    { return v === null ? '#e2e8f0' : v >= 60 ? '#bbf7d0' : '#fecaca' }
 
+// `notas` guarda la calificación 0-100 que el docente capturó por rubro (NO los puntos
+// absolutos almacenados en BD). Para el total: (calif/100) * peso del rubro.
 function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, number | null>): number | null {
   if (trabajos.length === 0) return null
   const suma = trabajos.reduce((s, t) => s + t.peso, 0)
   if (suma === 0) return null
-  // Cada rubro no puede contribuir más que su peso máximo (evita notas > 100 por datos históricos)
   const total = trabajos.reduce((s, t) => {
-    const puntos = notas.get(`${t.id}:${alumnoId}`) ?? 0
-    return s + Math.min(puntos, t.peso)
+    const calif = notas.get(`${t.id}:${alumnoId}`) ?? 0
+    const califClamp = Math.max(0, Math.min(100, calif))
+    return s + (califClamp / 100) * t.peso
   }, 0)
   return Math.round(total * 10) / 10
-}
-
-// ── Modal evaluar alumno ──────────────────────────────────────────────────────
-function ModalEvaluar({ alumno, trabajo, valorActual, onGuardar, onCerrar }: {
-  alumno: Alumno
-  trabajo: Trabajo
-  valorActual: number | null
-  onGuardar: (puntos: number) => void
-  onCerrar: () => void
-}) {
-  const [valor, setValor] = useState(Math.min(valorActual ?? 0, trabajo.peso))
-
-  if (typeof window === 'undefined') return null
-  return createPortal(
-    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'1rem' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:380, padding:'1.75rem', boxShadow:'0 24px 64px rgba(0,0,0,0.18)', animation:'cardIn 0.35s cubic-bezier(0.34,1.4,0.64,1)' }}>
-        <style>{`@keyframes cardIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}`}</style>
-
-        {/* Alumno + trabajo */}
-        <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.375rem' }}>
-          <div style={{ width:40, height:40, borderRadius:10, background:'#dde3ea', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.875rem', fontWeight:700, color:'#6b7897', flexShrink:0 }}>
-            {alumno.nombre_completo.charAt(0)}
-          </div>
-          <div style={{ minWidth:0 }}>
-            <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{alumno.nombre_completo}</p>
-            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:0 }}>{trabajo.nombre} · vale {trabajo.peso}%</p>
-          </div>
-        </div>
-
-        {/* Valor numérico grande */}
-        <div style={{ textAlign:'center', marginBottom:'1.25rem' }}>
-          <p style={{ fontSize:'4rem', fontWeight:800, color: valor >= trabajo.peso * 0.7 ? '#16a34a' : '#dc2626', margin:0, lineHeight:1, fontFamily:'Outfit, sans-serif', transition:'color 0.2s' }}>
-            {Math.round(valor * 10) / 10}
-          </p>
-          <p style={{ fontSize:'0.75rem', color:'#94a3b8', margin:'0.375rem 0 0' }}>de {trabajo.peso} puntos máximos</p>
-        </div>
-
-        {/* Barra deslizable */}
-        <div style={{ marginBottom:'1.5rem' }}>
-          <input
-            type="range"
-            min={0} max={trabajo.peso} step={0.5}
-            value={valor}
-            onChange={e => setValor(parseFloat(e.target.value))}
-            style={{ width:'100%', accentColor:'#2563eb', height:6, cursor:'pointer' }}
-          />
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.375rem' }}>
-            <span style={{ fontSize:'0.65rem', color:'#94a3b8' }}>0</span>
-            <span style={{ fontSize:'0.65rem', color:'#94a3b8' }}>{trabajo.peso / 2}</span>
-            <span style={{ fontSize:'0.65rem', color:'#94a3b8' }}>{trabajo.peso}</span>
-          </div>
-        </div>
-
-        {/* Porcentaje del trabajo */}
-        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'1.25rem' }}>
-          <div style={{ flex:1, height:8, borderRadius:9999, background:'#f1f5f9', overflow:'hidden' }}>
-            <div style={{ height:'100%', width:`${(valor / trabajo.peso) * 100}%`, background: valor >= trabajo.peso * 0.7 ? '#16a34a' : '#ef4444', borderRadius:9999, transition:'width 0.15s, background 0.2s' }}/>
-          </div>
-          <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#64748b', flexShrink:0 }}>
-            {Math.round((valor / trabajo.peso) * 100)}%
-          </span>
-        </div>
-
-        {/* Botones */}
-        <div style={{ display:'flex', gap:'0.625rem' }}>
-          <button onClick={onCerrar} style={{ flex:1, padding:'0.75rem', borderRadius:10, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
-            Regresar
-          </button>
-          <button onClick={() => { onGuardar(valor); onCerrar() }} style={{ flex:2, padding:'0.75rem', borderRadius:10, border:'none', background:'linear-gradient(135deg,#1e40af,#2563eb)', color:'white', fontSize:'0.85rem', fontWeight:700, cursor:'pointer', boxShadow:'0 4px 12px rgba(30,64,175,0.3)' }}>
-            Asignar calificación
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
-
-// ── Fila de alumno ────────────────────────────────────────────────────────────
-function FilaAlumno({ alumno, trabajos, notas, onNotaChange }: {
-  alumno: Alumno
-  trabajos: Trabajo[]
-  notas: Map<string, number | null>
-  onNotaChange: (trabajoId: string, alumnoId: string, pts: number) => void
-}) {
-  const [modal, setModal] = useState<Trabajo | null>(null)
-  const notaFinal = calcNota(trabajos, alumno.id, notas)
-
-  return (
-    <>
-      <div style={{ background:'white', borderRadius:14, border:`1.5px solid ${bdNota(notaFinal)}`, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
-        {/* Info alumno */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.75rem 1rem', borderBottom:'1px solid #f4f5f7' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'0.625rem', minWidth:0 }}>
-            <div style={{ width:34, height:34, borderRadius:9, flexShrink:0, background:'#dde3ea', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.8rem', fontWeight:700, color:'#6b7897' }}>
-              {alumno.nombre_completo.charAt(0)}
-            </div>
-            <div style={{ minWidth:0 }}>
-              <p style={{ fontSize:'0.83rem', fontWeight:600, color:'#1e3a5f', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{alumno.nombre_completo}</p>
-              <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>{alumno.matricula}</p>
-            </div>
-          </div>
-          {/* Nota final */}
-          <div style={{ minWidth:46, height:36, borderRadius:9, background:bgNota(notaFinal), border:`1.5px solid ${bdNota(notaFinal)}`, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 10px', flexShrink:0 }}>
-            <span style={{ fontSize:'0.9rem', fontWeight:800, color:colorNota(notaFinal) }}>{notaFinal ?? '—'}</span>
-          </div>
-        </div>
-
-        {/* Trabajos — grid de botones evaluar */}
-        <div style={{ padding:'0.625rem 1rem', display:'flex', flexDirection:'column', gap:'0.375rem' }}>
-          {trabajos.map(t => {
-            const pts = notas.get(`${t.id}:${alumno.id}`) ?? null
-            const evaluado = pts !== null
-            return (
-              <div key={t.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.5rem 0.75rem', borderRadius:9, background:'#f8fafc', border:'1px solid #f0f0f5' }}>
-                <div style={{ minWidth:0, flex:1 }}>
-                  <p style={{ fontSize:'0.78rem', fontWeight:600, color:'#374151', margin:0 }}>{t.nombre}</p>
-                  <p style={{ fontSize:'0.65rem', color:'#94a3b8', margin:0 }}>Vale {t.peso}%</p>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink:0 }}>
-                  {evaluado && (
-                    <span style={{ fontSize:'0.75rem', fontWeight:800, color: pts! >= t.peso * 0.7 ? '#16a34a' : '#dc2626', background: pts! >= t.peso * 0.7 ? '#f0fdf4' : '#fef2f2', padding:'2px 8px', borderRadius:9999 }}>
-                      {pts}/{t.peso}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => setModal(t)}
-                    style={{
-                      padding:'0.35rem 0.75rem', borderRadius:8, fontSize:'0.72rem', fontWeight:600, cursor:'pointer', border:'none', whiteSpace:'nowrap',
-                      background: evaluado ? '#f1f5f9' : 'linear-gradient(135deg,#1e40af,#2563eb)',
-                      color: evaluado ? '#475569' : 'white',
-                      boxShadow: evaluado ? 'none' : '0 2px 8px rgba(30,64,175,0.25)',
-                    }}>
-                    {evaluado ? 'Editar calificación' : 'Evaluar'}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {modal && (
-        <ModalEvaluar
-          alumno={alumno}
-          trabajo={modal}
-          valorActual={notas.get(`${modal.id}:${alumno.id}`) ?? null}
-          onGuardar={pts => onNotaChange(modal.id, alumno.id, pts)}
-          onCerrar={() => setModal(null)}
-        />
-      )}
-    </>
-  )
 }
 
 // ── Vista principal ───────────────────────────────────────────────────────────
@@ -183,36 +31,21 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
   const supabase = createClient()
   const [trabajos, setTrabajos]   = useState<Trabajo[]>([])
   const [alumnos, setAlumnos]     = useState<Alumno[]>([])
+  // notas: calificación 0-100 capturada por el docente para cada rubro
   const [notas, setNotas]         = useState<Map<string, number | null>>(new Map())
   const [loading, setLoading]     = useState(true)
-  const [guardando, setGuardando]     = useState(false)
-  const [guardado, setGuardado]       = useState(false)
-  const [haycambios, setHayCambios]   = useState(false)
-  const [modalSalir, setModalSalir]   = useState(false)
   const [docenteId, setDocenteId] = useState<string | null>(null)
   const [plantelId, setPlantelId] = useState<string | null>(null)
 
   // Pushear entrada al historial para interceptar el botón atrás
-  const haycambiosRef = useRef(false)
   useEffect(() => {
     // Al montar, empujar un estado para poder interceptar el popstate
     window.history.pushState({ calView: true }, '')
   }, [])
 
-  // Mantener ref sincronizada con el estado (para usarla en el handler)
-  useEffect(() => {
-    haycambiosRef.current = haycambios
-  }, [haycambios])
-
-  // Interceptar botón atrás del navegador/teléfono
+  // Interceptar botón atrás del navegador/teléfono — todo se autoguarda, regresar directo
   const handlePopState = useCallback(() => {
-    if (haycambiosRef.current) {
-      // Volver a empujar el estado para que no avance en el historial
-      window.history.pushState({ calView: true }, '')
-      setModalSalir(true)
-    } else {
-      onBack()
-    }
+    onBack()
   }, [onBack])
 
   useEffect(() => {
@@ -241,12 +74,20 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
       const ts = (tData ?? []) as TrabajoRaw[]
       const { data: alumnosData } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: ctx.grupo_id })
       const tIds = ts.map(t => t.id)
+      const pesoMap = new Map(ts.map(t => [t.id, t.peso]))
       const notasMapa = new Map<string, number | null>()
       if (tIds.length > 0) {
         const { data: nData } = await supabase
           .from('calificaciones_detalle').select('actividad_id, estudiante_id, puntos')
           .in('actividad_id', tIds)
-        for (const n of (nData ?? [])) notasMapa.set(`${n.actividad_id}:${n.estudiante_id}`, n.puntos)
+        for (const n of (nData ?? [])) {
+          // Convertir puntos absolutos (0-peso) a calificación 0-100 para la tabla
+          const peso = pesoMap.get(n.actividad_id) ?? 0
+          const calif = peso > 0 && n.puntos !== null
+            ? Math.round((Math.min(n.puntos, peso) / peso) * 100)
+            : null
+          notasMapa.set(`${n.actividad_id}:${n.estudiante_id}`, calif)
+        }
       }
       return { trabajos: ts, alumnos: (alumnosData ?? []) as Alumno[], notasMapa }
     })
@@ -263,36 +104,40 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
     }).catch(console.error)
   }, [docenteId, fetchDatos])
 
-  function handleNotaChange(trabajoId: string, alumnoId: string, pts: number) {
-    setNotas(prev => { const m = new Map(prev); m.set(`${trabajoId}:${alumnoId}`, pts); return m })
-    setGuardado(false)
-    setHayCambios(true)
-    // Auto-guardar inmediatamente
+  // calif: calificación 0-100 capturada en la celda. Se convierte a puntos (0-peso) para guardar.
+  function handleNotaChange(trabajoId: string, alumnoId: string, calif: number) {
+    let notasActualizadas: Map<string, number | null> = new Map()
+    setNotas(prev => {
+      const m = new Map(prev)
+      m.set(`${trabajoId}:${alumnoId}`, calif)
+      notasActualizadas = m
+      return m
+    })
     if (!docenteId || !plantelId) return
+    const peso = trabajos.find(t => t.id === trabajoId)?.peso ?? 0
+    const califClamp = Math.max(0, Math.min(100, calif))
+    const puntos = Math.round(((califClamp / 100) * peso) * 100) / 100
     void Promise.resolve(
       supabase.from('calificaciones_detalle').upsert(
-        [{ actividad_id: trabajoId, estudiante_id: alumnoId, plantel_id: plantelId, puntos: Math.min(pts, trabajos.find(t => t.id === trabajoId)?.peso ?? pts), updated_at: new Date().toISOString() }],
+        [{ actividad_id: trabajoId, estudiante_id: alumnoId, plantel_id: plantelId, puntos, updated_at: new Date().toISOString() }],
         { onConflict: 'actividad_id,estudiante_id', ignoreDuplicates: false }
+      )
+    )
+    // Auto-guardar la calificación final del alumno para este parcial
+    const notaFinal = calcNota(trabajos, alumnoId, notasActualizadas) ?? 0
+    void Promise.resolve(
+      supabase.from('calificaciones').upsert(
+        [{
+          plantel_id: plantelId, estudiante_id: alumnoId,
+          asignatura_id: ctx.asignatura_id, grupo_id: ctx.grupo_id,
+          docente_id: docenteId, periodo: ctx.periodo,
+          calificacion: notaFinal, falta: false, updated_at: new Date().toISOString(),
+        }],
+        { onConflict: 'estudiante_id,asignatura_id,grupo_id,periodo', ignoreDuplicates: false }
       )
     )
   }
 
-  async function guardarTodo() {
-    if (!docenteId || !plantelId || guardando) return
-    setGuardando(true)
-    // Actualizar calificaciones finales por alumno
-    const calFinals = alumnos.map(al => ({
-      plantel_id: plantelId, estudiante_id: al.id,
-      asignatura_id: ctx.asignatura_id, grupo_id: ctx.grupo_id,
-      docente_id: docenteId, periodo: ctx.periodo,
-      calificacion: calcNota(trabajos, al.id, notas) ?? 0,
-      falta: false, updated_at: new Date().toISOString(),
-    }))
-    await supabase.from('calificaciones')
-      .upsert(calFinals, { onConflict: 'estudiante_id,asignatura_id,grupo_id,periodo', ignoreDuplicates: false })
-    setGuardando(false); setGuardado(true); setHayCambios(false)
-    setTimeout(() => { setGuardado(false); onBack() }, 1200)
-  }
 
   const PERIODO_LABEL: Record<string, string> = { '1': '1er Parcial', '2': '2do Parcial', '3': '3er Parcial' }
   // Incluir todos los alumnos: sin nota = 0
@@ -312,7 +157,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
       {/* Header sticky */}
       <div style={{ position:'sticky', top:0, zIndex:30, background:'white', borderBottom:'1px solid #e8eaf0', padding:'0.75rem 1rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-          <button onClick={() => { if (haycambios) setModalSalir(true); else onBack() }} style={{ width:34, height:34, borderRadius:9, background:'#f4f5f7', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0 }}>
+          <button onClick={onBack} style={{ width:34, height:34, borderRadius:9, background:'#f4f5f7', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0 }}>
             <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           </button>
           <div style={{ flex:1, minWidth:0 }}>
@@ -326,7 +171,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         </div>
       </div>
 
-      <div style={{ padding:'1rem 0.875rem 6rem' }}>
+      <div style={{ padding:'1rem 0.875rem 2rem' }}>
 
         {/* Advertencia pesos */}
         {!loading && trabajos.length > 0 && Math.abs(sumaPesos - 100) > 0.01 && (
@@ -383,57 +228,22 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
           </div>
         )}
 
-        {/* Lista alumnos */}
+        {/* Tabla de calificaciones estilo Excel */}
         {loading ? (
           <div style={{ display:'flex', justifyContent:'center', padding:'4rem 0' }}>
             <div style={{ width:34, height:34, border:'3px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
-            {alumnos.map(al => (
-              <FilaAlumno key={al.id} alumno={al} trabajos={trabajos} notas={notas} onNotaChange={handleNotaChange} />
-            ))}
-          </div>
+          alumnos.length > 0 && trabajos.length > 0 && (
+            <TablaCalificaciones
+              alumnos={alumnos}
+              trabajos={trabajos}
+              notas={notas}
+              onNotaChange={handleNotaChange}
+            />
+          )
         )}
       </div>
-
-      {/* Modal confirmar salida */}
-      {modalSalir && (
-        <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'1rem' }}>
-          <div style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:340, padding:'1.75rem', boxShadow:'0 24px 64px rgba(0,0,0,0.18)' }}>
-            <div style={{ width:48, height:48, borderRadius:14, background:'#fffbeb', border:'1px solid #fde68a', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
-              <svg width="22" height="22" fill="none" stroke="#d97706" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-            </div>
-            <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.5rem' }}>¿Salir sin guardar?</h3>
-            <p style={{ fontSize:'0.8rem', color:'#64748b', textAlign:'center', margin:'0 0 1.375rem', lineHeight:1.55 }}>
-              Las notas individuales ya se guardaron, pero la calificación final del parcial no.
-            </p>
-            <div style={{ display:'flex', gap:'0.625rem' }}>
-              <button onClick={() => setModalSalir(false)} style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
-                Cancelar
-              </button>
-              <button onClick={() => { setModalSalir(false); onBack() }} style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'none', background:'#1e3a5f', color:'white', fontSize:'0.85rem', fontWeight:600, cursor:'pointer' }}>
-                Salir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Botón cerrar parcial flotante */}
-      {alumnos.length > 0 && trabajos.length > 0 && (
-        <div style={{ position:'fixed', bottom:'1.25rem', left:'50%', transform:'translateX(-50%)', zIndex:40, width:'calc(100% - 1.5rem)', maxWidth:460 }}>
-          <button onClick={guardarTodo} disabled={guardando}
-            style={{ width:'100%', padding:'0.875rem', borderRadius:14, background: guardado ? '#f0fdf4' : 'linear-gradient(135deg,#1e40af,#2563eb)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #bbf7d0' : 'none', fontWeight:700, fontSize:'0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', boxShadow: guardado ? 'none' : '0 8px 24px rgba(30,64,175,0.35)', transition:'all 0.3s', opacity: guardando ? 0.7 : 1, display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem' }}>
-            {guardando
-              ? <><div style={{ width:15, height:15, border:'2.5px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Guardando...</>
-              : guardado
-              ? <><svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg> Calificaciones cerradas</>
-              : 'Guardar calificaciones'
-            }
-          </button>
-        </div>
-      )}
     </div>
   )
 }
