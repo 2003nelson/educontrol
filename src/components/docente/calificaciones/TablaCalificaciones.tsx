@@ -1,6 +1,6 @@
 // src/components/docente/calificaciones/TablaCalificaciones.tsx
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Trabajo, Alumno } from './types'
 
 function colorNota(v: number | null) { return v === null ? '#94a3b8' : v >= 60 ? '#16a34a' : '#dc2626' }
@@ -137,12 +137,12 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
   alumnos: Alumno[]
   trabajos: Trabajo[]
   notas: Map<string, number | null>
-  onNotaChange: (trabajoId: string, alumnoId: string, calif: number) => void
+  onNotaChange: (trabajoId: string, alumnoId: string, calif: number | null) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const [scrollX, setScrollX] = useState(0)
-  const [maxScrollX, setMaxScrollX] = useState(0)
+  const [maxScrollX, setMaxScrollX] = useState(1) // 1 por defecto para no bloquear el botón derecho al inicio
 
   const key = (alumnoIdx: number, trabajoIdx: number) => `${alumnoIdx}:${trabajoIdx}`
 
@@ -152,6 +152,18 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
     setScrollX(el.scrollLeft)
     setMaxScrollX(el.scrollWidth - el.clientWidth)
   }, [])
+
+  // Calcular maxScrollX al montar y cuando cambie el contenido/tamaño
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    // Calcular inmediatamente
+    updateScrollState()
+    // Y también cuando el layout cambie (ej. al cargar datos)
+    const ro = new ResizeObserver(() => updateScrollState())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [updateScrollState, trabajos, alumnos])
 
   function scrollBy(delta: number) {
     const el = scrollRef.current
@@ -185,23 +197,35 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
           <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
             {trabajos.length} {trabajos.length === 1 ? 'rubro' : 'rubros'} · {sumaPesos}% · captura 0-100 por rubro
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <button
-              onClick={() => scrollBy(-COL_RUBRO_WIDTH * 2)}
-              disabled={scrollX <= 0}
-              style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: scrollX <= 0 ? '#f8fafc' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: scrollX <= 0 ? 'default' : 'pointer', color: scrollX <= 0 ? '#cbd5e1' : '#475569' }}
-              aria-label="Ver rubros anteriores"
-            >
-              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-            </button>
-            <button
-              onClick={() => scrollBy(COL_RUBRO_WIDTH * 2)}
-              disabled={scrollX >= maxScrollX - 1}
-              style={{ width: 26, height: 26, borderRadius: 7, border: '1px solid #e2e8f0', background: scrollX >= maxScrollX - 1 ? '#f8fafc' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: scrollX >= maxScrollX - 1 ? 'default' : 'pointer', color: scrollX >= maxScrollX - 1 ? '#cbd5e1' : '#475569' }}
-              aria-label="Ver más rubros"
-            >
-              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            {/* Flecha izquierda */}
+            {(() => {
+              const disabled = scrollX <= 0
+              return (
+                <button
+                  onClick={() => scrollBy(-COL_RUBRO_WIDTH * 2)}
+                  disabled={disabled}
+                  style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${disabled ? '#d1d5db' : '#111827'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', background: 'white', color: disabled ? '#d1d5db' : '#111827', transition: 'border-color 0.15s, color 0.15s', opacity: disabled ? 0.45 : 1 }}
+                  aria-label="Ver rubros anteriores"
+                >
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+              )
+            })()}
+            {/* Flecha derecha */}
+            {(() => {
+              const disabled = maxScrollX <= 0 || scrollX >= maxScrollX - 2
+              return (
+                <button
+                  onClick={() => scrollBy(COL_RUBRO_WIDTH * 2)}
+                  disabled={disabled}
+                  style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${disabled ? '#d1d5db' : '#111827'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', background: 'white', color: disabled ? '#d1d5db' : '#111827', transition: 'border-color 0.15s, color 0.15s', opacity: disabled ? 0.45 : 1 }}
+                  aria-label="Ver más rubros"
+                >
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                </button>
+              )
+            })()}
           </div>
         </div>
       )}
@@ -248,7 +272,7 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
                       <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
                         <CeldaNota
                           valor={valor}
-                          onGuardar={calif => onNotaChange(t.id, al.id, calif ?? 0)}
+                          onGuardar={calif => onNotaChange(t.id, al.id, calif)}
                           onNavegar={dir => handleNavegar(ai, ti, dir)}
                           cellRef={el => {
                             if (el) cellRefs.current.set(key(ai, ti), el)
