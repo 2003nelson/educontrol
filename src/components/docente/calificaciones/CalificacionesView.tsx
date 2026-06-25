@@ -104,8 +104,8 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
     }).catch(console.error)
   }, [docenteId, fetchDatos])
 
-  // calif: calificación 0-100 capturada en la celda. Se convierte a puntos (0-peso) para guardar.
-  function handleNotaChange(trabajoId: string, alumnoId: string, calif: number) {
+  // calif: calificación 0-100 capturada en la celda (null = celda vacía, no se guarda).
+  function handleNotaChange(trabajoId: string, alumnoId: string, calif: number | null) {
     let notasActualizadas: Map<string, number | null> = new Map()
     setNotas(prev => {
       const m = new Map(prev)
@@ -113,6 +113,8 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
       notasActualizadas = m
       return m
     })
+    // Si la celda se dejó vacía, no tocar la BD — mantener el valor previo o nulo
+    if (calif === null) return
     if (!docenteId || !plantelId) return
     const peso = trabajos.find(t => t.id === trabajoId)?.peso ?? 0
     const califClamp = Math.max(0, Math.min(100, calif))
@@ -164,8 +166,15 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
             <h1 style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ctx.asignatura_nombre}</h1>
             <p style={{ fontSize:'0.68rem', color:'#94a3b8', margin:0 }}>Grupo {ctx.grupo_numero} · {ctx.grupo_grado}° Sem · {PERIODO_LABEL[ctx.periodo]}</p>
           </div>
-          <button onClick={onAbrirRubros} style={{ display:'flex', alignItems:'center', gap:5, padding:'0.4rem 0.75rem', borderRadius:8, background:'#eff6ff', border:'1px solid #bfdbfe', color:'#2563eb', fontSize:'0.72rem', fontWeight:600, cursor:'pointer', flexShrink:0 }}>
-            <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          <button
+            onClick={onAbrirRubros}
+            style={{ display:'flex', alignItems:'center', gap:5, padding:'0 0.75rem', height:34, borderRadius:9, background:'#f4f5f7', border:'none', color:'#111827', fontSize:'0.75rem', fontWeight:600, cursor:'pointer', flexShrink:0, transition:'background 0.15s, color 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background='#e9eaec' }}
+            onMouseLeave={e => { e.currentTarget.style.background='#f4f5f7'; e.currentTarget.style.color='#111827' }}
+            onMouseDown={e => { e.currentTarget.style.background='#2563eb'; e.currentTarget.style.color='white' }}
+            onMouseUp={e => { e.currentTarget.style.background='#e9eaec'; e.currentTarget.style.color='#111827' }}
+          >
+            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
             Trabajos
           </button>
         </div>
@@ -195,17 +204,64 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         {/* Stats */}
         {!loading && alumnos.length > 0 && trabajos.length > 0 && (
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem', marginBottom:'1.125rem' }}>
-            {/* Promedio */}
-            <div style={{ background:'white', borderRadius:14, padding:'0.875rem 1rem', border:'1px solid #e8eaf0', display:'flex', alignItems:'center', gap:'0.75rem', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ width:40, height:40, borderRadius:12, background: promedio !== null ? bgNota(promedio) : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <svg width="17" height="17" fill="none" stroke={colorNota(promedio)} strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+
+            {/* Promedio + Descargar informe */}
+            <div style={{ background:'white', borderRadius:14, border:'1px solid #e8eaf0', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', display:'flex', flexDirection:'column' }}>
+              {/* Fila superior: icono + número */}
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.875rem 1rem 0.625rem' }}>
+                <div style={{ width:40, height:40, borderRadius:12, background: promedio !== null ? bgNota(promedio) : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <svg width="17" height="17" fill="none" stroke={colorNota(promedio)} strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div>
+                  <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Promedio</p>
+                  <p style={{ fontSize:'1.375rem', fontWeight:800, color:colorNota(promedio), margin:0, lineHeight:1, fontFamily:'Outfit, sans-serif' }}>{promedio ?? '—'}</p>
+                </div>
               </div>
-              <div>
-                <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Promedio</p>
-                <p style={{ fontSize:'1.375rem', fontWeight:800, color:colorNota(promedio), margin:0, lineHeight:1, fontFamily:'Outfit, sans-serif' }}>{promedio ?? '—'}</p>
+              {/* Separador */}
+              <div style={{ height:'1px', background:'#f0f0f5', margin:'0 1rem' }}/>
+              {/* Fila inferior: descargar informe */}
+              <div style={{ padding:'0.5rem 1rem 0.75rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
+                  <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', letterSpacing:'0.04em', textTransform:'uppercase' }}>Descargar informe</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                  {/* Excel */}
+                  <button title="Descargar Excel" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'background 0.12s, border-color 0.12s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#f0fdf4'; e.currentTarget.style.borderColor='#86efac' }}
+                    onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a"/>
+                      <path d="M7 8l3.5 4L7 16h2.5l2-2.8 2 2.8H16l-3.5-4L16 8h-2.5l-2 2.8L9.5 8H7z" fill="white"/>
+                    </svg>
+                  </button>
+                  {/* PDF */}
+                  <button title="Descargar PDF" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'background 0.12s, border-color 0.12s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#fef2f2'; e.currentTarget.style.borderColor='#fca5a5' }}
+                    onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#dc2626"/>
+                      <text x="4" y="15.5" fontSize="8" fontWeight="800" fill="white" fontFamily="system-ui,sans-serif">PDF</text>
+                    </svg>
+                  </button>
+                  {/* Word */}
+                  <button title="Descargar Word" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'background 0.12s, border-color 0.12s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#93c5fd' }}
+                    onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#2563eb"/>
+                      <path d="M5 8h1.5l1.8 6 1.8-6H12l1.8 6 1.8-6H17l-2.5 8h-1.8L11 10l-1.5 6H7.5L5 8z" fill="white"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-            {/* Aprobados */}
+
+            {/* Aprobados / Reprobados */}
             <div style={{ background:'white', borderRadius:14, padding:'0.875rem 1rem', border:'1px solid #e8eaf0', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
               <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 6px' }}>Resultado</p>
               <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:6 }}>
@@ -225,6 +281,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
                 <div style={{ height:'100%', width:`${alumnos.length > 0 && notasValidas.length > 0 ? (aprobados/alumnos.length)*100 : 0}%`, background:'linear-gradient(90deg,#16a34a,#22c55e)', borderRadius:9999, transition:'width 0.6s' }}/>
               </div>
             </div>
+
           </div>
         )}
 
