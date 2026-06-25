@@ -1,10 +1,8 @@
 // src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useDocente } from '@/contexts/DocenteContext'
-import HorarioAhoraWidget, { type ClaseActivaInfo } from '@/components/docente/HorarioAhoraWidget'
 import ConfirmarFechaView from '@/components/docente/grupos/ConfirmarFechaView'
 import AsistenciaView from '@/components/docente/grupos/AsistenciaView'
 import type { AsignaturaItem, GrupoAgrupado } from '@/components/docente/grupos/types'
@@ -331,8 +329,7 @@ type Vista =
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function GruposPage() {
   const { docente, loading, error } = useDocente()
-  const [vista, setVista]             = useState<Vista>({ tipo: 'grupos' })
-  const [claseActiva, setClaseActiva] = useState<ClaseActivaInfo | null>(null)
+  const [vista, setVista]           = useState<Vista>({ tipo: 'grupos' })
   const [completadas, setCompletadas] = useState<Set<string>>(new Set())
   const supabase = createClient()
 
@@ -533,39 +530,7 @@ export default function GruposPage() {
               {formatFechaHoy()}
             </p>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="btn-accion">
-              <span style={{ fontSize: '0.85rem' }}>📘</span>
-              Seguimiento
-            </span>
-            <Link href="/docente/horario" style={{ textDecoration: 'none' }}>
-              <span className="btn-accion horario-txt">
-                <span style={{ fontSize: '0.85rem' }}>⏰</span>
-                Recordatorio de clases
-              </span>
-              <span className="horario-ico">
-                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>⏰</span>
-              </span>
-            </Link>
-          </div>
         </div>
-
-        {/* ── Widget horario ── */}
-        {docente && (
-          <div>
-            <HorarioAhoraWidget
-              docenteId={docente.id}
-              nombre={docente.nombre_completo}
-              onClaseActiva={setClaseActiva}
-              asignaciones={docente.asignaciones.map(a => ({
-                asignatura_id: a.asignatura_id,
-                grupo_numero:  a.grupo_numero,
-                grupo_id:      a.grupo_id,
-              }))}
-            />
-          </div>
-        )}
 
         {/* ── Grid de grupos ── */}
         {grupos.length === 0 ? (
@@ -586,7 +551,7 @@ export default function GruposPage() {
             {grupos.map((grupo, idx) => {
               const completadasCount = grupo.asignaturas.filter(a => completadas.has(`${grupo.id}:${a.id}`)).length
               const todasCompletas   = grupo.asignaturas.length > 0 && completadasCount === grupo.asignaturas.length
-              const hayClaseAqui     = claseActiva?.grupo_id === grupo.id
+              const hayClaseAqui     = false // Se mantiene en false tras quitar el widget
               return (
                 <GrupoCard
                   key={grupo.id}
