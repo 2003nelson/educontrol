@@ -268,6 +268,30 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
                   <td style={{ position: 'sticky', left: 230, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderRight: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>{al.matricula}</td>
                   {trabajos.map((t, ti) => {
                     const valor = notas.get(`${t.id}:${al.id}`) ?? null
+                    const esAsistencia = !!t.es_asistencia
+
+                    if (esAsistencia) {
+                      // Celda de solo lectura — calculada del módulo de asistencia
+                      const aprobado = valor !== null && valor >= 60
+                      return (
+                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box', background: '#f8faff' }}
+                          title="Calculado automáticamente desde el módulo de asistencia">
+                          <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{
+                              width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              borderRadius: 6, fontSize: '0.8rem', fontWeight: 700,
+                              color: valor === null ? '#cbd5e1' : (aprobado ? '#16a34a' : '#dc2626'),
+                              background: valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
+                              padding: '4px 0',
+                            }}>
+                              {valor === null ? '—' : valor}
+                              <span style={{ fontSize: '0.55rem', fontWeight: 600, color: '#93c5fd', marginTop: 1, letterSpacing: '0.02em' }}>AUTO</span>
+                            </div>
+                          </div>
+                        </td>
+                      )
+                    }
+
                     return (
                       <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
                         <CeldaNota

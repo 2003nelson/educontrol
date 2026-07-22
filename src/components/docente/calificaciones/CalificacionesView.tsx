@@ -64,24 +64,26 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
 
   const fetchDatos = useCallback(() => {
     if (!docenteId || !plantelId) return Promise.resolve(null)
-    type TrabajoRaw = { id: string; nombre: string; peso: number; orden: number }
+    type TrabajoRaw = { id: string; nombre: string; peso: number; orden: number; es_asistencia?: boolean }
     return Promise.resolve(
       supabase.from('calificacion_rubros')
-        .select('id, nombre, peso, orden')
+        .select('id, nombre, peso, orden, es_asistencia')
         .eq('grupo_id', ctx.grupo_id).eq('asignatura_id', ctx.asignatura_id)
         .eq('periodo', ctx.periodo).eq('docente_id', docenteId).order('orden')
     ).then(async ({ data: tData }) => {
       const ts = (tData ?? []) as TrabajoRaw[]
       const { data: alumnosData } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: ctx.grupo_id })
+      const alumnos = (alumnosData ?? []) as Alumno[]
       const tIds = ts.map(t => t.id)
       const pesoMap = new Map(ts.map(t => [t.id, t.peso]))
       const notasMapa = new Map<string, number | null>()
+
+      // ── Calificaciones detalle (rubros normales) ──
       if (tIds.length > 0) {
         const { data: nData } = await supabase
           .from('calificaciones_detalle').select('actividad_id, estudiante_id, puntos')
           .in('actividad_id', tIds)
         for (const n of (nData ?? [])) {
-          // Convertir puntos absolutos (0-peso) a calificación 0-100 para la tabla
           const peso = pesoMap.get(n.actividad_id) ?? 0
           const calif = peso > 0 && n.puntos !== null
             ? Math.round((Math.min(n.puntos, peso) / peso) * 100)
@@ -89,7 +91,42 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
           notasMapa.set(`${n.actividad_id}:${n.estudiante_id}`, calif)
         }
       }
-      return { trabajos: ts, alumnos: (alumnosData ?? []) as Alumno[], notasMapa }
+
+      // ── Asistencia: calcular desde registros del módulo de asistencia ──
+      // Solo los días en que ESTE docente hizo lista para ESTE grupo (días únicos)
+      // ── Asistencia: calcular desde registros del módulo de asistencia ──
+      // estado (text): valor 'presente' cuenta como asistencia
+      const ESTADO_PRESENTE = 'presente'
+      const rubroAsistencia = ts.find(t => t.es_asistencia || t.nombre?.toLowerCase() === 'asistencia')
+      if (rubroAsistencia && alumnos.length > 0) {
+        const { data: asistData } = await supabase
+          .from('asistencias')
+          .select('estudiante_id, fecha, estado')
+          .eq('docente_id', docenteId)
+          .eq('grupo_id', ctx.grupo_id)
+
+        if (asistData && asistData.length > 0) {
+          // Días únicos en que el docente hizo lista
+          const diasUnicos = new Set(asistData.map(a => a.fecha as string)).size
+
+          if (diasUnicos > 0) {
+            // Contar días con estado === 'presente' por alumno
+            const presenciasPorAlumno = new Map<string, number>()
+            for (const a of asistData) {
+              if ((a.estado as string)?.toLowerCase() === ESTADO_PRESENTE) {
+                presenciasPorAlumno.set(a.estudiante_id, (presenciasPorAlumno.get(a.estudiante_id) ?? 0) + 1)
+              }
+            }
+            for (const al of alumnos) {
+              const presencias = presenciasPorAlumno.get(al.id) ?? 0
+              const califAsist = Math.round((presencias / diasUnicos) * 100)
+              notasMapa.set(`${rubroAsistencia.id}:${al.id}`, califAsist)
+            }
+          }
+        }
+      }
+
+      return { trabajos: ts, alumnos, notasMapa }
     })
   }, [docenteId, plantelId, ctx, supabase])
 

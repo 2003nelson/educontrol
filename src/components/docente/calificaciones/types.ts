@@ -3,14 +3,15 @@
 export interface Trabajo {
   id: string
   nombre: string
-  peso: number   // % que vale — la barra va de 0 a este valor
+  peso: number
   orden: number
+  es_asistencia?: boolean  // true = rubro fijo calculado del módulo de asistencia
 }
 
 export interface NotaAlumno {
   trabajo_id: string
   estudiante_id: string
-  puntos: number | null   // de 0 a peso del trabajo
+  puntos: number | null
 }
 
 export interface Alumno {
