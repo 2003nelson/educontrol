@@ -7,21 +7,59 @@ import type { AsignaturaItem } from './ConfirmarFechaView'
 type Alumno     = { id: string; nombre_completo: string; matricula?: string }
 type Asistencia = Record<string, 'P' | 'A' | 'J' | 'R'>
 
+const ESTADOS = ['P', 'A', 'J', 'R'] as const
+type Estado = typeof ESTADOS[number]
+
+const ESTADO_CFG: Record<Estado, { bg: string; color: string; border: string; bgActivo: string; label: string; labelCorto: string }> = {
+  P: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0', bgActivo: '#dcfce7', label: 'Presente',    labelCorto: 'Presente' },
+  A: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0', bgActivo: '#fee2e2', label: 'Ausente',     labelCorto: 'Ausente'  },
+  J: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0', bgActivo: '#fef3c7', label: 'Justificada', labelCorto: 'Justif.'  },
+  R: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0', bgActivo: '#f3e8ff', label: 'Retardo',     labelCorto: 'Retardo'  },
+}
+const ESTADO_COLOR: Record<Estado, string> = { P: '#16a34a', A: '#dc2626', J: '#d97706', R: '#7c3aed' }
+const ESTADO_BORDER_ACTIVO: Record<Estado, string> = { P: '#86efac', A: '#fca5a5', J: '#fcd34d', R: '#c4b5fd' }
+
 function formatFechaHoy() {
   return new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 }
-
 function formatFechaISO(fecha?: string) {
   if (fecha) return fecha
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
 }
-
 function formatFechaLegible(iso: string) {
   const [y, m, d] = iso.split('-')
   return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('es-MX', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
+}
+
+// ── Skeleton row ─────────────────────────────────────────────────────────────
+function SkeletonRow({ idx }: { idx: number }) {
+  return (
+    <tr style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
+      <td style={{ padding: '0.625rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 20, height: 14, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
+      </td>
+      <td style={{ padding: '0.625rem 0.75rem', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e5e7eb', flexShrink: 0, animation: 'shimmer 1.4s infinite' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ width: '70%', height: 12, borderRadius: 4, background: '#e5e7eb', marginBottom: 5, animation: 'shimmer 1.4s infinite' }} />
+            <div style={{ width: '45%', height: 10, borderRadius: 4, background: '#f1f5f9', animation: 'shimmer 1.4s infinite' }} />
+          </div>
+        </div>
+      </td>
+      <td style={{ padding: '0.625rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 72, height: 12, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
+      </td>
+      {ESTADOS.map(e => (
+        <td key={e} style={{ padding: '0.375rem 0.25rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
+        </td>
+      ))}
+    </tr>
+  )
 }
 
 export default function AsistenciaView({
@@ -57,7 +95,7 @@ export default function AsistenciaView({
           .eq('fecha', fechaObjetivo)
         const init: Asistencia = {}
         data.forEach((a: Alumno) => { init[a.id] = 'P' })
-        const estadoInverso: Record<string, 'P' | 'A' | 'J' | 'R'> = {
+        const estadoInverso: Record<string, Estado> = {
           presente: 'P', falta: 'A', justificada: 'J', retardo: 'R',
         }
         if (prevData) {
@@ -72,13 +110,13 @@ export default function AsistenciaView({
     cargar()
   }, [grupoId, asignatura.id, fechaObjetivo, supabase])
 
-  function marcarTodos(estado: 'P' | 'A' | 'J' | 'R') {
+  function marcarTodos(estado: Estado) {
     const nuevo: Asistencia = {}
     alumnos.forEach(a => { nuevo[a.id] = estado })
     setAsistencia(nuevo)
   }
 
-  function marcar(id: string, estado: 'P' | 'A' | 'J' | 'R') {
+  function marcar(id: string, estado: Estado) {
     setAsistencia(prev => ({ ...prev, [id]: estado }))
   }
 
@@ -90,9 +128,7 @@ export default function AsistenciaView({
       const { data: ud, error: udError } = await supabase
         .from('usuarios').select('plantel_id, id').eq('auth_id', user.id).single()
       if (udError || !ud?.plantel_id || !ud?.id) throw new Error('No se pudo obtener datos del docente')
-      const estadoMap: Record<'P' | 'A' | 'J' | 'R', string> = {
-        P: 'presente', A: 'falta', J: 'justificada', R: 'retardo',
-      }
+      const estadoMap: Record<Estado, string> = { P: 'presente', A: 'falta', J: 'justificada', R: 'retardo' }
       const registros = alumnos.map(a => ({
         estudiante_id: a.id,
         grupo_id:      grupoId,
@@ -123,34 +159,30 @@ export default function AsistenciaView({
   const justif    = Object.values(asistencia).filter(v => v === 'J').length
   const retardos  = Object.values(asistencia).filter(v => v === 'R').length
 
-  const BtnEstado = ({ estado, alumnoId }: { estado: 'P' | 'A' | 'J' | 'R'; alumnoId: string }) => {
-    const activo = asistencia[alumnoId] === estado
-    const cfg = {
-      P: { bg: activo ? '#dcfce7' : '#f8fafc', color: activo ? '#16a34a' : '#94a3b8', border: activo ? '#86efac' : '#e2e8f0' },
-      A: { bg: activo ? '#fee2e2' : '#f8fafc', color: activo ? '#dc2626' : '#94a3b8', border: activo ? '#fca5a5' : '#e2e8f0' },
-      J: { bg: activo ? '#fef3c7' : '#f8fafc', color: activo ? '#d97706' : '#94a3b8', border: activo ? '#fcd34d' : '#e2e8f0' },
-      R: { bg: activo ? '#f3e8ff' : '#f8fafc', color: activo ? '#7c3aed' : '#94a3b8', border: activo ? '#c4b5fd' : '#e2e8f0' },
-    }[estado]
-    return (
-      <button onClick={() => marcar(alumnoId, estado)}
-        style={{ width: 36, height: 36, borderRadius: 10, background: cfg.bg, color: cfg.color, border: `1.5px solid ${cfg.border}`, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {estado}
-      </button>
-    )
-  }
-
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4fa', padding: '1.25rem 0.75rem 2rem' }}>
       <style>{`
+        @keyframes shimmer {
+          0%   { opacity: 1 }
+          50%  { opacity: 0.45 }
+          100% { opacity: 1 }
+        }
         .asist-layout { display: flex; flex-direction: column; gap: 1rem; }
         @media (min-width: 768px) {
-          .asist-layout { flex-direction: row; align-items: flex-start; gap: 1.25rem; padding: 0; }
+          .asist-layout { flex-direction: row; align-items: flex-start; gap: 1.25rem; }
           .asist-sidebar { width: 240px; flex-shrink: 0; position: sticky; top: 80px; }
           .asist-main    { flex: 1; min-width: 0; }
-          .asist-wrap    { padding: 1.5rem 1.25rem 3rem; }
         }
         .guardar-mobile { display: block; }
         @media (min-width: 768px) { .guardar-mobile { display: none; } }
+        .asist-table-wrap { overflow-x: auto; }
+        .asist-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        /* En móvil las columnas de nombre se acortan */
+        @media (max-width: 639px) {
+          .col-nombre { max-width: 140px; }
+          .col-matricula { display: none; }
+          .th-matricula { display: none; }
+        }
       `}</style>
 
       {/* Header */}
@@ -177,9 +209,11 @@ export default function AsistenciaView({
 
       <div className="asist-layout">
 
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <div className="asist-sidebar">
           <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e5ea', padding: '1.125rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+
+            {/* Resumen */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.75rem' }}>Resumen</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -200,79 +234,172 @@ export default function AsistenciaView({
               </div>
             </div>
 
+            {/* Marcar todos */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.375rem' }}>Marcar todos</p>
               <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.625rem', lineHeight: 1.4 }}>
                 Pulsa un botón para marcar a <strong style={{ color: '#64748b' }}>todos los alumnos</strong> con ese estado.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {(['P', 'A', 'J', 'R'] as const).map(e => {
-                  const cfg = {
-                    P: { bg: '#dcfce7', color: '#16a34a', border: '#86efac', label: 'Presente' },
-                    A: { bg: '#fee2e2', color: '#dc2626', border: '#fca5a5', label: 'Ausente' },
-                    J: { bg: '#fef3c7', color: '#d97706', border: '#fcd34d', label: 'Justif.' },
-                    R: { bg: '#f3e8ff', color: '#7c3aed', border: '#c4b5fd', label: 'Retardo' },
-                  }[e]
+                {ESTADOS.map(e => {
+                  const cfg = ESTADO_CFG[e]
                   return (
                     <button key={e} onClick={() => marcarTodos(e)}
-                      style={{ padding: '0.5rem', borderRadius: 10, background: cfg.bg, color: cfg.color, border: `1.5px solid ${cfg.border}`, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      style={{ padding: '0.5rem', borderRadius: 10, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'opacity 0.12s' }}
+                      onMouseEnter={e2 => (e2.currentTarget.style.opacity = '0.8')}
+                      onMouseLeave={e2 => (e2.currentTarget.style.opacity = '1')}>
                       <span style={{ fontSize: '1rem' }}>{e}</span>
-                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{cfg.label}</span>
+                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{cfg.labelCorto}</span>
                     </button>
                   )
                 })}
               </div>
             </div>
 
+            {/* Guardar desktop */}
             {alumnos.length > 0 && (
               <button onClick={guardar} disabled={guardando}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.85rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
+                style={{ width: '100%', padding: '0.75rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.85rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
                 {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
               </button>
             )}
           </div>
         </div>
 
-        {/* Lista alumnos */}
+        {/* ── Tabla principal ── */}
         <div className="asist-main">
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-              <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"/>
-            </div>
-          ) : alumnos.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', fontSize: '0.875rem', color: '#94a3b8' }}>
-              No hay alumnos en este grupo
-            </div>
-          ) : (
-            <div style={{ background: 'white', borderRadius: 14, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-              {alumnos.map((alumno, idx) => (
-                <div key={alumno.id}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: idx < alumnos.length - 1 ? '1px solid #f1f5f9' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
-                      {alumno.nombre_completo.charAt(0).toUpperCase()}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a5f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alumno.nombre_completo}</p>
-                      {alumno.matricula && <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>{alumno.matricula}</p>}
-                    </div>
+          <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+
+            {/* Info bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
+                {loading ? '—' : `${alumnos.length} alumno${alumnos.length !== 1 ? 's' : ''}`}
+              </span>
+              {/* Leyenda de colores */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                {ESTADOS.map(e => (
+                  <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: ESTADO_COLOR[e] }}/>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748b' }}>{ESTADO_CFG[e].labelCorto}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                    <BtnEstado estado="P" alumnoId={alumno.id}/>
-                    <BtnEstado estado="A" alumnoId={alumno.id}/>
-                    <BtnEstado estado="J" alumnoId={alumno.id}/>
-                    <BtnEstado estado="R" alumnoId={alumno.id}/>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
+
+            <div className="asist-table-wrap">
+              <table className="asist-table">
+                <colgroup>
+                  <col style={{ width: 40 }} />
+                  <col style={{ minWidth: 160 }} />
+                  <col className="th-matricula" style={{ width: 100 }} />
+                  {ESTADOS.map(e => <col key={e} style={{ width: 52 }} />)}
+                </colgroup>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                    <th style={{ padding: '0.625rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>#</th>
+                    <th style={{ padding: '0.625rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Alumno</th>
+                    <th className="th-matricula" style={{ padding: '0.625rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderRight: '1.5px solid #e2e8f0' }}>Matrícula</th>
+                    {ESTADOS.map(e => (
+                      <th key={e} style={{ padding: '0.5rem 0.25rem', fontSize: '0.66rem', fontWeight: 700, color: ESTADO_COLOR[e], textAlign: 'center', borderLeft: '1px solid #eef1f6' }}>
+                        {e}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading
+                    ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} idx={i} />)
+                    : alumnos.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', fontSize: '0.875rem', color: '#94a3b8' }}>
+                          No hay alumnos en este grupo
+                        </td>
+                      </tr>
+                    )
+                    : alumnos.map((alumno, idx) => {
+                        const estadoActual = asistencia[alumno.id] ?? 'P'
+                        const par = idx % 2 === 1
+                        return (
+                          <tr key={alumno.id}
+                            style={{ background: par ? '#fafbfc' : 'white' }}
+                            onMouseEnter={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = '#f0f7ff' }}
+                            onMouseLeave={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = par ? '#fafbfc' : 'white' }}>
+
+                            {/* # */}
+                            <td style={{ padding: '0.5rem 0.375rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                              {idx + 1}
+                            </td>
+
+                            {/* Nombre */}
+                            <td className="col-nombre" style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.75rem' }}>
+                                  {alumno.nombre_completo.charAt(0).toUpperCase()}
+                                </div>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {alumno.nombre_completo}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Matrícula */}
+                            <td className="col-matricula" style={{ padding: '0.5rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, borderRight: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                              {alumno.matricula ?? '—'}
+                            </td>
+
+                            {/* Botones P / A / J / R */}
+                            {ESTADOS.map(e => {
+                              const activo = estadoActual === e
+                              return (
+                                <td key={e} style={{ padding: '0.375rem 0.25rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                                  <button
+                                    onClick={() => marcar(alumno.id, e)}
+                                    style={{
+                                      width: 36, height: 36, borderRadius: 10,
+                                      background: activo ? ESTADO_CFG[e].bgActivo : 'transparent',
+                                      color: activo ? ESTADO_COLOR[e] : '#d1d5db',
+                                      border: `1.5px solid ${activo ? ESTADO_BORDER_ACTIVO[e] : 'transparent'}`,
+                                      fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                                      transition: 'all 0.1s',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
+                                    onMouseEnter={ev => {
+                                      if (!activo) {
+                                        ev.currentTarget.style.background = ESTADO_CFG[e].bgActivo
+                                        ev.currentTarget.style.color = ESTADO_COLOR[e]
+                                        ev.currentTarget.style.borderColor = ESTADO_BORDER_ACTIVO[e]
+                                        ev.currentTarget.style.opacity = '0.6'
+                                      }
+                                    }}
+                                    onMouseLeave={ev => {
+                                      if (!activo) {
+                                        ev.currentTarget.style.background = 'transparent'
+                                        ev.currentTarget.style.color = '#d1d5db'
+                                        ev.currentTarget.style.borderColor = 'transparent'
+                                        ev.currentTarget.style.opacity = '1'
+                                      }
+                                    }}
+                                  >
+                                    {e}
+                                  </button>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           {/* Guardar móvil */}
           {alumnos.length > 0 && (
-            <div style={{ marginTop: '1rem' }}>
-              <button className="guardar-mobile" onClick={guardar} disabled={guardando}
-                style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg, #1e6fcc, #155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
+            <div style={{ marginTop: '1rem' }} className="guardar-mobile">
+              <button onClick={guardar} disabled={guardando}
+                style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
                 {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
               </button>
             </div>

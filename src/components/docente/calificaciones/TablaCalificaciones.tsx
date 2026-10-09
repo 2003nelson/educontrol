@@ -139,6 +139,13 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
   notas: Map<string, number | null>
   onNotaChange: (trabajoId: string, alumnoId: string, calif: number | null) => void
 }) {
+  // Asistencia siempre primera columna
+  const trabajosOrdenados = [...trabajos].sort((a, b) => {
+    if (a.es_asistencia && !b.es_asistencia) return -1
+    if (!a.es_asistencia && b.es_asistencia) return 1
+    return a.orden - b.orden
+  })
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map())
   const [scrollX, setScrollX] = useState(0)
@@ -183,19 +190,19 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
     if (dir === 'up') r = Math.max(0, r - 1)
     else if (dir === 'down' || dir === 'enter') r = Math.min(alumnos.length - 1, r + 1)
     else if (dir === 'left') c = Math.max(0, c - 1)
-    else if (dir === 'right') c = Math.min(trabajos.length - 1, c + 1)
+    else if (dir === 'right') c = Math.min(trabajosOrdenados.length - 1, c + 1)
     requestAnimationFrame(() => focusCell(r, c))
   }
 
-  const sumaPesos = trabajos.reduce((s, t) => s + t.peso, 0)
+  const sumaPesos = trabajosOrdenados.reduce((s, t) => s + t.peso, 0)
 
   return (
     <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
       {/* Barra superior con flechas de navegación de rubros */}
-      {trabajos.length > 0 && (
+      {trabajosOrdenados.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
-            {trabajos.length} {trabajos.length === 1 ? 'rubro' : 'rubros'} · {sumaPesos}% · captura 0-100 por rubro
+            {trabajosOrdenados.length} {trabajosOrdenados.length === 1 ? 'rubro' : 'rubros'} · {sumaPesos}% · captura 0-100 por rubro
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             {/* Flecha izquierda */}
@@ -231,12 +238,12 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
       )}
 
       <div style={{ overflowX: 'auto' }} ref={scrollRef} onScroll={updateScrollState}>
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: 380 + trabajos.length * COL_RUBRO_WIDTH + 70 }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: 380 + trabajosOrdenados.length * COL_RUBRO_WIDTH + 70 }}>
           <colgroup>
             <col style={{ width: 40 }} />
             <col style={{ width: 190 }} />
             <col style={{ width: 90 }} />
-            {trabajos.map(t => <col key={t.id} style={{ width: COL_RUBRO_WIDTH }} />)}
+            {trabajosOrdenados.map(t => <col key={t.id} style={{ width: COL_RUBRO_WIDTH }} />)}
             <col style={{ width: 72 }} />
           </colgroup>
           <thead>
@@ -244,10 +251,10 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
               <th style={{ position: 'sticky', left: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', borderBottom: '1.5px solid #e2e8f0' }}>#</th>
               <th style={{ position: 'sticky', left: 40, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Alumno</th>
               <th style={{ position: 'sticky', left: 230, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
-              {trabajos.map(t => (
-                <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
+              {trabajosOrdenados.map(t => (
+                <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: t.es_asistencia ? '#d1d5db' : '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: t.es_asistencia ? '#374151' : '#475569', textAlign: 'center', borderLeft: t.es_asistencia ? '1px solid #9ca3af' : '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.nombre}>{t.nombre}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
+                  <div style={{ fontSize: '0.6rem', color: t.es_asistencia ? '#6b7280' : '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
                 </th>
               ))}
               <th style={{ position: 'sticky', right: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Final</th>
@@ -255,7 +262,7 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
           </thead>
           <tbody>
             {alumnos.map((al, ai) => {
-              const notaFinal = calcNota(trabajos, al.id, notas)
+              const notaFinal = calcNota(trabajosOrdenados, al.id, notas)
               const par = ai % 2 === 1
               return (
                 <tr key={al.id} style={{ background: par ? '#fcfdfe' : 'white' }}
@@ -266,7 +273,7 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
                     {al.nombre_completo}
                   </td>
                   <td style={{ position: 'sticky', left: 230, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderRight: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>{al.matricula}</td>
-                  {trabajos.map((t, ti) => {
+                  {trabajosOrdenados.map((t, ti) => {
                     const valor = notas.get(`${t.id}:${al.id}`) ?? null
                     const esAsistencia = !!t.es_asistencia
 
@@ -274,14 +281,14 @@ export default function TablaCalificaciones({ alumnos, trabajos, notas, onNotaCh
                       // Celda de solo lectura — calculada del módulo de asistencia
                       const aprobado = valor !== null && valor >= 60
                       return (
-                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box', background: '#f8faff' }}
+                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box', background: '#e5e7eb' }}
                           title="Calculado automáticamente desde el módulo de asistencia">
                           <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div style={{
                               width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                               borderRadius: 6, fontSize: '0.8rem', fontWeight: 700,
-                              color: valor === null ? '#cbd5e1' : (aprobado ? '#16a34a' : '#dc2626'),
-                              background: valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
+                              color: valor === null ? '#9ca3af' : (aprobado ? '#16a34a' : '#dc2626'),
+                              background: valor === null ? 'transparent' : (aprobado ? '#dcfce7' : '#fee2e2'),
                               padding: '4px 0',
                             }}>
                               {valor === null ? '—' : valor}
