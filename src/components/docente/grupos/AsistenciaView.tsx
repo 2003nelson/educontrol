@@ -78,8 +78,9 @@ export default function AsistenciaView({
   const [guardando, setGuardando]   = useState(false)
   const [guardado, setGuardado]     = useState(false)
 
-  const fechaObjetivo = formatFechaISO(fechaEditar)
-  const esEdicion     = !!fechaEditar
+  const fechaObjetivo  = formatFechaISO(fechaEditar)
+  const esEdicion      = !!fechaEditar
+  const [masOpciones, setMasOpciones] = useState(false)
 
   useEffect(() => {
     async function cargar() {
@@ -177,6 +178,17 @@ export default function AsistenciaView({
         @media (min-width: 768px) { .guardar-mobile { display: none; } }
         .asist-table-wrap { overflow-x: auto; }
         .asist-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        /* Marcar todos: desktop muestra grid, móvil muestra botones */
+        .marcar-desktop { display: grid !important; }
+        .marcar-mobile  { display: none !important; }
+        @media (max-width: 767px) {
+          .marcar-desktop { display: none !important; }
+          .marcar-mobile  { display: flex !important; }
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         /* En móvil las columnas de nombre se acortan */
         @media (max-width: 639px) {
           .col-nombre { max-width: 140px; }
@@ -240,7 +252,9 @@ export default function AsistenciaView({
               <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.625rem', lineHeight: 1.4 }}>
                 Pulsa un botón para marcar a <strong style={{ color: '#64748b' }}>todos los alumnos</strong> con ese estado.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+
+              {/* Desktop: grid 2x2 normal */}
+              <div className="marcar-desktop" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {ESTADOS.map(e => {
                   const cfg = ESTADO_CFG[e]
                   return (
@@ -253,6 +267,47 @@ export default function AsistenciaView({
                     </button>
                   )
                 })}
+              </div>
+
+              {/* Móvil: botón principal P + más opciones */}
+              <div className="marcar-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0.5rem' }}>
+                {/* Botón principal — Marcar todos como Presente */}
+                <button onClick={() => { marcarTodos('P'); setMasOpciones(false) }}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 12, background: '#dcfce7', color: '#16a34a', border: '1.5px solid #86efac', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                  <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  Marcar todos como Presente
+                </button>
+
+                {/* Botón más opciones */}
+                <button onClick={() => setMasOpciones(v => !v)}
+                  style={{ width: '100%', padding: '0.625rem 1rem', borderRadius: 12, background: masOpciones ? '#f1f5f9' : 'white', color: '#475569', border: '1.5px solid #e2e8f0', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'background 0.15s' }}>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transform: masOpciones ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                  {masOpciones ? 'Ocultar opciones' : 'Más opciones'}
+                </button>
+
+                {/* Tres opciones adicionales — desplegable */}
+                {masOpciones && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', animation: 'slideDown 0.18s ease' }}>
+                    {(['A', 'J', 'R'] as const).map(e => {
+                      const cfg = ESTADO_CFG[e]
+                      const labels: Record<string, string> = { A: 'Marcar todos como Ausente', J: 'Marcar todos como Justificada', R: 'Marcar todos como Retardo' }
+                      return (
+                        <button key={e} onClick={() => { marcarTodos(e); setMasOpciones(false) }}
+                          style={{ width: '100%', padding: '0.625rem 1rem', borderRadius: 12, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.625rem', transition: 'opacity 0.12s' }}
+                          onMouseEnter={ev => (ev.currentTarget.style.opacity = '0.85')}
+                          onMouseLeave={ev => (ev.currentTarget.style.opacity = '1')}>
+                          <span style={{ width: 28, height: 28, borderRadius: 8, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0, border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}` }}>{e}</span>
+                          {labels[e]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
