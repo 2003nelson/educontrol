@@ -143,6 +143,7 @@ export default function TablaCalificaciones({
   const [editandoObsId, setEditandoObsId] = useState<string | null>(null)
   const [textoObsTemp, setTextoObsTemp] = useState<string>('')
   const [guardandoObsId, setGuardandoObsId] = useState<string | null>(null)
+  const [obsContraido, setObsContraido] = useState<boolean>(false)
 
   const handleIniciarEdicionObs = (alumnoId: string) => {
     setEditandoObsId(alumnoId)
@@ -190,7 +191,7 @@ export default function TablaCalificaciones({
     const ro = new ResizeObserver(() => updateScrollState())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [updateScrollState, trabajos, alumnos])
+  }, [updateScrollState, trabajos, alumnos, obsContraido])
 
   function scrollBy(delta: number) {
     const el = scrollRef.current
@@ -215,6 +216,9 @@ export default function TablaCalificaciones({
   }
 
   const sumaPesos = trabajosOrdenados.reduce((s, t) => s + t.peso, 0)
+  const obsWidth = obsContraido ? 88 : 280
+  const matLeft = 280
+  const obsLeft = matLeft + 100 // 380
 
   return (
     <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
@@ -255,12 +259,12 @@ export default function TablaCalificaciones({
       )}
 
       <div style={{ overflowX: 'auto' }} ref={scrollRef} onScroll={updateScrollState}>
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: 660 + trabajosOrdenados.length * COL_RUBRO_WIDTH + 72 }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: (obsLeft + obsWidth + 72) + trabajosOrdenados.length * COL_RUBRO_WIDTH }}>
           <colgroup>
             <col style={{ width: 40 }} />
             <col style={{ width: 240 }} />
             <col style={{ width: 100 }} />
-            <col style={{ width: 280 }} />
+            <col style={{ width: obsWidth }} />
             {trabajosOrdenados.map(t => <col key={t.id} style={{ width: COL_RUBRO_WIDTH }} />)}
             <col style={{ width: 72 }} />
           </colgroup>
@@ -268,15 +272,42 @@ export default function TablaCalificaciones({
             <tr>
               <th style={{ position: 'sticky', left: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1.5px solid #e2e8f0' }}>#</th>
               <th style={{ position: 'sticky', left: 40, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Alumno</th>
-              <th style={{ position: 'sticky', left: 280, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
+              <th style={{ position: 'sticky', left: matLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
               
-              {/* TÍTULO DE OBSERVACIONES UNIFICADO CON EL COLOR NEUTRO DE LAS DEMÁS FILAS */}
-              <th style={{ position: 'sticky', left: 380, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Observaciones</th>
+              {/* CABECERA OBSERVACIONES CON ANCHO Y MARGENES AJUSTADOS */}
+              <th style={{ position: 'sticky', left: obsLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: obsContraido ? '0.5rem 0.25rem' : '0.5rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
+                {obsContraido ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                    <button
+                      onClick={() => setObsContraido(false)}
+                      title="Expandir observaciones"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, color: '#2563eb', padding: '2px 4px', fontSize: '0.63rem', fontWeight: 700 }}
+                    >
+                      <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                      <span>Expandir</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Observaciones</span>
+                    <button
+                      onClick={() => setObsContraido(true)}
+                      title="Contraer observaciones"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2, color: '#64748b', padding: '2px 4px', fontSize: '0.65rem', fontWeight: 600 }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#2563eb'}
+                      onMouseLeave={e => e.currentTarget.style.color = '#64748b'}
+                    >
+                      <span>Contraer</span>
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                  </div>
+                )}
+              </th>
 
               {trabajosOrdenados.map(t => (
-                <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: t.es_asistencia ? '#d1d5db' : '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: t.es_asistencia ? '#374151' : '#475569', textAlign: 'center', borderLeft: t.es_asistencia ? '1px solid #9ca3af' : '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
+                <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.nombre}>{t.nombre}</div>
-                  <div style={{ fontSize: '0.6rem', color: t.es_asistencia ? '#6b7280' : '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
+                  <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
                 </th>
               ))}
               <th style={{ position: 'sticky', right: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Final</th>
@@ -301,22 +332,27 @@ export default function TablaCalificaciones({
                     {al.nombre_completo}
                   </td>
                   
-                  <td style={{ position: 'sticky', left: 280, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
+                  <td style={{ position: 'sticky', left: matLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
 
-                  {/* COLUMNA OBSERVACIONES */}
+                  {/* CELDA OBSERVACIONES */}
                   <td style={{
-                    position: 'sticky', left: 380, zIndex: 1,
-                    background: tieneObs && !estaEditando ? '#fefce8' : (par ? '#fcfdfe' : 'white'),
-                    borderLeft: tieneObs && !estaEditando ? '3px solid #facc15' : 'none',
+                    position: 'sticky', left: obsLeft, zIndex: 1,
+                    background: !obsContraido && tieneObs && !estaEditando ? '#fefce8' : (par ? '#fcfdfe' : 'white'),
+                    borderLeft: !obsContraido && tieneObs && !estaEditando ? '3px solid #facc15' : 'none',
                     borderRight: '1.5px solid #e2e8f0',
                     borderBottom: '1px solid #eef1f6',
-                    padding: '0.5rem 0.75rem',
+                    padding: obsContraido ? '0.5rem 0.2rem' : '0.5rem 0.75rem',
                     boxSizing: 'border-box',
                     verticalAlign: 'middle',
-                    width: 280,
-                    maxWidth: 280
+                    width: obsWidth,
+                    maxWidth: obsWidth,
+                    textAlign: 'center'
                   }}>
-                    {estaEditando ? (
+                    {obsContraido ? (
+                      <span title={tieneObs ? obsActual : 'Sin observación'} style={{ fontSize: '0.75rem', color: tieneObs ? '#ca8a04' : '#cbd5e1', fontWeight: 700 }}>
+                        {tieneObs ? '•' : '—'}
+                      </span>
+                    ) : estaEditando ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
                         <textarea
                           value={textoObsTemp}
@@ -410,14 +446,14 @@ export default function TablaCalificaciones({
                     if (esAsistencia) {
                       const aprobado = valor !== null && valor >= 60
                       return (
-                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box', background: '#e5e7eb' }}
+                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}
                           title="Calculado automáticamente desde el módulo de asistencia">
                           <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div style={{
                               width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                               borderRadius: 6, fontSize: '0.8rem', fontWeight: 700,
                               color: valor === null ? '#9ca3af' : (aprobado ? '#16a34a' : '#dc2626'),
-                              background: valor === null ? 'transparent' : (aprobado ? '#dcfce7' : '#fee2e2'),
+                              background: valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
                               padding: '4px 0',
                             }}>
                               {valor === null ? '—' : valor}

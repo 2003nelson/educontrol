@@ -40,7 +40,6 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
       onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow='0 12px 32px rgba(107,114,128,0.35)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform='translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow='0 6px 20px rgba(107,114,128,0.25)' }}>
 
-      {/* Parte color — clickeable → navega a asignaturas */}
       <div
         className="cal-card-top"
         onClick={() => onNavegar({ tipo:'asignaturas', grupo })}
@@ -60,10 +59,8 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
         </div>
       </div>
 
-      {/* Parte blanca */}
       <div style={{ background:'white', borderTop:'1px solid #f0f0f5' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.75rem 1rem' }}>
-          {/* Dots + toggle */}
           <button
             onClick={() => setAsigAbiertas(v => !v)}
             style={{ display:'flex', alignItems:'center', gap:'0.5rem', background:'none', border:'none', cursor:'pointer', padding:'4px 8px', borderRadius:8, transition:'background 0.15s' }}
@@ -83,7 +80,6 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
             </span>
           </button>
 
-          {/* Ir a asignaturas */}
           <button
             onClick={() => onNavegar({ tipo:'asignaturas', grupo })}
             style={{ display:'flex', alignItems:'center', gap:'0.3rem', background:'none', border:'none', cursor:'pointer', padding:'4px 2px', transition:'opacity 0.15s' }}
@@ -94,7 +90,6 @@ function GrupoCardCal({ grupo, idx, onNavegar }: {
           </button>
         </div>
 
-        {/* Desplegable de asignaturas */}
         {asigAbiertas && (
           <div style={{ borderTop:'1px solid #f0f0f5', padding:'0.5rem 1rem 0.75rem', display:'flex', flexDirection:'column', gap:'0.375rem', animation:'asigIn 0.2s ease' }}>
             <style>{`@keyframes asigIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -123,6 +118,7 @@ export default function CalificacionesPage() {
   const [plantelId, setPlantelId] = useState<string | null>(null)
   const [modalCtx, setModalCtx]   = useState<ContextoCalificacion | null>(null)
   const [rubrosCount, setRubrosCount] = useState<Map<string, number>>(new Map())
+  const [isRestored, setIsRestored]   = useState(false)
 
   useEffect(() => {
     void Promise.resolve(supabase.auth.getUser()).then(({ data: { user } }) => {
@@ -142,6 +138,29 @@ export default function CalificacionesPage() {
         }, {})
       )
     : [], [docente])
+
+  // Restaurar vista guardada en sessionStorage al cargar los grupos del docente
+  useEffect(() => {
+    if (isRestored || grupos.length === 0) return
+    const savedVistaStr = sessionStorage.getItem('educontrol_cal_vista')
+    if (savedVistaStr) {
+      try {
+        const v = JSON.parse(savedVistaStr) as Vista
+        if (v.tipo === 'asignaturas' || v.tipo === 'parcial' || v.tipo === 'notas') {
+          const grupoId = v.tipo === 'notas' ? v.ctx.grupo_id : v.grupo.id
+          const grupoCompleto = grupos.find(g => g.id === grupoId)
+          if (grupoCompleto) {
+            v.grupo = grupoCompleto
+            setVista(v)
+            vistaRef.current = v
+          }
+        }
+      } catch (e) {
+        console.error('Error restaurando vista:', e)
+      }
+    }
+    setIsRestored(true)
+  }, [grupos, isRestored])
 
   const fetchRubrosCount = useCallback(() => {
     if (!docenteId) return Promise.resolve(null)
@@ -180,6 +199,11 @@ export default function CalificacionesPage() {
   const vistaRef = useRef<Vista>({ tipo: 'grupos' })
 
   function navegar(v: Vista) {
+    if (v.tipo === 'grupos') {
+      sessionStorage.removeItem('educontrol_cal_vista')
+    } else {
+      sessionStorage.setItem('educontrol_cal_vista', JSON.stringify(v))
+    }
     window.history.pushState({ vista: v.tipo, data: JSON.stringify(v) }, '')
     vistaRef.current = v
     setVista(v)
@@ -195,6 +219,7 @@ export default function CalificacionesPage() {
   const handlePopState = useCallback((e: PopStateEvent) => {
     const state = e.state as { vista?: string; data?: string } | null
     if (!state?.vista || state.vista === 'grupos') {
+      sessionStorage.removeItem('educontrol_cal_vista')
       setVista({ tipo: 'grupos' })
       vistaRef.current = { tipo: 'grupos' }
       return
@@ -202,20 +227,19 @@ export default function CalificacionesPage() {
     try {
       if (state.data) {
         const v = JSON.parse(state.data) as Vista
-        // Reconstruir grupo completo si es necesario
         if ((v.tipo === 'asignaturas' || v.tipo === 'parcial' || v.tipo === 'notas') && grupos.length > 0) {
           const grupoId = v.tipo === 'notas' ? v.ctx.grupo_id : v.grupo.id
           const grupoCompleto = grupos.find(g => g.id === grupoId)
           if (grupoCompleto) {
-            if (v.tipo === 'asignaturas') v.grupo = grupoCompleto
-            else if (v.tipo === 'parcial') v.grupo = grupoCompleto
-            else if (v.tipo === 'notas') v.grupo = grupoCompleto
+            v.grupo = grupoCompleto
           }
         }
+        sessionStorage.setItem('educontrol_cal_vista', JSON.stringify(v))
         setVista(v)
         vistaRef.current = v
       }
     } catch {
+      sessionStorage.removeItem('educontrol_cal_vista')
       setVista({ tipo: 'grupos' })
       vistaRef.current = { tipo: 'grupos' }
     }
@@ -226,7 +250,6 @@ export default function CalificacionesPage() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [handlePopState])
 
-  // Buscar grupo completo con asignaturas
   function getGrupoCompleto(grupoId: string): GrupoItem {
     return grupos.find(g => g.id === grupoId) ?? { id: grupoId, numero: '', grado: 0, asignaturas: [] }
   }
@@ -238,12 +261,13 @@ export default function CalificacionesPage() {
     </div>
   )
 
-  // Vista notas — pasa el grupo COMPLETO al onBack
+  // Vista notas
   if (vista.tipo === 'notas') return (
     <>
       <CalificacionesView
         ctx={vista.ctx}
         onBack={() => {
+          sessionStorage.removeItem('educontrol_cal_vista')
           const grupoCompleto = getGrupoCompleto(vista.ctx.grupo_id)
           navegar({ tipo: 'parcial', grupo: grupoCompleto, asignatura: { id: vista.ctx.asignatura_id, nombre: vista.ctx.asignatura_nombre } })
         }}
@@ -294,7 +318,7 @@ export default function CalificacionesPage() {
       {vista.tipo === 'asignaturas' && (
         <>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.5rem' }}>
-            <button onClick={() => navegar({ tipo:'grupos' })} style={{ width:34, height:34, borderRadius:9, background:'white', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
+            <button onClick={() => { sessionStorage.removeItem('educontrol_cal_vista'); navegar({ tipo:'grupos' }) }} style={{ width:34, height:34, borderRadius:9, background:'white', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
               <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             </button>
             <div>
@@ -316,14 +340,14 @@ export default function CalificacionesPage() {
                 style={{ background:'white', border:'1px solid #e5e5ea', borderRadius:14, cursor:'pointer', transition:'all 0.15s', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', textAlign:'left', width:'100%', display:'flex', flexDirection:'column' }}
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.boxShadow='0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform='translateY(-2px)' }}
                 onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform='translateY(0)' }}>
-                {/* Desktop */}
+                
                 <div className="cal-asig-pc" style={{ padding:'1.75rem 1rem 0', gap:'0.75rem', width:'100%' }}>
                   <div style={{ width:52, height:52, borderRadius:14, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <span style={{ fontSize:'1.5rem', lineHeight:1 }}>📒</span>
                   </div>
                   <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#1e3a5f', lineHeight:1.4, textAlign:'center', padding:'0 0.5rem' }}>{asig.nombre}</span>
                 </div>
-                {/* Móvil */}
+                
                 <div className="cal-asig-mob" style={{ padding:'0.875rem 1rem 0', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', width:'100%' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                     <div style={{ width:40, height:40, borderRadius:11, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -335,7 +359,7 @@ export default function CalificacionesPage() {
                     <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </div>
-                {/* Footer */}
+                
                 <div style={{ width:'100%', borderTop:'1px solid #f0f0f5', marginTop:'0.875rem', padding:'0.5rem 1rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b' }}>3 parciales</span>
                   <span style={{ fontSize:'0.65rem', color:'#94a3b8', fontWeight:500 }}>
@@ -372,16 +396,15 @@ export default function CalificacionesPage() {
               }
               return (
                 <div key={p.key} style={{ background:'white', borderRadius:16, overflow:'hidden', animation:`cardIn 0.35s ${idx*0.07}s both`, boxShadow:'0 2px 10px rgba(0,0,0,0.06)', border: count > 0 ? '1px solid #e2e8f0' : '1px solid #f0f0f5' }}>
-                  {/* Fila principal */}
                   <button onClick={() => navegar({ tipo:'notas', ctx, grupo:vista.grupo })}
                     style={{ width:'100%', display:'flex', alignItems:'center', padding:'2.25rem 1.375rem', background:'none', border:'none', cursor:'pointer', textAlign:'left', transition:'background 0.15s', gap:'1rem' }}
                     onMouseEnter={e => (e.currentTarget.style.background='#f8fafc')}
                     onMouseLeave={e => (e.currentTarget.style.background='transparent')}>
-                    {/* Badge número */}
+                    
                     <div style={{ width:50, height:50, borderRadius:14, background: count > 0 ? '#1e3a5f' : '#f4f5f7', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                       <span style={{ fontSize:'0.875rem', fontWeight:800, color: count > 0 ? 'white' : '#b0b8c8', fontFamily:'Outfit, sans-serif', letterSpacing:'-0.01em' }}>{p.short}</span>
                     </div>
-                    {/* Info */}
+                    
                     <div style={{ flex:1, minWidth:0 }}>
                       <p style={{ fontSize:'0.9375rem', fontWeight:700, color:'#1e3a5f', margin:'0 0 5px' }}>{p.label}</p>
                       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -393,7 +416,7 @@ export default function CalificacionesPage() {
                     </div>
                     <svg width="14" height="14" fill="none" stroke="#d1d5db" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><path d="M9 18l6-6-6-6"/></svg>
                   </button>
-                  {/* Footer acciones */}
+
                   <div style={{ borderTop:'1px solid #f4f5f7', padding:'0.5rem 1.125rem', display:'flex', alignItems:'center', justifyContent:'space-between', background:'#fafafa' }}>
                     <button onClick={() => setModalCtx(ctx)}
                       style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'none', cursor:'pointer', color:'#2563eb', fontSize:'0.72rem', fontWeight:600, padding:'3px 0' }}>
@@ -415,7 +438,6 @@ export default function CalificacionesPage() {
         </>
       )}
 
-      {/* Modal rubros */}
       {modalCtx && docenteId && plantelId && (
         <RubrosModal ctx={modalCtx} docenteId={docenteId} plantelId={plantelId}
           onClose={() => setModalCtx(null)}

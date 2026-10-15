@@ -2,6 +2,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { exportarCalificacionesExcel } from '@/lib/excelExport'
 import TablaCalificaciones from './TablaCalificaciones'
 import ObservacionesCard from './ObservacionesCard'
 import type { Trabajo, Alumno, ContextoCalificacion } from './types'
@@ -322,7 +323,21 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
                   <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', letterSpacing:'0.04em', textTransform:'uppercase' }}>Descargar informe</span>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                  <button title="Descargar Excel" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                  {/* Botón Excel conectado pasando la asignatura, número de grupo, grado y periodo */}
+                  <button
+                    onClick={() => exportarCalificacionesExcel(
+                      alumnos, 
+                      trabajos, 
+                      notas, 
+                      observacionesAlumnos, 
+                      ctx.asignatura_nombre, 
+                      ctx.grupo_numero, 
+                      ctx.grupo_grado, 
+                      ctx.periodo
+                    )}
+                    title="Descargar Excel"
+                    style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
+                  >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                       <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a"/>
                       <path d="M7 8l3.5 4L7 16h2.5l2-2.8 2 2.8H16l-3.5-4L16 8h-2.5l-2 2.8L9.5 8H7z" fill="white"/>

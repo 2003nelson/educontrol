@@ -1,6 +1,6 @@
 // src/app/docente/(autenticado)/grupos/page.tsx
 'use client'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useDocente } from '@/contexts/DocenteContext'
 import ConfirmarFechaView from '@/components/docente/grupos/ConfirmarFechaView'
@@ -22,11 +22,9 @@ function ProgresoCircular({ completadas, total, activo }: { completadas: number;
   return (
     <div style={{ position: 'relative', width: 52, height: 52, flexShrink: 0 }}>
       <svg width="52" height="52" viewBox="0 0 52 52" style={{ transform: 'rotate(-90deg)' }}>
-        {/* Track */}
         <circle cx="26" cy="26" r={r} fill="none"
           stroke={activo ? 'rgba(134,239,172,0.3)' : 'rgba(255,255,255,0.15)'}
           strokeWidth="3.5" />
-        {/* Progreso */}
         <circle cx="26" cy="26" r={r} fill="none"
           stroke={todasListas ? '#4ade80' : activo ? '#86efac' : 'rgba(255,255,255,0.7)'}
           strokeWidth="3.5"
@@ -36,7 +34,6 @@ function ProgresoCircular({ completadas, total, activo }: { completadas: number;
           style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1)' }}
         />
       </svg>
-      {/* Número central */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -72,10 +69,8 @@ function GrupoCard({
   todasCompletas: boolean
   onClick: () => void
 }) {
-  const [hov, setHov]           = useState(false)
+  const [hov, setHov] = useState(false)
   const [asigAbiertas, setAsigAbiertas] = useState(false)
-
-  // Temporal: gris pastel uniforme hasta implementar sistema de colores por grupo
   const p = { from: '#6b7280', to: '#9ca3af' }
 
   return (
@@ -104,7 +99,6 @@ function GrupoCard({
           background: 'white',
         }}
       >
-        {/* ── Parte de color: nombre grupo + semestre ── */}
         <div
           className="card-color-top"
           onClick={onClick}
@@ -119,41 +113,30 @@ function GrupoCard({
             justifyContent: 'space-between',
           }}
         >
-          {/* Círculos decorativos */}
           <div style={{ position:'absolute', top:-30, right:-30, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.08)', pointerEvents:'none' }} />
           <div style={{ position:'absolute', bottom:-20, left:-10, width:70, height:70, borderRadius:'50%', background:'rgba(255,255,255,0.05)', pointerEvents:'none' }} />
 
-          {/* Fila: nombre izquierda + progreso derecha */}
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'0.75rem', zIndex:1, position:'relative' }}>
             <div>
-              {/* Pill clase activa */}
               {hayClaseAqui && (
                 <div style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 8px', borderRadius:9999, background:'rgba(74,222,128,0.2)', border:'1px solid rgba(74,222,128,0.4)', marginBottom:'0.375rem' }}>
                   <div style={{ width:5, height:5, borderRadius:'50%', background:'#4ade80', boxShadow:'0 0 5px #4ade80' }} />
                   <span style={{ fontSize:'0.58rem', fontWeight:700, color:'#4ade80', letterSpacing:'0.06em', textTransform:'uppercase' }}>En clase</span>
                 </div>
               )}
-              {/* Nombre del grupo */}
               <h3 style={{ fontSize:'2rem', fontWeight:800, color:'white', margin:0, lineHeight:1, fontFamily:'Outfit, "Plus Jakarta Sans", sans-serif', letterSpacing:'-0.02em' }}>
                 Grupo {grupo.numero}
               </h3>
-              {/* Semestre debajo del nombre */}
               <p style={{ fontSize:'0.65rem', fontWeight:500, color:'rgba(255,255,255,0.65)', margin:'0.375rem 0 0', letterSpacing:'0.04em' }}>
                 {grupo.grado}° semestre
               </p>
             </div>
-            {/* Progreso circular */}
             <ProgresoCircular completadas={completadasCount} total={grupo.asignaturas.length} activo={hayClaseAqui} />
           </div>
         </div>
 
-        {/* ── Parte blanca: dots + asignaturas desplegables + flecha ir ── */}
         <div style={{ background:'white', borderTop:'1px solid #f0f0f5' }}>
-
-          {/* Fila de acciones */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.75rem 1rem' }}>
-
-            {/* Dots + toggle asignaturas */}
             <button
               onClick={(e) => { e.stopPropagation(); setAsigAbiertas(v => !v) }}
               style={{ display:'flex', alignItems:'center', gap:'0.5rem', background:'none', border:'none', cursor:'pointer', padding:'4px 8px', borderRadius:8, transition:'background 0.15s' }}
@@ -177,7 +160,6 @@ function GrupoCard({
               </span>
             </button>
 
-            {/* Ir al grupo — texto simple con flecha */}
             <button
               onClick={(e) => { e.stopPropagation(); onClick() }}
               style={{
@@ -195,7 +177,6 @@ function GrupoCard({
             </button>
           </div>
 
-          {/* Desplegable de asignaturas */}
           {asigAbiertas && (
             <div style={{ borderTop:'1px solid #f0f0f5', padding:'0.5rem 1rem 0.75rem', display:'flex', flexDirection:'column', gap:'0.375rem', animation:'asigIn 0.2s ease' }}>
               {grupo.asignaturas.map((a) => (
@@ -221,7 +202,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
     async function cargarAlumnos() {
       const { data } = await supabase.rpc('get_estudiantes_grupo', { p_grupo_id: grupo.id })
       if (data) {
-        // El RPC devuelve los alumnos del grupo — el conteo es el mismo para todas las asignaturas del grupo
         const total = (data as { id: string }[]).length
         const mapa: Record<string, number> = {}
         grupo.asignaturas.forEach(a => { mapa[a.id] = total })
@@ -250,7 +230,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
         @media (min-width: 640px) { .asig-pc2 { display: flex !important; flex-direction: column; align-items: center; } .asig-mobile2 { display: none !important; } }
       `}</style>
 
-      {/* Encabezado */}
       <div className="asig-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <button onClick={onBack}
           style={{ width: 36, height: 36, borderRadius: 10, background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -264,7 +243,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
         </div>
       </div>
 
-      {/* Grid de asignaturas */}
       <div className="asig-grid-wrap">
         {grupo.asignaturas.map((asig: AsignaturaItem) => {
           const totalAlumnos = alumnosPorAsig[asig.id]
@@ -274,7 +252,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
               onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
               onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)' }}>
 
-              {/* Desktop: centrado vertical */}
               <div className="asig-pc2" style={{ padding: '1.75rem 1rem 0', gap: '0.75rem', width: '100%' }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>📒</span>
@@ -282,7 +259,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
                 <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4, textAlign: 'center', padding: '0 0.5rem' }}>{asig.nombre}</span>
               </div>
 
-              {/* Móvil: fila horizontal */}
               <div className="asig-mobile2" style={{ padding: '0.875rem 1rem 0', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 11, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -295,7 +271,6 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
                 </svg>
               </div>
 
-              {/* Footer: alumnos + fecha — igual en móvil y desktop */}
               <div style={{ width: '100%', borderTop: '1px solid #f0f0f5', marginTop: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -318,7 +293,7 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
   )
 }
 
-// ── Tipos de vista ────────────────────────────────────────────────────────────
+// ── Tipos de vista corregidos ─────────────────────────────────────────────────
 type Vista =
   | { tipo: 'grupos' }
   | { tipo: 'asignaturas'; grupo: GrupoAgrupado }
@@ -329,8 +304,9 @@ type Vista =
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function GruposPage() {
   const { docente, loading, error } = useDocente()
-  const [vista, setVista]           = useState<Vista>({ tipo: 'grupos' })
+  const [vista, setVista] = useState<Vista>({ tipo: 'grupos' })
   const [completadas, setCompletadas] = useState<Set<string>>(new Set())
+  const [isRestored, setIsRestored] = useState(false)
   const supabase = createClient()
 
   const cargarCompletadas = useCallback(async () => {
@@ -359,6 +335,35 @@ export default function GruposPage() {
     return () => { cancelled = true }
   }, [cargarCompletadas])
 
+  const gruposPorId = docente ? docente.asignaciones.reduce((acc: Record<string, GrupoAgrupado>, asig) => {
+    if (!acc[asig.grupo_id]) acc[asig.grupo_id] = { id: asig.grupo_id, numero: asig.grupo_numero, grado: asig.grupo_grado, asignaturas: [] }
+    acc[asig.grupo_id].asignaturas.push({ id: asig.asignatura_id as string, nombre: asig.asignatura_nombre as string })
+    return acc
+  }, {} as Record<string, GrupoAgrupado>) : {}
+  const grupos = Object.values(gruposPorId)
+
+  // Restaurar vista desde sessionStorage al recargar con F5
+  useEffect(() => {
+    if (isRestored || grupos.length === 0) return
+    const savedVistaStr = sessionStorage.getItem('educontrol_asist_vista')
+    if (savedVistaStr) {
+      try {
+        const v = JSON.parse(savedVistaStr) as Vista
+        if (v.tipo !== 'grupos' && 'grupo' in v && v.grupo) {
+          const grupoCompleto = grupos.find(g => g.id === v.grupo.id)
+          if (grupoCompleto) {
+            v.grupo = grupoCompleto
+            setVista(v)
+            vistaRef.current = v
+          }
+        }
+      } catch (e) {
+        console.error('Error restaurando vista de asistencia:', e)
+      }
+    }
+    setIsRestored(true)
+  }, [grupos, isRestored])
+
   const marcarCompletada = useCallback((grupoId: string, asignaturaId: string, completada: boolean) => {
     const key = `${grupoId}:${asignaturaId}`
     setCompletadas(prev => {
@@ -368,10 +373,16 @@ export default function GruposPage() {
     })
   }, [])
 
-  useEffect(() => { window.history.replaceState({ vista: 'grupos' }, '') }, [])
+  useEffect(() => { window.history.replaceState({ vista: 'grupos', data: JSON.stringify({ tipo: 'grupos' }) }, '') }, [])
 
-  const vistaRef = React.useRef<Vista>({ tipo: 'grupos' })
+  const vistaRef = useRef<Vista>({ tipo: 'grupos' })
+
   const setVistaConHistorial = useCallback((nuevaVista: Vista) => {
+    if (nuevaVista.tipo === 'grupos') {
+      sessionStorage.removeItem('educontrol_asist_vista')
+    } else {
+      sessionStorage.setItem('educontrol_asist_vista', JSON.stringify(nuevaVista))
+    }
     window.history.pushState({ vista: nuevaVista.tipo, data: JSON.stringify(nuevaVista) }, '')
     vistaRef.current = nuevaVista
     setVista(nuevaVista)
@@ -380,16 +391,29 @@ export default function GruposPage() {
 
   const handlePopState = useCallback((e: PopStateEvent) => {
     const state = e.state as { vista?: string; data?: string } | null
-    if (!state?.vista) { window.location.href = '/login'; return }
-    if (state.vista === 'grupos') {
-      if (vistaRef.current.tipo === 'grupos') { window.location.href = '/login' }
-      else { setVista({ tipo: 'grupos' }); vistaRef.current = { tipo: 'grupos' } }
+    if (!state?.vista || state.vista === 'grupos') {
+      sessionStorage.removeItem('educontrol_asist_vista')
+      setVista({ tipo: 'grupos' })
+      vistaRef.current = { tipo: 'grupos' }
       return
     }
     try {
-      if (state.data) { const v = JSON.parse(state.data) as Vista; setVista(v); vistaRef.current = v }
-    } catch { setVista({ tipo: 'grupos' }); vistaRef.current = { tipo: 'grupos' } }
-  }, [])
+      if (state.data) {
+        const v = JSON.parse(state.data) as Vista
+        if (v.tipo !== 'grupos' && 'grupo' in v && v.grupo && grupos.length > 0) {
+          const grupoCompleto = grupos.find(g => g.id === v.grupo.id)
+          if (grupoCompleto) v.grupo = grupoCompleto
+        }
+        sessionStorage.setItem('educontrol_asist_vista', JSON.stringify(v))
+        setVista(v)
+        vistaRef.current = v
+      }
+    } catch {
+      sessionStorage.removeItem('educontrol_asist_vista')
+      setVista({ tipo: 'grupos' })
+      vistaRef.current = { tipo: 'grupos' }
+    }
+  }, [grupos])
 
   useEffect(() => {
     window.addEventListener('popstate', handlePopState)
@@ -411,13 +435,6 @@ export default function GruposPage() {
       <p className="text-sm" style={{ color: '#dc2626' }}>{error || 'Error al cargar datos'}</p>
     </div>
   )
-
-  const gruposPorId = docente.asignaciones.reduce((acc: Record<string, GrupoAgrupado>, asig) => {
-    if (!acc[asig.grupo_id]) acc[asig.grupo_id] = { id: asig.grupo_id, numero: asig.grupo_numero, grado: asig.grupo_grado, asignaturas: [] }
-    acc[asig.grupo_id].asignaturas.push({ id: asig.asignatura_id as string, nombre: asig.asignatura_nombre as string })
-    return acc
-  }, {} as Record<string, GrupoAgrupado>)
-  const grupos = Object.values(gruposPorId)
 
   // ── Sub-vistas ──
   if (vista.tipo === 'editar-asistencia') return (
@@ -494,33 +511,9 @@ export default function GruposPage() {
         }
         .card-color-top { min-height: 120px; }
         @media (min-width: 640px) { .card-color-top { min-height: 140px; } }
-
-        .btn-accion {
-          display: inline-flex; align-items: center; gap: 0.5rem;
-          padding: 0.5rem 1rem; border-radius: 10px;
-          background: white; border: 1px solid #e2e8f0;
-          font-size: 0.78rem; font-weight: 600; color: #3a3a3c;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-          white-space: nowrap; cursor: pointer;
-          text-decoration: none;
-          transition: box-shadow 0.15s, transform 0.15s;
-        }
-        .btn-accion:hover {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.09);
-          transform: translateY(-1px);
-        }
-
-        .horario-txt { display: inline-flex; }
-        .horario-ico { display: none; }
-        @media (max-width: 767px) {
-          .horario-txt { display: none; }
-          .horario-ico { display: flex; width: 38px; height: 38px; border-radius: 50%; background: white; border: 1px solid #e2e8f0; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-        }
       `}</style>
 
       <div className="grupos-wrap">
-
-        {/* ── Encabezado ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e3a5f', margin: '0 0 0.25rem', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>
@@ -532,7 +525,6 @@ export default function GruposPage() {
           </div>
         </div>
 
-        {/* ── Grid de grupos ── */}
         {grupos.length === 0 ? (
           <div className="flex items-center justify-center" style={{ minHeight: '40vh' }}>
             <div style={{ textAlign: 'center', maxWidth: 320 }}>
@@ -550,8 +542,8 @@ export default function GruposPage() {
           <div className="grupos-grid">
             {grupos.map((grupo, idx) => {
               const completadasCount = grupo.asignaturas.filter(a => completadas.has(`${grupo.id}:${a.id}`)).length
-              const todasCompletas   = grupo.asignaturas.length > 0 && completadasCount === grupo.asignaturas.length
-              const hayClaseAqui     = false // Se mantiene en false tras quitar el widget
+              const todasCompletas = grupo.asignaturas.length > 0 && completadasCount === grupo.asignaturas.length
+              const hayClaseAqui = false
               return (
                 <GrupoCard
                   key={grupo.id}
