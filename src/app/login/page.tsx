@@ -31,6 +31,13 @@ function validarEmail(email: string): boolean { return /^[^\s@]+@[^\s@]+\.[^\s@]
 function sanitizeEmail(v: string): string { return v.trim().toLowerCase() }
 function validarPassword(p: string): boolean { return p.length >= 6 }
 
+// Palabras motivacionales
+const MOTIVATIONAL_WORDS = [
+  'Éxito', 'Innovación', 'Liderazgo', 'Excelencia', 
+  'Aprende', 'Disciplina', 'Persistencia', 'Enfoque', 
+  'Crece', 'Impacto', 'Futuro', 'Meta', 'Pasión', 'Educa'
+]
+
 // Paletas de colores
 const THEMES = [
   {
@@ -105,7 +112,7 @@ const THEMES = [
   },
 ]
 
-// Canvas Interactivo con partículas más grandes
+// Canvas Interactivo con Palabras Motivacionales en Intersecciones
 function BackgroundCanvas({ particleColor }: { particleColor: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -120,7 +127,7 @@ function BackgroundCanvas({ particleColor }: { particleColor: string }) {
     let height = (canvas.height = window.innerHeight)
 
     const particles: Array<{ x: number; y: number; vx: number; vy: number; radius: number }> = []
-    const particleCount = 60
+    const particleCount = 55
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -128,12 +135,21 @@ function BackgroundCanvas({ particleColor }: { particleColor: string }) {
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.45,
         vy: (Math.random() - 0.5) * 0.45,
-        // Partículas un poco más grandes (entre 2.5px y 4.5px)
         radius: Math.random() * 2 + 2.5,
       })
     }
 
+    // Lista de palabras activas que flotan
+    let floatingTexts: Array<{
+      text: string
+      x: number
+      y: number
+      opacity: number
+      life: number
+    }> = []
+
     let mouse = { x: -1000, y: -1000 }
+    let lastTriggerTime = 0
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.x = e.clientX
@@ -152,6 +168,8 @@ function BackgroundCanvas({ particleColor }: { particleColor: string }) {
     const animate = () => {
       ctx.clearRect(0, 0, width, height)
 
+      const now = Date.now()
+
       particles.forEach((p, idx) => {
         p.x += p.vx
         p.y += p.vy
@@ -159,32 +177,71 @@ function BackgroundCanvas({ particleColor }: { particleColor: string }) {
         if (p.x < 0 || p.x > width) p.vx *= -1
         if (p.y < 0 || p.y > height) p.vy *= -1
 
+        // Dibujar partícula
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
         ctx.fillStyle = particleColor
         ctx.fill()
 
+        // Dibujar líneas y detectar intersecciones
         for (let j = idx + 1; j < particles.length; j++) {
           const p2 = particles[j]
           const dist = Math.hypot(p.x - p2.x, p.y - p2.y)
+
           if (dist < 130) {
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(p2.x, p2.y)
             ctx.strokeStyle = particleColor.replace(/[\d\.]+\)$/g, `${0.3 - dist / 500})`)
-            ctx.lineWidth = 0.9 // Líneas ligeramente más marcadas
+            ctx.lineWidth = 0.9
             ctx.stroke()
+
+            // Punto medio (intersección)
+            const midX = (p.x + p2.x) / 2
+            const midY = (p.y + p2.y) / 2
+            const mouseDistToMid = Math.hypot(midX - mouse.x, midY - mouse.y)
+
+            // Si el mouse pasa cerca del punto de intersección y ha pasado tiempo suficiente
+            if (mouseDistToMid < 55 && now - lastTriggerTime > 350) {
+              const randomWord = MOTIVATIONAL_WORDS[Math.floor(Math.random() * MOTIVATIONAL_WORDS.length)]
+              floatingTexts.push({
+                text: randomWord,
+                x: midX,
+                y: midY,
+                opacity: 1,
+                life: 1,
+              })
+              lastTriggerTime = now
+            }
           }
         }
 
+        // Conexión con el mouse
         const mouseDist = Math.hypot(p.x - mouse.x, p.y - mouse.y)
         if (mouseDist < 160) {
           ctx.beginPath()
           ctx.moveTo(p.x, p.y)
           ctx.lineTo(mouse.x, mouse.y)
           ctx.strokeStyle = particleColor.replace(/[\d\.]+\)$/g, `${0.5 - mouseDist / 320})`)
-          ctx.lineWidth = 1.2 // Línea de conexión al mouse más prominente
+          ctx.lineWidth = 1.2
           ctx.stroke()
+        }
+      })
+
+      // Renderizar y animar palabras motivacionales
+      floatingTexts.forEach((item, index) => {
+        item.y -= 0.4 // Elevar suavemente
+        item.life -= 0.015 // Reducir opacidad
+        item.opacity = Math.max(0, item.life)
+
+        ctx.font = '700 13px "Plus Jakarta Sans", sans-serif'
+        ctx.fillStyle = particleColor.replace(/[\d\.]+\)$/g, `${item.opacity})`)
+        ctx.textAlign = 'center'
+        ctx.fillText(item.text, item.x, item.y)
+
+        // Limpiar palabras desvanecidas
+        if (item.life <= 0) {
+          floatingTexts.splice(index, 1)
         }
       })
 
