@@ -214,25 +214,42 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
   const fechaHoy = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
-    <div style={{ padding: '1.25rem 0.75rem 2rem', minHeight: '100vh', background: '#f0f4fa' }}>
+    <div style={{ padding: '1.25rem 0.75rem 2rem', width: '100%', minHeight: '100vh', background: '#f0f4fa' }}>
       <style>{`
-        .asig-header { margin-bottom: 1.25rem; }
-        .asig-grid-wrap { display: flex; flex-direction: column; gap: 0.625rem; }
+        .asig-grid-wrap {
+          display: grid;
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+          gap: 1.25rem;
+          margin-top: 1.5rem;
+          width: 100%;
+        }
         @media (min-width: 640px) {
-          .asig-grid-wrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.875rem; }
+          .asig-grid-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (min-width: 1024px) {
-          .asig-grid-wrap { grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-          .asig-header { margin-bottom: 1.5rem; }
+          .asig-grid-wrap { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
         }
-        .asig-pc2 { display: none; }
-        .asig-mobile2 { display: flex; }
-        @media (min-width: 640px) { .asig-pc2 { display: flex !important; flex-direction: column; align-items: center; } .asig-mobile2 { display: none !important; } }
       `}</style>
 
-      <div className="asig-header" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <button onClick={onBack}
-          style={{ width: 36, height: 36, borderRadius: 10, background: 'white', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      {/* Encabezado con el botón y la flecha EXACTOS del componente original */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <button 
+          onClick={onBack}
+          style={{ 
+            width: 36, 
+            height: 36, 
+            borderRadius: 10, 
+            background: 'white', 
+            border: '1px solid #e2e8f0', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            cursor: 'pointer', 
+            color: '#475569', 
+            flexShrink: 0, 
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)' 
+          }}
+        >
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -247,45 +264,55 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
         {grupo.asignaturas.map((asig: AsignaturaItem) => {
           const totalAlumnos = alumnosPorAsig[asig.id]
           return (
-            <button key={asig.id} onClick={() => onSelect(asig)}
-              style={{ background: 'white', border: '1px solid #e5e5ea', borderRadius: 14, cursor: 'pointer', transition: 'all 0.15s', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', textAlign: 'left', width: '100%', display: 'flex', flexDirection: 'column' }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#bfdbfe'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor = '#e5e5ea'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+            <div key={asig.id} onClick={() => onSelect(asig)}
+              style={{
+                background: 'white',
+                borderRadius: '18px',
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '240px',
+                overflow: 'hidden',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease'
+              }}
+              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.currentTarget.style.transform = 'translateY(-4px)'
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(30, 58, 95, 0.08)'
+                e.currentTarget.style.borderColor = '#cbd5e1'
+              }}
+              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.03)'
+                e.currentTarget.style.borderColor = '#e2e8f0'
+              }}>
 
-              <div className="asig-pc2" style={{ padding: '1.75rem 1rem 0', gap: '0.75rem', width: '100%' }}>
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>📒</span>
+              {/* Cuerpo de la tarjeta */}
+              <div style={{ padding: '2.25rem 1.75rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', flexGrow: 1 }}>
+                <div style={{ width: 72, height: 72, borderRadius: '20px', background: '#fef9c3', border: '1px solid #fef08a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', marginBottom: '1.25rem', boxShadow: '0 2px 8px rgba(234, 179, 8, 0.12)' }}>
+                  📒
                 </div>
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4, textAlign: 'center', padding: '0 0.5rem' }}>{asig.nombre}</span>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1.4, margin: 0 }}>
+                  {asig.nombre}
+                </h3>
               </div>
 
-              <div className="asig-mobile2" style={{ padding: '0.875rem 1rem 0', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 11, background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>📒</span>
-                  </div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a5f' }}>{asig.nombre}</span>
-                </div>
-                <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                  <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-
-              <div style={{ width: '100%', borderTop: '1px solid #f0f0f5', marginTop: '0.875rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <svg width="12" height="12" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              {/* Pie de la tarjeta */}
+              <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                    <path d="M16 3.13a4 4 0 010 7.75" />
                   </svg>
-                  <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748b' }}>
-                    {totalAlumnos !== undefined ? `${totalAlumnos} alumno${totalAlumnos !== 1 ? 's' : ''}` : '…'}
-                  </span>
+                  <span>{totalAlumnos !== undefined ? `${totalAlumnos} alumno${totalAlumnos !== 1 ? 's' : ''}` : '…'}</span>
                 </div>
-                <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 500, textTransform: 'capitalize' }}>
-                  {fechaHoy}
-                </span>
+                <span style={{ textTransform: 'capitalize' }}>{fechaHoy}</span>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
@@ -293,7 +320,7 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
   )
 }
 
-// ── Tipos de vista corregidos ─────────────────────────────────────────────────
+// ── Tipos de vista ─────────────────────────────────────────────────────────────
 type Vista =
   | { tipo: 'grupos' }
   | { tipo: 'asignaturas'; grupo: GrupoAgrupado }
