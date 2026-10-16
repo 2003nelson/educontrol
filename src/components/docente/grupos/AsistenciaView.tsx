@@ -171,20 +171,14 @@ export default function AsistenciaView({
         .asist-layout { display: flex; flex-direction: column; gap: 1rem; }
         @media (min-width: 768px) {
           .asist-layout { flex-direction: row; align-items: flex-start; gap: 1.25rem; }
-          .asist-sidebar { width: 240px; flex-shrink: 0; position: sticky; top: 80px; }
+          .asist-sidebar { width: 250px; flex-shrink: 0; position: sticky; top: 80px; }
           .asist-main    { flex: 1; min-width: 0; }
         }
         .guardar-mobile { display: block; }
         @media (min-width: 768px) { .guardar-mobile { display: none; } }
         .asist-table-wrap { overflow-x: auto; }
         .asist-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        /* Marcar todos: desktop muestra grid, móvil muestra botones */
-        .marcar-desktop { display: grid !important; }
-        .marcar-mobile  { display: none !important; }
-        @media (max-width: 767px) {
-          .marcar-desktop { display: none !important; }
-          .marcar-mobile  { display: flex !important; }
-        }
+        
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -221,9 +215,9 @@ export default function AsistenciaView({
 
       <div className="asist-layout">
 
-        {/* ── Sidebar ── */}
+        {/* ── Sidebar con mayor espaciado vertical ── */}
         <div className="asist-sidebar">
-          <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e5e5ea', padding: '1.125rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+          <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e5e5ea', padding: '1.25rem 1.125rem 1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
             {/* Resumen */}
             <div>
@@ -246,34 +240,17 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Marcar todos */}
+            {/* Marcar todos unificado */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.375rem' }}>Marcar todos</p>
-              <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.625rem', lineHeight: 1.4 }}>
+              <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
                 Pulsa un botón para marcar a <strong style={{ color: '#64748b' }}>todos los alumnos</strong> con ese estado.
               </p>
 
-              {/* Desktop: grid 2x2 normal */}
-              <div className="marcar-desktop" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {ESTADOS.map(e => {
-                  const cfg = ESTADO_CFG[e]
-                  return (
-                    <button key={e} onClick={() => marcarTodos(e)}
-                      style={{ padding: '0.5rem', borderRadius: 10, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'opacity 0.12s' }}
-                      onMouseEnter={e2 => (e2.currentTarget.style.opacity = '0.8')}
-                      onMouseLeave={e2 => (e2.currentTarget.style.opacity = '1')}>
-                      <span style={{ fontSize: '1rem' }}>{e}</span>
-                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{cfg.labelCorto}</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Móvil: botón principal P + más opciones */}
-              <div className="marcar-mobile" style={{ display: 'none', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {/* Botón principal — Marcar todos como Presente */}
                 <button onClick={() => { marcarTodos('P'); setMasOpciones(false) }}
-                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 12, background: '#dcfce7', color: '#16a34a', border: '1.5px solid #86efac', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 12, background: '#dcfce7', color: '#16a34a', border: '1.5px solid #86efac', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
                   <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -282,7 +259,7 @@ export default function AsistenciaView({
 
                 {/* Botón más opciones */}
                 <button onClick={() => setMasOpciones(v => !v)}
-                  style={{ width: '100%', padding: '0.625rem 1rem', borderRadius: 12, background: masOpciones ? '#f1f5f9' : 'white', color: '#475569', border: '1.5px solid #e2e8f0', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'background 0.15s' }}>
+                  style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: 12, background: masOpciones ? '#f1f5f9' : 'white', color: '#475569', border: '1.5px solid #e2e8f0', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'background 0.15s' }}>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
                     style={{ transform: masOpciones ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
                     <path d="M6 9l6 6 6-6"/>
@@ -292,16 +269,16 @@ export default function AsistenciaView({
 
                 {/* Tres opciones adicionales — desplegable */}
                 {masOpciones && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', animation: 'slideDown 0.18s ease' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', animation: 'slideDown 0.18s ease', marginTop: '0.25rem' }}>
                     {(['A', 'J', 'R'] as const).map(e => {
                       const cfg = ESTADO_CFG[e]
                       const labels: Record<string, string> = { A: 'Marcar todos como Ausente', J: 'Marcar todos como Justificada', R: 'Marcar todos como Retardo' }
                       return (
                         <button key={e} onClick={() => { marcarTodos(e); setMasOpciones(false) }}
-                          style={{ width: '100%', padding: '0.625rem 1rem', borderRadius: 12, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.625rem', transition: 'opacity 0.12s' }}
+                          style={{ width: '100%', padding: '0.625rem 0.875rem', borderRadius: 12, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
                           onMouseEnter={ev => (ev.currentTarget.style.opacity = '0.85')}
                           onMouseLeave={ev => (ev.currentTarget.style.opacity = '1')}>
-                          <span style={{ width: 28, height: 28, borderRadius: 8, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0, border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}` }}>{e}</span>
+                          <span style={{ width: 26, height: 26, borderRadius: 8, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.82rem', flexShrink: 0, border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}` }}>{e}</span>
                           {labels[e]}
                         </button>
                       )
@@ -311,12 +288,14 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Guardar desktop */}
+            {/* Guardar desktop con espacio extra superior */}
             {alumnos.length > 0 && (
-              <button onClick={guardar} disabled={guardando}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.85rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
-                {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
-              </button>
+              <div style={{ marginTop: '0.5rem' }}>
+                <button onClick={guardar} disabled={guardando}
+                  style={{ width: '100%', padding: '0.875rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.875rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
+                  {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
+                </button>
+              </div>
             )}
           </div>
         </div>

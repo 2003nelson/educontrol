@@ -146,10 +146,16 @@ export default function CalificacionesPage() {
     if (savedVistaStr) {
       try {
         const v = JSON.parse(savedVistaStr) as Vista
-        if (v.tipo === 'asignaturas' || v.tipo === 'parcial' || v.tipo === 'notas') {
-          const grupoId = v.tipo === 'notas' ? v.ctx.grupo_id : v.grupo.id
+        let grupoId: string | undefined
+        if (v.tipo === 'notas') {
+          grupoId = v.ctx.grupo_id
+        } else if (v.tipo === 'asignaturas' || v.tipo === 'parcial') {
+          grupoId = v.grupo.id
+        }
+
+        if (grupoId) {
           const grupoCompleto = grupos.find(g => g.id === grupoId)
-          if (grupoCompleto) {
+          if (grupoCompleto && v.tipo !== 'grupos') {
             v.grupo = grupoCompleto
             setVista(v)
             vistaRef.current = v
@@ -227,7 +233,7 @@ export default function CalificacionesPage() {
     try {
       if (state.data) {
         const v = JSON.parse(state.data) as Vista
-        if ((v.tipo === 'asignaturas' || v.tipo === 'parcial' || v.tipo === 'notas') && grupos.length > 0) {
+        if (v.tipo !== 'grupos' && grupos.length > 0) {
           const grupoId = v.tipo === 'notas' ? v.ctx.grupo_id : v.grupo.id
           const grupoCompleto = grupos.find(g => g.id === grupoId)
           if (grupoCompleto) {
@@ -329,40 +335,56 @@ export default function CalificacionesPage() {
 
           <div className="cal-asig-grid" style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
             <style>{`
-              @media(min-width:640px){ .cal-asig-grid { display:grid !important; grid-template-columns:repeat(2,1fr); gap:0.875rem; } }
-              @media(min-width:1024px){ .cal-asig-grid { grid-template-columns:repeat(4,1fr); gap:1rem; } }
+              @media(min-width:640px){ .cal-asig-grid { display:grid !important; grid-template-columns:repeat(2,1fr); gap:1rem; } }
+              @media(min-width:1024px){ .cal-asig-grid { grid-template-columns:repeat(3,1fr); gap:1.25rem; } }
               .cal-asig-pc { display:none; }
               .cal-asig-mob { display:flex; }
               @media(min-width:640px){ .cal-asig-pc { display:flex !important; flex-direction:column; align-items:center; } .cal-asig-mob { display:none !important; } }
             `}</style>
             {vista.grupo.asignaturas.map((asig) => (
               <button key={asig.id} onClick={() => navegar({ tipo:'parcial', grupo:vista.grupo, asignatura:asig })}
-                style={{ background:'white', border:'1px solid #e5e5ea', borderRadius:14, cursor:'pointer', transition:'all 0.15s', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', textAlign:'left', width:'100%', display:'flex', flexDirection:'column' }}
+                style={{
+                  background:'white',
+                  border:'1px solid #e5e5ea',
+                  borderRadius:18,
+                  cursor:'pointer',
+                  transition:'all 0.15s',
+                  boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
+                  textAlign:'left',
+                  width:'100%',
+                  display:'flex',
+                  flexDirection:'column',
+                  justifyContent:'space-between',
+                  minHeight:'220px' // Mismo alto exacto proporcionado a Asistencia
+                }}
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.boxShadow='0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform='translateY(-2px)' }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'; e.currentTarget.style.transform='translateY(0)' }}>
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)'; e.currentTarget.style.transform='translateY(0)' }}>
                 
-                <div className="cal-asig-pc" style={{ padding:'1.75rem 1rem 0', gap:'0.75rem', width:'100%' }}>
-                  <div style={{ width:52, height:52, borderRadius:14, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <span style={{ fontSize:'1.5rem', lineHeight:1 }}>📒</span>
+                {/* Escritorio (Centrado con mas espacio vertical) */}
+                <div className="cal-asig-pc" style={{ padding:'2rem 1.25rem 1rem', gap:'1rem', width:'100%', flexGrow:1, justifyContent:'center' }}>
+                  <div style={{ width:68, height:68, borderRadius:18, background:'#fef9c3', border:'1px solid #fef08a', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(234,179,8,0.12)' }}>
+                    <span style={{ fontSize:'2rem', lineHeight:1 }}>📒</span>
                   </div>
-                  <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#1e3a5f', lineHeight:1.4, textAlign:'center', padding:'0 0.5rem' }}>{asig.nombre}</span>
+                  <span style={{ fontSize:'0.88rem', fontWeight:800, color:'#1e3a5f', lineHeight:1.3, textAlign:'center', textTransform:'uppercase', letterSpacing:'0.02em', padding:'0 0.5rem' }}>{asig.nombre}</span>
                 </div>
                 
-                <div className="cal-asig-mob" style={{ padding:'0.875rem 1rem 0', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', width:'100%' }}>
+                {/* Móvil */}
+                <div className="cal-asig-mob" style={{ padding:'1.125rem 1rem 0.875rem', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', width:'100%' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                    <div style={{ width:40, height:40, borderRadius:11, background:'#eff6ff', border:'1px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontSize:'1.2rem', lineHeight:1 }}>📒</span>
+                    <div style={{ width:44, height:44, borderRadius:12, background:'#fef9c3', border:'1px solid #fef08a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <span style={{ fontSize:'1.3rem', lineHeight:1 }}>📒</span>
                     </div>
-                    <span style={{ fontSize:'0.85rem', fontWeight:600, color:'#1e3a5f' }}>{asig.nombre}</span>
+                    <span style={{ fontSize:'0.85rem', fontWeight:700, color:'#1e3a5f', textTransform:'uppercase' }}>{asig.nombre}</span>
                   </div>
                   <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink:0 }} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 18l6-6-6-6"/>
                   </svg>
                 </div>
                 
-                <div style={{ width:'100%', borderTop:'1px solid #f0f0f5', marginTop:'0.875rem', padding:'0.5rem 1rem', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <span style={{ fontSize:'0.68rem', fontWeight:600, color:'#64748b' }}>3 parciales</span>
-                  <span style={{ fontSize:'0.65rem', color:'#94a3b8', fontWeight:500 }}>
+                {/* Footer del card */}
+                <div style={{ width:'100%', borderTop:'1px solid #f0f0f5', background:'#fafbfc', padding:'0.75rem 1.125rem', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottomLeftRadius:18, borderBottomRightRadius:18 }}>
+                  <span style={{ fontSize:'0.72rem', fontWeight:600, color:'#64748b' }}>3 parciales</span>
+                  <span style={{ fontSize:'0.7rem', color:'#94a3b8', fontWeight:500, textTransform:'capitalize' }}>
                     {new Date().toLocaleDateString('es-MX', { weekday:'short', day:'numeric', month:'short' })}
                   </span>
                 </div>
