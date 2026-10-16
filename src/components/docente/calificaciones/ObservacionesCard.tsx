@@ -1,4 +1,3 @@
-// src/components/docente/calificaciones/ObservacionesCard.tsx
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -105,8 +104,6 @@ export default function ObservacionesCard({
     setGuardando(false)
   }
 
-  const estaEditandoODeshabilitado = cargando || guardando || estadoBoton === 'editar'
-
   return (
     <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e8eaf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1rem 1.25rem' }}>
       <div>
@@ -159,7 +156,7 @@ export default function ObservacionesCard({
             padding: 0
           }}
         >
-          Ver observaciones
+          Alumnos con observaciones
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -190,7 +187,7 @@ export default function ObservacionesCard({
           <button
             onClick={() => {
               if (estadoBoton === 'editar') {
-                setEstadoBoton('guardar') // Activa modo edición
+                setEstadoBoton('guardar')
               } else {
                 void handleGuardarObs()
               }

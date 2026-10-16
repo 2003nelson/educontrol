@@ -1,4 +1,3 @@
-// src/components/docente/calificaciones/CalificacionesView.tsx
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -35,6 +34,11 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
   const [loading, setLoading]     = useState(true)
   const [docenteId, setDocenteId] = useState<string | null>(null)
   const [plantelId, setPlantelId] = useState<string | null>(null)
+  const [informeDescargado, setInformeDescargado] = useState(false)
+
+  // Estado para desplegar la lista de alumnos con observaciones
+  const [mostrarObsAlumnos, setMostrarObsAlumnos] = useState(false)
+  const [alumnosConObsCalculados, setAlumnosConObsCalculados] = useState<{ id: string; nombreCompleto: string; observacion: string }[] | null>(null)
 
   useEffect(() => {
     window.history.pushState({ calView: true }, '')
@@ -87,7 +91,6 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         }
       }
 
-      // Cargar observaciones de alumnos filtrando por docente, grupo, asignatura y periodo actual
       const { data: obsAlumnosData } = await supabase
         .from('observaciones_estudiantes')
         .select('estudiante_id, contenido')
@@ -192,6 +195,8 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
       return m
     })
 
+    setAlumnosConObsCalculados(null)
+
     if (textoLimpio.length === 0) {
       await supabase
         .from('observaciones_estudiantes')
@@ -213,6 +218,51 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         updated_at: new Date().toISOString()
       }], { onConflict: 'docente_id,grupo_id,asignatura_id,estudiante_id,periodo' })
     }
+  }
+
+  const handleToggleVerObservacionesAlumnos = () => {
+    const nuevoEstado = !mostrarObsAlumnos
+    setMostrarObsAlumnos(nuevoEstado)
+
+    if (nuevoEstado) {
+      const lista = alumnos
+        .filter(al => {
+          const obs = observacionesAlumnos.get(al.id)
+          return obs && obs.trim().length > 0
+        })
+        .map(al => {
+          const raw = (al as unknown) as Record<string, unknown>
+          const nombreCompleto =
+            (typeof raw.nombre_completo === 'string' && raw.nombre_completo) ||
+            (typeof raw.nombreCompleto === 'string' && raw.nombreCompleto) ||
+            [raw.apellido_paterno, raw.apellido_materno, raw.nombre].filter(Boolean).join(' ') ||
+            [raw.apellidos, raw.nombre].filter(Boolean).join(' ') ||
+            'Alumno'
+
+          return {
+            id: al.id,
+            nombreCompleto,
+            observacion: observacionesAlumnos.get(al.id) ?? ''
+          }
+        })
+        .sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto, 'es', { sensitivity: 'base' }))
+
+      setAlumnosConObsCalculados(lista)
+    }
+  }
+
+  const handleDescargarExcel = () => {
+    exportarCalificacionesExcel(
+      alumnos, 
+      trabajos, 
+      notas, 
+      observacionesAlumnos, 
+      ctx.asignatura_nombre, 
+      ctx.grupo_numero, 
+      ctx.grupo_grado, 
+      ctx.periodo
+    )
+    setInformeDescargado(true)
   }
 
   const PERIODO_LABEL: Record<string, string> = { '1': '1er Parcial', '2': '2do Parcial', '3': '3er Parcial' }
@@ -271,105 +321,132 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
         )}
 
         {!loading && alumnos.length > 0 && trabajos.length > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem', marginBottom:'1.125rem' }}>
+          <>
+            {/* GRID PRINCIPAL: 2 Tarjetas idénticas en altura y estructura */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem', marginBottom: mostrarObsAlumnos ? '0.875rem' : '1.125rem' }}>
 
-            <div style={{ background:'white', borderRadius:14, border:'1px solid #e8eaf0', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'1rem 1.25rem' }}>
-              
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
+              {/* Card Izquierda: Métricas */}
+              <div style={{ background:'white', borderRadius:14, border:'1px solid #e8eaf0', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'1rem 1.25rem' }}>
                 
-                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                  <div style={{ width:40, height:40, borderRadius:12, background: promedio !== null ? bgNota(promedio) : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <svg width="17" height="17" fill="none" stroke={colorNota(promedio)} strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                  </div>
-                  <div>
-                    <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Promedio</p>
-                    <p style={{ fontSize:'1.375rem', fontWeight:800, color:colorNota(promedio), margin:0, lineHeight:1, fontFamily:'Outfit, sans-serif' }}>{promedio ?? '—'}</p>
-                  </div>
-                </div>
-
-                <div style={{ width:1, height:35, background:'#f0f0f5', flexShrink:0 }} />
-
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 4px' }}>Resultado</p>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:4 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:3 }}>
-                      <div style={{ width:7, height:7, borderRadius:'50%', background:'#16a34a', flexShrink:0 }}/>
-                      <span style={{ fontSize:'0.8rem', fontWeight:800, color:'#16a34a' }}>{aprobados}</span>
-                      <span style={{ fontSize:'0.6rem', color:'#94a3b8' }}>aprobados</span>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
+                  
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div style={{ width:40, height:40, borderRadius:12, background: promedio !== null ? bgNota(promedio) : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <svg width="17" height="17" fill="none" stroke={colorNota(promedio)} strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                     </div>
-                    <div style={{ width:1, height:10, background:'#e2e8f0', flexShrink:0 }}/>
-                    <div style={{ display:'flex', alignItems:'center', gap:3 }}>
-                      <div style={{ width:7, height:7, borderRadius:'50%', background:'#ef4444', flexShrink:0 }}/>
-                      <span style={{ fontSize:'0.8rem', fontWeight:800, color:'#ef4444' }}>{alumnos.length - aprobados}</span>
-                      <span style={{ fontSize:'0.6rem', color:'#94a3b8' }}>reprobados</span>
+                    <div>
+                      <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 1px' }}>Promedio</p>
+                      <p style={{ fontSize:'1.375rem', fontWeight:800, color:colorNota(promedio), margin:0, lineHeight:1, fontFamily:'Outfit, sans-serif' }}>{promedio ?? '—'}</p>
                     </div>
                   </div>
-                  <div style={{ height:3, borderRadius:9999, background:'#f1f5f9', overflow:'hidden' }}>
-                    <div style={{ height:'100%', width:`${alumnos.length > 0 && notasValidas.length > 0 ? (aprobados/alumnos.length)*100 : 0}%`, background:'linear-gradient(90deg,#16a34a,#22c55e)', borderRadius:9999 }}/>
+
+                  <div style={{ width:1, height:35, background:'#f0f0f5', flexShrink:0 }} />
+
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ fontSize:'0.58rem', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.07em', margin:'0 0 4px' }}>Resultado</p>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:4 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                        <div style={{ width:7, height:7, borderRadius:'50%', background:'#16a34a', flexShrink:0 }}/>
+                        <span style={{ fontSize:'0.8rem', fontWeight:800, color:'#16a34a' }}>{aprobados}</span>
+                        <span style={{ fontSize:'0.6rem', color:'#94a3b8' }}>aprobados</span>
+                      </div>
+                      <div style={{ width:1, height:10, background:'#e2e8f0', flexShrink:0 }}/>
+                      <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                        <div style={{ width:7, height:7, borderRadius:'50%', background:'#ef4444', flexShrink:0 }}/>
+                        <span style={{ fontSize:'0.8rem', fontWeight:800, color:'#ef4444' }}>{alumnos.length - aprobados}</span>
+                        <span style={{ fontSize:'0.6rem', color:'#94a3b8' }}>reprobados</span>
+                      </div>
+                    </div>
+                    <div style={{ height:3, borderRadius:9999, background:'#f1f5f9', overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${alumnos.length > 0 && notasValidas.length > 0 ? (aprobados/alumnos.length)*100 : 0}%`, background:'linear-gradient(90deg,#16a34a,#22c55e)', borderRadius:9999 }}/>
+                    </div>
                   </div>
+
                 </div>
 
-              </div>
+                <div style={{ height:'1px', background:'#f0f0f5', margin:'0.875rem 0 0.75rem' }}/>
 
-              <div style={{ height:'1px', background:'#f0f0f5', margin:'0.875rem 0 0.75rem' }}/>
-
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
-                  <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', letterSpacing:'0.04em', textTransform:'uppercase' }}>Descargar informe</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
-                  {/* Botón Excel conectado pasando la asignatura, número de grupo, grado y periodo */}
-                  <button
-                    onClick={() => exportarCalificacionesExcel(
-                      alumnos, 
-                      trabajos, 
-                      notas, 
-                      observacionesAlumnos, 
-                      ctx.asignatura_nombre, 
-                      ctx.grupo_numero, 
-                      ctx.grupo_grado, 
-                      ctx.periodo
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
+                    <svg width="13" height="13" fill="none" stroke="#94a3b8" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', letterSpacing:'0.04em', textTransform:'uppercase' }}>Descargar informe</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                    {informeDescargado && (
+                      <span style={{ fontSize:'0.72rem', fontWeight:600, color:'#16a34a', animation:'fadeUp 0.2s ease-out' }}>
+                        informe descargado
+                      </span>
                     )}
-                    title="Descargar Excel"
-                    style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a"/>
-                      <path d="M7 8l3.5 4L7 16h2.5l2-2.8 2 2.8H16l-3.5-4L16 8h-2.5l-2 2.8L9.5 8H7z" fill="white"/>
-                    </svg>
-                  </button>
-                  <button title="Descargar PDF" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#dc2626"/>
-                      <text x="4" y="15.5" fontSize="8" fontWeight="800" fill="white" fontFamily="system-ui,sans-serif">PDF</text>
-                    </svg>
-                  </button>
-                  <button title="Descargar Word" style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="3" width="20" height="18" rx="3" fill="#2563eb"/>
-                      <path d="M5 8h1.5l1.8 6 1.8-6H12l1.8 6 1.8-6H17l-2.5 8h-1.8L11 10l-1.5 6H7.5L5 8z" fill="white"/>
-                    </svg>
-                  </button>
+                    <button
+                      onClick={handleDescargarExcel}
+                      title="Descargar Excel"
+                      style={{ width:36, height:36, borderRadius:9, border:'1px solid #e2e8f0', background:'white', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="2" y="3" width="20" height="18" rx="3" fill="#16a34a"/>
+                        <path d="M7 8l3.5 4L7 16h2.5l2-2.8 2 2.8H16l-3.5-4L16 8h-2.5l-2 2.8L9.5 8H7z" fill="white"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
+
               </div>
+
+              {/* Card Derecha: Observación del Grupo */}
+              <ObservacionesCard
+                ctx={ctx}
+                docenteId={docenteId}
+                plantelId={plantelId}
+                onVerAlumnosObs={handleToggleVerObservacionesAlumnos}
+              />
 
             </div>
 
-            <ObservacionesCard
-              ctx={ctx}
-              docenteId={docenteId}
-              plantelId={plantelId}
-              onVerAlumnosObs={() => {
-                alert('Próximamente: ver observaciones hechas a los alumnos')
-              }}
-            />
+            {/* SECCIÓN DESPLEGABLE: Ocupa todo el ancho independientemente debajo de las dos tarjetas */}
+            {mostrarObsAlumnos && alumnosConObsCalculados && (
+              <div style={{ background:'white', borderRadius:14, border:'1px solid #e8eaf0', padding:'1rem 1.25rem', marginBottom:'1.125rem', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', animation:'fadeUp 0.2s ease-out' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem' }}>
+                  <h3 style={{ fontSize:'0.78rem', fontWeight:700, color:'#1e3a5f', margin:0, textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                    Alumnos con observaciones ({alumnosConObsCalculados.length})
+                  </h3>
+                  <button
+                    onClick={() => setMostrarObsAlumnos(false)}
+                    style={{ background:'none', border:'none', fontSize:'0.72rem', color:'#94a3b8', cursor:'pointer', fontWeight:600 }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
 
-          </div>
+                {alumnosConObsCalculados.length === 0 ? (
+                  <p style={{ fontSize:'0.78rem', color:'#94a3b8', margin:0, fontStyle:'italic' }}>
+                    No hay alumnos con observaciones registradas en este grupo.
+                  </p>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem', maxHeight:250, overflowY:'auto', paddingRight:4 }}>
+                    {alumnosConObsCalculados.map((al, idx) => (
+                      <div key={al.id} style={{ background:'#f8fafc', borderRadius:10, padding:'0.625rem 0.875rem', border:'1px solid #f1f5f9' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.25rem' }}>
+                          <span style={{ fontSize:'0.65rem', fontWeight:700, color:'#64748b', background:'#e2e8f0', borderRadius:'50%', width:18, height:18, display:'inline-flex', alignItems:'center', justifyContent:'center' }}>
+                            {idx + 1}
+                          </span>
+                          <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e293b' }}>
+                            {al.nombreCompleto}
+                          </span>
+                        </div>
+                        <p style={{ fontSize:'0.74rem', color:'#475569', margin:'0 0 0 1.625rem', lineHeight:1.35, whiteSpace:'pre-wrap' }}>
+                          {al.observacion}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {loading ? (
