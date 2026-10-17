@@ -110,9 +110,19 @@ export default function ConfirmarFechaView({
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .confirmar-grid { display:grid; gap:1rem; }
+        .confirmar-grid { display:grid; gap:1.25rem; align-items: stretch; }
+        .confirmar-card {
+          background: white;
+          border: 1px solid #f0f0f5;
+          border-radius: 1rem;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          min-height: 520px;
+        }
         @media(min-width:768px) {
-          .confirmar-grid { grid-template-columns:1fr 1fr; gap:1.25rem; }
+          .confirmar-grid { grid-template-columns:1fr 1fr; gap:1.5rem; }
           .confirmar-wrap { padding: 1.5rem 1.25rem 3rem; }
         }
       `}</style>
@@ -120,7 +130,7 @@ export default function ConfirmarFechaView({
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.25rem' }}>
         <button onClick={onBack}
-          style={{ width:36, height:36, borderRadius:10, background:'white', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
+          style={{ width:36, height:36, borderRadius:10, background:'white', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#475569', flexShrink:0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -134,8 +144,8 @@ export default function ConfirmarFechaView({
       <div className="confirmar-grid">
 
         {/* Card izquierda — acción del día */}
-        <div style={{ background:'white', border:'1px solid #f0f0f5', borderRadius:'1rem', boxShadow:'0 4px 20px rgba(0,0,0,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          <div style={{ padding:'2.5rem 1.5rem 1.5rem', flex:1 }}>
+        <div className="confirmar-card" style={{ padding: '2.5rem 1.5rem 1.75rem' }}>
+          <div>
             <p style={{ color:'#1e3a5f', fontSize:'2.25rem', fontWeight:800, fontFamily:'Outfit, sans-serif', lineHeight:1.1, textTransform:'capitalize', marginBottom:'0.5rem' }}>
               {new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' })}
             </p>
@@ -149,24 +159,28 @@ export default function ConfirmarFechaView({
             </div>
           </div>
 
-          <div style={{ padding:'0 1.5rem 2rem', display:'flex', gap:'0.75rem' }}>
+          {/* Botones empujados hacia abajo de la card sin líneas divisorias */}
+          <div style={{ marginTop: 'auto', paddingTop: '1.5rem' }}>
             {!docenteId || loadingHist ? (
-              <div style={{ flex:1, height:48, borderRadius:'0.875rem', background:'#f4f4f8', animation:'pulse 1.5s ease-in-out infinite' }}/>
+              <div style={{ width:'100%', height:48, borderRadius:'0.875rem', background:'#f4f4f8', animation:'pulse 1.5s ease-in-out infinite' }}/>
             ) : hayHoy ? (
-              <>
-                <div style={{ flex:1, padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'#f0fdf4', border:'1px solid #bbf7d0', display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', width:'100%' }}>
+                <div style={{ flex:1, padding:'0.75rem 1rem', borderRadius:'0.875rem', background:'#f0fdf4', border:'1px solid #bbf7d0', display:'flex', alignItems:'center', gap:'0.5rem' }}>
                   <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   <span style={{ fontSize:'0.8rem', color:'#16a34a', fontWeight:500 }}>Asistencia tomada</span>
                 </div>
                 <button onClick={onConfirmar}
-                  style={{ padding:'0.875rem 1.25rem', background:'#eff6ff', color:'#2563eb', border:'1.5px solid #bfdbfe', borderRadius:'0.875rem', cursor:'pointer', fontWeight:600, fontSize:'0.85rem' }}>
-                  Editar
+                  style={{ padding:'0.75rem 1.25rem', background:'#eff6ff', color:'#2563eb', border:'1.5px solid #bfdbfe', borderRadius:'0.875rem', cursor:'pointer', fontWeight:600, fontSize:'0.85rem', display:'inline-flex', alignItems:'center', gap:'0.35rem' }}>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+                  </svg>
+                  Ver
                 </button>
-              </>
+              </div>
             ) : (
-              <button onClick={onConfirmar} style={{ width:'100%', background:'linear-gradient(135deg, #1e6fcc, #155ca0)', color:'white', border:'none', borderRadius:'0.875rem', cursor:'pointer', fontWeight:700, padding:'0.95rem', fontSize:'0.9rem' }}>
+              <button onClick={onConfirmar} style={{ width:'100%', background:'linear-gradient(135deg, #1e6fcc, #155ca0)', color:'white', border:'none', borderRadius:'0.875rem', cursor:'pointer', fontWeight:700, padding:'0.875rem', fontSize:'0.9rem' }}>
                 Tomar asistencia ahora →
               </button>
             )}
@@ -174,7 +188,7 @@ export default function ConfirmarFechaView({
         </div>
 
         {/* Card derecha — historial */}
-        <div style={{ background:'white', borderRadius:'1rem', border:'1px solid #f0f0f5', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 4px 20px rgba(0,0,0,0.05)' }}>
+        <div className="confirmar-card">
           <div style={{ padding:'1.25rem 1.25rem', borderBottom:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <div>
               <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Historial de asistencias</p>
@@ -241,8 +255,11 @@ export default function ConfirmarFechaView({
                     <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 8px', borderRadius:9999, background:'#f0fdf4', color:'#16a34a', border:'1px solid #bbf7d0' }}>✓</span>
                     {onEditarFecha && (
                       <button onClick={() => onEditarFecha(reg.fecha)}
-                        style={{ fontSize:'0.68rem', fontWeight:600, color:'#2563eb', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, padding:'3px 10px', cursor:'pointer', whiteSpace:'nowrap' }}>
-                        Editar
+                        style={{ fontSize:'0.68rem', fontWeight:600, color:'#2563eb', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:8, padding:'3px 10px', cursor:'pointer', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:'0.3rem' }}>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+                        </svg>
+                        Ver
                       </button>
                     )}
                   </div>
@@ -251,8 +268,9 @@ export default function ConfirmarFechaView({
             })}
           </div>
 
-          {totalPaginas > 1 && (
-            <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.375rem' }}>
+          {/* Paginación en la tarjeta de historial */}
+          {totalPaginas > 1 ? (
+            <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid #f4f4f8', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.375rem', minHeight: '52px' }}>
               <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
                 style={{ width:28, height:28, borderRadius:8, border:'1px solid #e5e5ea', background:'white', cursor: pagina === 1 ? 'not-allowed' : 'pointer', opacity: pagina === 1 ? 0.4 : 1, display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <svg width="12" height="12" fill="none" stroke="#3a3a3c" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
@@ -272,6 +290,8 @@ export default function ConfirmarFechaView({
                 </svg>
               </button>
             </div>
+          ) : (
+            <div style={{ borderTop:'1px solid #f4f4f8', minHeight: '52px' }} />
           )}
         </div>
       </div>

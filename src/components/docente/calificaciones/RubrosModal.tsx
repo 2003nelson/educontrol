@@ -84,13 +84,11 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
       .eq('docente_id', docenteId)
       .order('orden')
     if (data && data.length > 0) {
-      // Al copiar mantenemos el rubro de asistencia actual y copiamos el resto
       setTrabajos(prev => {
         const asistencia = prev.find(t => t.es_asistencia)
         const copiados = data
           .filter(t => !t.es_asistencia && t.nombre.toLowerCase() !== 'asistencia')
           .map((t, i) => ({ id: `new-${Date.now()}-${i}`, nombre: t.nombre, peso: t.peso, orden: i + 1 }))
-        // Actualizar solo el peso de asistencia si la copia lo trae
         const pesoAsistenciaCopia = data.find(t => t.es_asistencia || t.nombre.toLowerCase() === 'asistencia')?.peso ?? asistencia?.peso ?? 0
         return [
           ...(asistencia ? [{ ...asistencia, peso: pesoAsistenciaCopia }] : []),
@@ -102,7 +100,6 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
   }
 
   function update(idx: number, campo: keyof Trabajo, valor: string | number) {
-    // El nombre del rubro de asistencia no se puede editar
     if (campo === 'nombre' && trabajos[idx]?.es_asistencia) return
     setTrabajos(prev => prev.map((t, i) => i === idx ? { ...t, [campo]: valor } : t))
   }
@@ -118,14 +115,12 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
     })
   }
 
-  // Solo se pueden eliminar rubros que NO son asistencia
   function remove(idx: number) {
     if (trabajos[idx]?.es_asistencia) return
     setTrabajos(prev => prev.filter((_, i) => i !== idx))
   }
 
   function borrarTodos() {
-    // Mantener solo el rubro de asistencia, borrar todos los demás
     setTrabajos(prev => prev.filter(t => t.es_asistencia))
     setConfirmarBorrar(false)
   }
@@ -174,81 +169,62 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
     setGuardando(false)
     onGuardado()
     onClose()
+    window.location.reload()
   }
 
   if (typeof window === 'undefined') return null
 
-  // Rubros sin contar Asistencia para el check de "agregar trabajo"
   const rubrosEditables = trabajos.filter(t => !t.es_asistencia)
   const ultimoEditable = rubrosEditables[rubrosEditables.length - 1]
   const mostrarAgregar = !ultimoEditable || (ultimoEditable.nombre.trim() !== '' && Number(ultimoEditable.peso) > 0)
 
   return createPortal(
     <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'1rem' }}>
-      <div onClick={e => e.stopPropagation()} className="rubros-modal-inner" style={{ background:'white', borderRadius:'1.375rem', width:'100%', maxWidth:680, maxHeight:'92vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 28px 72px rgba(0,0,0,0.20)', animation:'cardIn 0.32s cubic-bezier(0.34,1.4,0.64,1)', position:'relative' }}>
+      <div onClick={e => e.stopPropagation()} className="rubros-modal-inner" style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:720, maxHeight:'92vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 24px 60px rgba(0,0,0,0.15)', animation:'cardIn 0.3s cubic-bezier(0.34,1.3,0.64,1)', position:'relative' }}>
         <style>{`
-          @keyframes cardIn{from{opacity:0;transform:scale(0.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+          @keyframes cardIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
           @keyframes spin{to{transform:rotate(360deg)}}
           @keyframes modalBorrarIn{from{opacity:0;transform:scale(0.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
           .rubro-row:hover { background: #f8fafc !important; }
-          .rubro-asistencia:hover { background: #e8f0fe !important; }
           .peso-btn { transition: background 0.12s, border-color 0.12s, opacity 0.12s; }
-          .peso-btn:disabled { opacity: 0.3; cursor: default !important; }
-          .btn-menos:not(:disabled):hover { background: #ffedd5 !important; border-color: #fb923c !important; }
-          .btn-mas:not(:disabled):hover { background: #dcfce7 !important; border-color: #4ade80 !important; }
+          .peso-btn:disabled { opacity: 0.25; cursor: default !important; }
+          .btn-menos:not(:disabled):hover { background: #fff1f2 !important; border-color: #fda4af !important; color: #e11d48 !important; }
+          .btn-mas:not(:disabled):hover { background: #f0fdf4 !important; border-color: #86efac !important; color: #16a34a !important; }
           @media (max-width: 600px) {
             .rubros-modal-inner { max-width: 100% !important; border-radius: 1rem 1rem 0 0 !important; max-height: 96vh !important; }
             .rubros-footer { flex-direction: column !important; }
             .rubros-footer button { flex: unset !important; width: 100% !important; }
-            .rubro-asistencia { flex-wrap: wrap !important; }
-            .asistencia-spinner { margin-left: auto !important; }
           }
         `}</style>
 
         {/* Header */}
-        <div style={{ padding:'1.375rem 1.625rem 1rem', borderBottom:'1px solid #f0f0f5', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+        <div style={{ padding:'1.25rem 1.5rem 1rem', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
-            <h2 style={{ fontSize:'1.0625rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Trabajos del parcial</h2>
-            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'3px 0 0', textTransform:'uppercase', letterSpacing:'0.04em' }}>{ctx.asignatura_nombre} · {['1er','2do','3er'][parseInt(ctx.periodo)-1]} Parcial</p>
+            <h2 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Trabajos del parcial</h2>
+            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.04em' }}>{ctx.asignatura_nombre} · {['1er','2do','3er'][parseInt(ctx.periodo)-1]} Parcial</p>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
-            {/* Borrar todos los rubros editables */}
-            {rubrosEditables.length > 0 && (
-              <button
-                onClick={() => setConfirmarBorrar(true)}
-                title="Borrar todos los trabajos"
-                style={{ display:'flex', alignItems:'center', gap:5, padding:'0.375rem 0.75rem', borderRadius:8, border:'1px solid #fecaca', background:'#fff1f1', color:'#dc2626', fontSize:'0.75rem', fontWeight:600, cursor:'pointer', transition:'background 0.12s, border-color 0.12s' }}
-                onMouseEnter={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.borderColor='#fca5a5' }}
-                onMouseLeave={e => { e.currentTarget.style.background='#fff1f1'; e.currentTarget.style.borderColor='#fecaca' }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-                Borrar todos
-              </button>
-            )}
-            <button onClick={onClose} style={{ width:30, height:30, borderRadius:'50%', background:'#f4f4f8', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#6b7280', fontWeight:700, fontSize:'1rem' }}>✕</button>
-          </div>
+          <button onClick={onClose} style={{ width:28, height:28, borderRadius:'50%', background:'#f8fafc', border:'1px solid #e2e8f0', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:600, fontSize:'0.85rem' }}>✕</button>
         </div>
 
-        {/* Barra de pesos */}
-        <div style={{ padding:'0.625rem 1.625rem', background: pesoValido ? '#f0fdf4' : sumaPesos > 100 ? '#fef2f2' : '#fffbeb', borderBottom:'1px solid #f0f0f5', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'1rem' }}>
-          <span style={{ fontSize:'0.75rem', fontWeight:700, color: pesoValido ? '#15803d' : sumaPesos > 100 ? '#dc2626' : '#92400e', flexShrink:0 }}>
+        {/* Barra de pesos minimalista */}
+        <div style={{ padding:'0.55rem 1.5rem', background: pesoValido ? '#f8fafc' : sumaPesos > 100 ? '#fef2f2' : '#fffbeb', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'1rem' }}>
+          <span style={{ fontSize:'0.73rem', fontWeight:600, color: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#d97706', flexShrink:0 }}>
             {pesoValido ? '✓ Suma 100%' : `Suma ${sumaPesos}% — debe ser 100%`}
           </span>
-          <div style={{ flex:1, height:7, borderRadius:9999, background:'#e2e8f0', overflow:'hidden' }}>
-            <div style={{ height:'100%', width:`${Math.min(sumaPesos,100)}%`, background: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#f59e0b', borderRadius:9999, transition:'width 0.3s' }}/>
+          <div style={{ flex:1, height:5, borderRadius:9999, background:'#e2e8f0', overflow:'hidden' }}>
+            <div style={{ height:'100%', width:`${Math.min(sumaPesos,100)}%`, background: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#f59e0b', borderRadius:9999, transition:'width 0.25s' }}/>
           </div>
-          <span style={{ fontSize:'0.72rem', fontWeight:800, color:'#64748b', flexShrink:0, minWidth:38, textAlign:'right' }}>{sumaPesos}%</span>
+          <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#475569', flexShrink:0, minWidth:34, textAlign:'right' }}>{sumaPesos}%</span>
         </div>
 
-        {/* Lista de trabajos */}
-        <div style={{ flex:1, overflowY:'auto', padding:'0.875rem 1.625rem' }}>
+        {/* Lista de trabajos limpia */}
+        <div style={{ flex:1, overflowY:'auto', padding:'1rem 1.5rem' }}>
           {loading ? (
             <div style={{ display:'flex', justifyContent:'center', padding:'3rem' }}>
-              <div style={{ width:32, height:32, border:'3px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/>
+              <div style={{ width:28, height:28, border:'2.5px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/>
             </div>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
 
               {trabajos.map((t, i) => {
                 const pesoNum = Number(t.peso) || 0
@@ -257,104 +233,95 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 const puedeBajar = pesoNum > 0
                 const esAsistencia = !!t.es_asistencia
 
+                // Estado de la guía para el usuario
+                const tieneNombre = t.nombre.trim() !== ''
+                const tienePeso = pesoNum > 0
+
                 return esAsistencia ? (
-                  /* ── Rubro fijo: Asistencia ── */
-                  <div key={t.id} className="rubro-asistencia" style={{ display:'flex', alignItems:'center', gap:'0.875rem', padding:'0.875rem 1rem', borderRadius:12, background:'#eff6ff', border:'1.5px solid #bfdbfe', transition:'background 0.12s' }}>
-                    {/* Ícono asistencia */}
-                    <div style={{ width:38, height:38, borderRadius:10, background:'#dbeafe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <svg width="18" height="18" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  /* ── Rubro fijo: Asistencia (Diseño limpio) ── */
+                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
+                    <div style={{ width:30, height:30, borderRadius:8, background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#475569' }}>
+                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                       </svg>
                     </div>
 
-                    {/* Nombre fijo + subtítulo */}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.375rem' }}>
-                        <p style={{ fontSize:'0.875rem', fontWeight:700, color:'#1e40af', margin:0 }}>Asistencia</p>
-                        <span style={{ fontSize:'0.6rem', fontWeight:700, color:'#2563eb', background:'#dbeafe', borderRadius:5, padding:'1px 6px', letterSpacing:'0.04em' }}>DEFAULT</span>
+                      <div style={{ display:'flex', alignItems:'center', gap: '0.35rem' }}>
+                        <p style={{ fontSize:'0.82rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Asistencia</p>
+                        <span style={{ fontSize:'0.58rem', fontWeight:700, color:'#64748b', background:'#e2e8f0', borderRadius:4, padding:'1px 4px' }}>AUTOMÁTICO</span>
                       </div>
-                      <p style={{ fontSize:'0.68rem', color:'#3b82f6', margin:'2px 0 0', fontWeight:500, lineHeight:1.4 }}>
-                        Calculada automáticamente desde el módulo de asistencia · solo ajusta el porcentaje que vale
-                      </p>
+                      <p style={{ fontSize:'0.65rem', color:'#94a3b8', margin:0 }}>Calculada desde asistencia</p>
                     </div>
 
-                    {/* Spinner de porcentaje */}
-                    <div className="asistencia-spinner" style={{ display:'flex', alignItems:'center', gap:'0.25rem', flexShrink:0 }}>
-                      {/* Botón − naranja */}
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
                       <button className="peso-btn btn-menos" disabled={!puedeBajar} onClick={() => cambiarPeso(i, -5)}
-                        style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #fed7aa', background:'#fff7ed', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#ea580c' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14"/></svg>
-                      </button>
-                      {/* Valor */}
-                      <div style={{ width:52, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, border:'1.5px solid #bfdbfe', background:'white' }}>
-                        <span style={{ fontSize:'0.85rem', fontWeight:800, color:'#1d4ed8' }}>{pesoNum}</span>
-                        <span style={{ fontSize:'0.65rem', color:'#3b82f6', marginLeft:1 }}>%</span>
+                        style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
+                      <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
+                        <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
                       </div>
-                      {/* Botón + verde */}
                       <button className="peso-btn btn-mas" disabled={!puedeSubir} onClick={() => cambiarPeso(i, 5)}
-                        style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #bbf7d0', background:'#f0fdf4', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#16a34a' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      </button>
+                        style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
                     </div>
 
-                    {/* Placeholder alineado con botón eliminar de los demás */}
-                    <div style={{ width:26, flexShrink:0 }} />
+                    <div style={{ width:24, flexShrink:0 }} />
                   </div>
                 ) : (
-                  /* ── Rubro normal editable ── */
-                  <div key={t.id} className="rubro-row" style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.625rem 0.875rem', borderRadius:11, background:'#f8fafc', border:'1px solid #e8eaf0', transition:'background 0.12s' }}>
-                    <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#94a3b8', width:20, flexShrink:0, textAlign:'center' }}>{i}</span>
+                  /* ── Rubro normal editable con mensaje de ayuda dinámico ── */
+                  <div key={t.id} className="rubro-row" style={{ display:'flex', flexDirection:'column', gap:'0.35rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', transition:'background 0.1s' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                      <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', width:16, flexShrink:0, textAlign:'center' }}>{i}</span>
 
-                    <input
-                      value={t.nombre}
-                      onChange={e => update(i, 'nombre', e.target.value)}
-                      placeholder="Nombre del trabajo"
-                      style={{ flex:1, border:'none', background:'transparent', fontSize:'0.85rem', color:'#1e3a5f', outline:'none', fontWeight:500, minWidth:0 }}
-                    />
+                      <input
+                        value={t.nombre}
+                        onChange={e => update(i, 'nombre', e.target.value)}
+                        placeholder="Nombre del trabajo (ej. Tarea, Examen)"
+                        style={{ flex:1, border:'none', background:'transparent', fontSize:'0.82rem', color:'#1e3a5f', outline:'none', fontWeight:500, minWidth:0 }}
+                      />
 
-                    {/* Spinner de porcentaje */}
-                    <div style={{ display:'flex', alignItems:'center', gap:'0.25rem', flexShrink:0 }}>
-                      {/* Botón − naranja */}
-                      <button className="peso-btn btn-menos" disabled={!puedeBajar} onClick={() => cambiarPeso(i, -5)}
-                        style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #fed7aa', background:'#fff7ed', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#ea580c' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14"/></svg>
-                      </button>
-                      <div style={{ width:52, height:30, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8, border:'1.5px solid #e2e8f0', background:'white' }}>
-                        <span style={{ fontSize:'0.85rem', fontWeight:800, color:'#1e3a5f' }}>{pesoNum}</span>
-                        <span style={{ fontSize:'0.65rem', color:'#94a3b8', marginLeft:1 }}>%</span>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
+                        <button className="peso-btn btn-menos" disabled={!puedeBajar} onClick={() => cambiarPeso(i, -5)}
+                          style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
+                        <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
+                          <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
+                        </div>
+                        <button className="peso-btn btn-mas" disabled={!puedeSubir} onClick={() => cambiarPeso(i, 5)}
+                          style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
                       </div>
-                      {/* Botón + verde */}
-                      <button className="peso-btn btn-mas" disabled={!puedeSubir} onClick={() => cambiarPeso(i, 5)}
-                        style={{ width:30, height:30, borderRadius:8, border:'1.5px solid #bbf7d0', background:'#f0fdf4', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#16a34a' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                      </button>
+
+                      <button onClick={() => remove(i)}
+                        style={{ width:24, height:24, borderRadius:'50%', background:'transparent', border:'none', cursor:'pointer', color:'#cbd5e1', fontSize:'0.75rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'color 0.12s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color='#dc2626')}
+                        onMouseLeave={e => (e.currentTarget.style.color='#cbd5e1')}>✕</button>
                     </div>
 
-                    <button onClick={() => remove(i)}
-                      style={{ width:26, height:26, borderRadius:'50%', background:'rgba(220,38,38,0.07)', border:'none', cursor:'pointer', color:'#dc2626', fontSize:'0.75rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'background 0.12s' }}
-                      onMouseEnter={e => (e.currentTarget.style.background='rgba(220,38,38,0.15)')}
-                      onMouseLeave={e => (e.currentTarget.style.background='rgba(220,38,38,0.07)')}>✕</button>
+                    {/* Mensaje de guía para docentes */}
+                    <div style={{ paddingLeft: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      {!tieneNombre ? (
+                        <p style={{ fontSize: '0.68rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: '0.75rem' }}>ℹ️</span> Asigna un nombre a tu rubro
+                        </p>
+                      ) : !tienePeso ? (
+                        <p style={{ fontSize: '0.68rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: '0.75rem' }}>ℹ️</span> Añade un porcentaje a este trabajo
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: '0.68rem', color: '#16a34a', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>✓</span> Rubro cargado correctamente
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )
               })}
 
-              {/* Copiar de otro parcial — solo si no hay rubros editables aún */}
+              {/* Copiar de otro parcial */}
               {parcialesToCopy.length > 0 && rubrosEditables.length === 0 && (
-                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.625rem 0.875rem', borderRadius:11, background:'#f0f4fa', border:'1px solid #dde3ea', marginBottom:'0.25rem' }}>
-                  <svg width="13" height="13" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  <span style={{ fontSize:'0.75rem', color:'#1e3a5f', fontWeight:500, flex:1 }}>Copiar trabajos de:</span>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.55rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', marginTop:'0.25rem' }}>
+                  <span style={{ fontSize:'0.72rem', color:'#64748b', fontWeight:500, flex:1 }}>Copiar de:</span>
                   {parcialesToCopy.map(p => (
                     <button key={p.periodo} onClick={() => void copiarDeParcial(p.periodo)} disabled={copiando}
-                      style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:7, border:'1px solid #bfdbfe', background:'white', color:'#2563eb', fontSize:'0.72rem', fontWeight:600, cursor: copiando ? 'not-allowed' : 'pointer', opacity: copiando ? 0.6 : 1 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2"/>
-                        <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"/>
-                        <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8"/>
-                        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
-                      </svg>
+                      style={{ padding:'3px 8px', borderRadius:6, border:'1px solid #cbd5e1', background:'white', color:'#475569', fontSize:'0.7rem', fontWeight:600, cursor: copiando ? 'not-allowed' : 'pointer' }}>
                       {p.label}
                     </button>
                   ))}
@@ -364,11 +331,24 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
               {/* Agregar trabajo */}
               {mostrarAgregar && (
                 <button onClick={addTrabajo}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.625rem', borderRadius:11, border:'1.5px dashed #e2e8f0', background:'transparent', cursor:'pointer', color:'#94a3b8', fontSize:'0.82rem', fontWeight:600, marginTop:'0.25rem', transition:'border-color 0.12s, color 0.12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.color='#2563eb' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#94a3b8' }}>
-                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                  Agregar trabajo
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'0.55rem', borderRadius:10, border:'1px dashed #cbd5e1', background:'transparent', cursor:'pointer', color:'#64748b', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='#94a3b8'; e.currentTarget.style.color='#1e3a5f' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='#cbd5e1'; e.currentTarget.style.color='#64748b' }}>
+                  + Agregar trabajo
+                </button>
+              )}
+
+              {/* Botón Borrar Todos — ubicado en la parte inferior por debajo del botón de agregar */}
+              {rubrosEditables.length > 0 && (
+                <button
+                  onClick={() => setConfirmarBorrar(true)}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.55rem', borderRadius:10, border:'1px solid #fecaca', background:'#fff1f1', cursor:'pointer', color:'#dc2626', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.borderColor='#fca5a5' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#fff1f1'; e.currentTarget.style.borderColor='#fecaca' }}>
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                  </svg>
+                  Borrar todos los trabajos
                 </button>
               )}
             </div>
@@ -376,37 +356,29 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
         </div>
 
         {/* Footer */}
-        <div className="rubros-footer" style={{ padding:'1rem 1.625rem', borderTop:'1px solid #f0f0f5', display:'flex', gap:'0.625rem', flexShrink:0 }}>
-          <button onClick={onClose} style={{ flex:1, padding:'0.75rem', borderRadius:10, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.875rem', fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+        <div className="rubros-footer" style={{ padding:'0.85rem 1.5rem', borderTop:'1px solid #f1f5f9', display:'flex', gap:'0.5rem', flexShrink:0 }}>
+          <button onClick={onClose} style={{ flex:1, padding:'0.65rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>Cancelar</button>
           <button onClick={guardar} disabled={!pesoValido || guardando}
-            style={{ flex:2, padding:'0.75rem', borderRadius:10, border:'none', background: !pesoValido ? '#e2e8f0' : 'linear-gradient(135deg,#1e40af,#2563eb)', color: !pesoValido ? '#94a3b8' : 'white', fontSize:'0.875rem', fontWeight:700, cursor: !pesoValido || guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'background 0.2s' }}>
-            {guardando ? <><div style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Guardando...</> : 'Guardar trabajos'}
+            style={{ flex:2, padding:'0.65rem', borderRadius:8, border:'none', background: !pesoValido ? '#e2e8f0' : '#1e3a5f', color: !pesoValido ? '#94a3b8' : 'white', fontSize:'0.82rem', fontWeight:600, cursor: !pesoValido || guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'background 0.15s' }}>
+            {guardando ? <><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Guardando...</> : 'Guardar trabajos'}
           </button>
         </div>
 
         {/* Modal de confirmación: borrar todos */}
         {confirmarBorrar && (
-          <div style={{ position:'absolute', inset:0, zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.35)', backdropFilter:'blur(4px)', borderRadius:'1.375rem' }}>
-            <div style={{ background:'white', borderRadius:'1.125rem', width:'calc(100% - 3rem)', maxWidth:360, padding:'1.75rem', boxShadow:'0 16px 48px rgba(0,0,0,0.18)', animation:'modalBorrarIn 0.25s cubic-bezier(0.34,1.4,0.64,1)' }}>
-              {/* Ícono */}
-              <div style={{ width:48, height:48, borderRadius:14, background:'#fff1f1', border:'1px solid #fecaca', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
-                <svg width="22" height="22" fill="none" stroke="#dc2626" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-              </div>
-              <h3 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.5rem' }}>¿Borrar todos los trabajos?</h3>
-              <p style={{ fontSize:'0.8rem', color:'#64748b', textAlign:'center', margin:'0 0 1.375rem', lineHeight:1.55 }}>
-                Se eliminarán <strong>{rubrosEditables.length} {rubrosEditables.length === 1 ? 'trabajo' : 'trabajos'}</strong> de este parcial. El rubro de Asistencia se conserva. Esta acción no se puede deshacer.
+          <div style={{ position:'absolute', inset:0, zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.35)', backdropFilter:'blur(4px)', borderRadius:'1.25rem' }}>
+            <div style={{ background:'white', borderRadius:'1rem', width:'calc(100% - 3rem)', maxWidth:340, padding:'1.5rem', boxShadow:'0 16px 40px rgba(0,0,0,0.15)', animation:'modalBorrarIn 0.2s cubic-bezier(0.34,1.3,0.64,1)' }}>
+              <h3 style={{ fontSize:'0.95rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.35rem' }}>¿Borrar todos los trabajos?</h3>
+              <p style={{ fontSize:'0.75rem', color:'#64748b', textAlign:'center', margin:'0 0 1.25rem', lineHeight:1.5 }}>
+                Se eliminarán todos los trabajos de este parcial. El rubro de Asistencia se conservará.
               </p>
-              <div style={{ display:'flex', gap:'0.625rem' }}>
+              <div style={{ display:'flex', gap:'0.5rem' }}>
                 <button onClick={() => setConfirmarBorrar(false)}
-                  style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.875rem', fontWeight:600, cursor:'pointer' }}>
+                  style={{ flex:1, padding:'0.6rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.8rem', fontWeight:600, cursor:'pointer' }}>
                   Cancelar
                 </button>
                 <button onClick={borrarTodos}
-                  style={{ flex:1, padding:'0.7rem', borderRadius:10, border:'none', background:'#dc2626', color:'white', fontSize:'0.875rem', fontWeight:700, cursor:'pointer', transition:'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background='#b91c1c')}
-                  onMouseLeave={e => (e.currentTarget.style.background='#dc2626')}>
+                  style={{ flex:1, padding:'0.6rem', borderRadius:8, border:'none', background:'#dc2626', color:'white', fontSize:'0.8rem', fontWeight:600, cursor:'pointer' }}>
                   Sí, borrar
                 </button>
               </div>

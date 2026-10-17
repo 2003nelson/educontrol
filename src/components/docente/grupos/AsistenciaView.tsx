@@ -1,6 +1,6 @@
 // src/components/docente/grupos/AsistenciaView.tsx
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { AsignaturaItem } from './ConfirmarFechaView'
 
@@ -38,23 +38,20 @@ function formatFechaLegible(iso: string) {
 function SkeletonRow({ idx }: { idx: number }) {
   return (
     <tr style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
-      <td style={{ padding: '0.625rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+      <td style={{ padding: '0.875rem 0.5rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
         <div style={{ width: 20, height: 14, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
       </td>
-      <td style={{ padding: '0.625rem 0.75rem', borderBottom: '1px solid #eef1f6' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e5e7eb', flexShrink: 0, animation: 'shimmer 1.4s infinite' }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ width: '70%', height: 12, borderRadius: 4, background: '#e5e7eb', marginBottom: 5, animation: 'shimmer 1.4s infinite' }} />
-            <div style={{ width: '45%', height: 10, borderRadius: 4, background: '#f1f5f9', animation: 'shimmer 1.4s infinite' }} />
-          </div>
+      <td style={{ padding: '0.875rem 0.75rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 100, height: 13, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
+      </td>
+      <td style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e5e7eb', flexShrink: 0, animation: 'shimmer 1.4s infinite' }} />
+          <div style={{ width: '70%', height: 13, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
         </div>
       </td>
-      <td style={{ padding: '0.625rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
-        <div style={{ width: 72, height: 12, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
-      </td>
       {ESTADOS.map(e => (
-        <td key={e} style={{ padding: '0.375rem 0.25rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
+        <td key={e} style={{ padding: '0.875rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
         </td>
       ))}
@@ -72,15 +69,31 @@ export default function AsistenciaView({
   fechaEditar?: string
 }) {
   const supabase = createClient()
-  const [alumnos, setAlumnos]       = useState<Alumno[]>([])
+  const [alumnos, setAlumnos]         = useState<Alumno[]>([])
   const [asistencia, setAsistencia] = useState<Asistencia>({})
-  const [loading, setLoading]       = useState(true)
-  const [guardando, setGuardando]   = useState(false)
-  const [guardado, setGuardado]     = useState(false)
+  const [loading, setLoading]      = useState(true)
+  const [guardando, setGuardando]  = useState(false)
+  const [guardado, setGuardado]    = useState(false)
+  const [descargado, setDescargado] = useState(false)
+  const [busqueda, setBusqueda]    = useState('')
+
+  const [opcionPrincipal, setOpcionPrincipal] = useState<Estado>('P')
+  const [estadoMarcarTodos, setEstadoMarcarTodos] = useState<Estado | null>('P')
 
   const fechaObjetivo  = formatFechaISO(fechaEditar)
   const esEdicion      = !!fechaEditar
   const [masOpciones, setMasOpciones] = useState(false)
+
+  // Filtro dinámico de alumnos por nombre o matrícula
+  const alumnosFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return alumnos
+    const query = busqueda.toLowerCase().trim()
+    return alumnos.filter(al => {
+      const nombreCompleto = (al.nombre_completo || '').toLowerCase()
+      const matricula = (al.matricula || '').toLowerCase()
+      return nombreCompleto.includes(query) || matricula.includes(query)
+    })
+  }, [alumnos, busqueda])
 
   useEffect(() => {
     async function cargar() {
@@ -99,10 +112,22 @@ export default function AsistenciaView({
         const estadoInverso: Record<string, Estado> = {
           presente: 'P', falta: 'A', justificada: 'J', retardo: 'R',
         }
-        if (prevData) {
+        if (prevData && prevData.length > 0) {
           prevData.forEach((r: { estudiante_id: string; estado: string }) => {
             init[r.estudiante_id] = estadoInverso[r.estado] ?? 'P'
           })
+
+          const primerEstado = init[data[0]?.id]
+          const todosIgual = data.every((a: Alumno) => init[a.id] === primerEstado)
+          if (todosIgual && primerEstado) {
+            setEstadoMarcarTodos(primerEstado)
+            setOpcionPrincipal(primerEstado)
+          } else {
+            setEstadoMarcarTodos(null)
+          }
+        } else {
+          setEstadoMarcarTodos('P')
+          setOpcionPrincipal('P')
         }
         setAsistencia(init)
       }
@@ -115,10 +140,56 @@ export default function AsistenciaView({
     const nuevo: Asistencia = {}
     alumnos.forEach(a => { nuevo[a.id] = estado })
     setAsistencia(nuevo)
+    setEstadoMarcarTodos(estado)
+    setOpcionPrincipal(estado)
+    setDescargado(false)
   }
 
   function marcar(id: string, estado: Estado) {
-    setAsistencia(prev => ({ ...prev, [id]: estado }))
+    setAsistencia(prev => {
+      const nuevo = { ...prev, [id]: estado }
+      const primerEstado = nuevo[alumnos[0]?.id]
+      const todosIgual = alumnos.every(a => nuevo[a.id] === primerEstado)
+      setEstadoMarcarTodos(todosIgual ? primerEstado : null)
+      return nuevo
+    })
+    setDescargado(false)
+  }
+
+  function exportarExcel() {
+    if (alumnos.length === 0) return
+
+    const estadoTexto: Record<string, string> = {
+      P: 'Presente',
+      A: 'Ausente',
+      J: 'Justificada',
+      R: 'Retardo'
+    }
+
+    let csvContent = '\uFEFF'
+    csvContent += `Asignatura:,${asignatura.nombre}\n`
+    csvContent += `Fecha:,${fechaObjetivo}\n`
+    csvContent += `Total de Alumnos:,${alumnos.length}\n\n`
+    csvContent += `Matrícula,Nombre Completo,Estado de Asistencia\n`
+
+    alumnos.forEach(alumno => {
+      const estadoCode = asistencia[alumno.id] ?? 'P'
+      const estadoDesc = estadoTexto[estadoCode] ?? 'Presente'
+      const matricula = alumno.matricula ?? 'S/N'
+      const nombre = `"${alumno.nombre_completo.replace(/"/g, '""')}"`
+      csvContent += `${matricula},${nombre},${estadoDesc}\n`
+    })
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `Asistencia_${asignatura.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaObjetivo}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    setDescargado(true)
   }
 
   async function guardar() {
@@ -160,6 +231,8 @@ export default function AsistenciaView({
   const justif    = Object.values(asistencia).filter(v => v === 'J').length
   const retardos  = Object.values(asistencia).filter(v => v === 'R').length
 
+  const opcionesSecundarias = ESTADOS.filter(e => e !== opcionPrincipal)
+
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4fa', padding: '1.25rem 0.75rem 2rem' }}>
       <style>{`
@@ -182,12 +255,6 @@ export default function AsistenciaView({
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
-        }
-        /* En móvil las columnas de nombre se acortan */
-        @media (max-width: 639px) {
-          .col-nombre { max-width: 140px; }
-          .col-matricula { display: none; }
-          .th-matricula { display: none; }
         }
       `}</style>
 
@@ -215,7 +282,7 @@ export default function AsistenciaView({
 
       <div className="asist-layout">
 
-        {/* ── Sidebar con mayor espaciado vertical ── */}
+        {/* ── Sidebar ── */}
         <div className="asist-sidebar">
           <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e5e5ea', padding: '1.25rem 1.125rem 1.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
@@ -240,7 +307,7 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Marcar todos unificado */}
+            {/* Marcar todos dinámico */}
             <div>
               <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 0.375rem' }}>Marcar todos</p>
               <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
@@ -248,16 +315,42 @@ export default function AsistenciaView({
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {/* Botón principal — Marcar todos como Presente */}
-                <button onClick={() => { marcarTodos('P'); setMasOpciones(false) }}
-                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 12, background: '#dcfce7', color: '#16a34a', border: '1.5px solid #86efac', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-                  <svg width="15" height="15" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
-                  Marcar todos como Presente
+                <button
+                  onClick={() => { marcarTodos(opcionPrincipal); setMasOpciones(false) }}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    borderRadius: 12,
+                    background: estadoMarcarTodos === opcionPrincipal ? ESTADO_CFG[opcionPrincipal].bgActivo : '#ffffff',
+                    color: estadoMarcarTodos === opcionPrincipal ? ESTADO_COLOR[opcionPrincipal] : '#334155',
+                    border: `1.5px solid ${estadoMarcarTodos === opcionPrincipal ? ESTADO_BORDER_ACTIVO[opcionPrincipal] : '#e2e8f0'}`,
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s ease',
+                    boxShadow: estadoMarcarTodos === opcionPrincipal ? 'none' : '0 1px 2px rgba(0,0,0,0.03)'
+                  }}
+                  onMouseEnter={e => {
+                    if (estadoMarcarTodos !== opcionPrincipal) e.currentTarget.style.background = '#f8fafc'
+                    else e.currentTarget.style.opacity = '0.9'
+                  }}
+                  onMouseLeave={e => {
+                    if (estadoMarcarTodos !== opcionPrincipal) e.currentTarget.style.background = '#ffffff'
+                    else e.currentTarget.style.opacity = '1'
+                  }}
+                >
+                  <svg width="15" height="15" fill="none" stroke={estadoMarcarTodos === opcionPrincipal ? ESTADO_COLOR[opcionPrincipal] : '#64748b'} strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                  {estadoMarcarTodos === opcionPrincipal
+                    ? `Todos marcados como ${ESTADO_CFG[opcionPrincipal].label}`
+                    : `Marcar todos como ${ESTADO_CFG[opcionPrincipal].label}`}
                 </button>
 
-                {/* Botón más opciones */}
                 <button onClick={() => setMasOpciones(v => !v)}
                   style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: 12, background: masOpciones ? '#f1f5f9' : 'white', color: '#475569', border: '1.5px solid #e2e8f0', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'background 0.15s' }}>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"
@@ -267,12 +360,16 @@ export default function AsistenciaView({
                   {masOpciones ? 'Ocultar opciones' : 'Más opciones'}
                 </button>
 
-                {/* Tres opciones adicionales — desplegable */}
                 {masOpciones && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', animation: 'slideDown 0.18s ease', marginTop: '0.25rem' }}>
-                    {(['A', 'J', 'R'] as const).map(e => {
+                    {opcionesSecundarias.map(e => {
                       const cfg = ESTADO_CFG[e]
-                      const labels: Record<string, string> = { A: 'Marcar todos como Ausente', J: 'Marcar todos como Justificada', R: 'Marcar todos como Retardo' }
+                      const labels: Record<string, string> = {
+                        P: 'Marcar todos como Presente',
+                        A: 'Marcar todos como Ausente',
+                        J: 'Marcar todos como Justificada',
+                        R: 'Marcar todos como Retardo'
+                      }
                       return (
                         <button key={e} onClick={() => { marcarTodos(e); setMasOpciones(false) }}
                           style={{ width: '100%', padding: '0.625rem 0.875rem', borderRadius: 12, background: cfg.bgActivo, color: ESTADO_COLOR[e], border: `1.5px solid ${ESTADO_BORDER_ACTIVO[e]}`, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'opacity 0.12s' }}
@@ -288,7 +385,7 @@ export default function AsistenciaView({
               </div>
             </div>
 
-            {/* Guardar desktop con espacio extra superior */}
+            {/* Guardar desktop */}
             {alumnos.length > 0 && (
               <div style={{ marginTop: '0.5rem' }}>
                 <button onClick={guardar} disabled={guardando}
@@ -304,37 +401,94 @@ export default function AsistenciaView({
         <div className="asist-main">
           <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
 
-            {/* Info bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
-                {loading ? '—' : `${alumnos.length} alumno${alumnos.length !== 1 ? 's' : ''}`}
-              </span>
-              {/* Leyenda de colores */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                {ESTADOS.map(e => (
-                  <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: ESTADO_COLOR[e] }}/>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748b' }}>{ESTADO_CFG[e].labelCorto}</span>
-                  </div>
-                ))}
+            {/* Info bar con Barra de Búsqueda a la izquierda y Botón Excel a la derecha */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
+              
+              {/* Esquina superior izquierda: Input de Búsqueda */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.35rem 0.65rem', width: '260px' }}>
+                <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Buscar alumno en este grupo..."
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.78rem', color: '#1e3a5f', width: '100%', fontWeight: 500 }}
+                />
+                {busqueda && (
+                  <button
+                    onClick={() => setBusqueda('')}
+                    style={{ border: 'none', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', padding: 0, display: 'flex', alignItems: 'center' }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Esquina superior derecha: Total alumnos y Descargar Excel */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                  {loading ? '—' : `${alumnosFiltrados.length} ${alumnosFiltrados.length === 1 ? 'alumno' : 'alumnos'}`}
+                </span>
+
+                <button
+                  onClick={exportarExcel}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: 6,
+                    background: 'transparent',
+                    border: 'none',
+                    color: descargado ? '#16a34a' : '#334155',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s'
+                  }}
+                  onMouseEnter={e => {
+                    if (!descargado) e.currentTarget.style.color = '#0f172a'
+                  }}
+                  onMouseLeave={e => {
+                    if (!descargado) e.currentTarget.style.color = '#334155'
+                  }}
+                >
+                  {descargado ? (
+                    <svg width="14" height="14" fill="none" stroke="#16a34a" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="8" y1="13" x2="16" y2="13"></line>
+                      <line x1="8" y1="17" x2="16" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                  )}
+                  {descargado ? 'Documento descargado' : 'Descargar Excel'}
+                </button>
               </div>
             </div>
 
             <div className="asist-table-wrap">
               <table className="asist-table">
                 <colgroup>
-                  <col style={{ width: 40 }} />
-                  <col style={{ minWidth: 160 }} />
-                  <col className="th-matricula" style={{ width: 100 }} />
-                  {ESTADOS.map(e => <col key={e} style={{ width: 52 }} />)}
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ minWidth: '220px' }} />
+                  {ESTADOS.map(e => <col key={e} style={{ width: '56px' }} />)}
                 </colgroup>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
-                    <th style={{ padding: '0.625rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>#</th>
-                    <th style={{ padding: '0.625rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Alumno</th>
-                    <th className="th-matricula" style={{ padding: '0.625rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderRight: '1.5px solid #e2e8f0' }}>Matrícula</th>
+                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>#</th>
+                    <th style={{ padding: '0.75rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Matrícula</th>
+                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderLeft: '1.5px solid #e2e8f0' }}>Alumno</th>
                     {ESTADOS.map(e => (
-                      <th key={e} style={{ padding: '0.5rem 0.25rem', fontSize: '0.66rem', fontWeight: 700, color: ESTADO_COLOR[e], textAlign: 'center', borderLeft: '1px solid #eef1f6' }}>
+                      <th key={e} style={{ padding: '0.75rem 0.25rem', fontSize: '0.68rem', fontWeight: 700, color: ESTADO_COLOR[e], textAlign: 'center', borderLeft: '1px solid #eef1f6' }}>
                         {e}
                       </th>
                     ))}
@@ -343,15 +497,15 @@ export default function AsistenciaView({
                 <tbody>
                   {loading
                     ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} idx={i} />)
-                    : alumnos.length === 0
+                    : alumnosFiltrados.length === 0
                     ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', fontSize: '0.875rem', color: '#94a3b8' }}>
-                          No hay alumnos en este grupo
+                          {busqueda ? `No se encontraron alumnos con "${busqueda}"` : 'No hay alumnos en este grupo'}
                         </td>
                       </tr>
                     )
-                    : alumnos.map((alumno, idx) => {
+                    : alumnosFiltrados.map((alumno, idx) => {
                         const estadoActual = asistencia[alumno.id] ?? 'P'
                         const par = idx % 2 === 1
                         return (
@@ -361,62 +515,66 @@ export default function AsistenciaView({
                             onMouseLeave={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = par ? '#fafbfc' : 'white' }}>
 
                             {/* # */}
-                            <td style={{ padding: '0.5rem 0.375rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                            <td style={{ padding: '0.875rem 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
                               {idx + 1}
                             </td>
 
-                            {/* Nombre */}
-                            <td className="col-nombre" style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.75rem' }}>
+                            {/* Matrícula */}
+                            <td style={{ padding: '0.875rem 0.75rem', textAlign: 'center', borderBottom: '1px solid #eef1f6', borderRight: '1.5px solid #e2e8f0', transition: 'background 0.1s' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', fontFamily: 'monospace, sans-serif', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                                {alumno.matricula ?? '—'}
+                              </span>
+                            </td>
+
+                            {/* Nombre Alumno */}
+                            <td style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
                                   {alumno.nombre_completo.charAt(0).toUpperCase()}
                                 </div>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#1e3a5f', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {alumno.nombre_completo}
                                 </span>
                               </div>
-                            </td>
-
-                            {/* Matrícula */}
-                            <td className="col-matricula" style={{ padding: '0.5rem 0.5rem', fontSize: '0.72rem', color: '#94a3b8', fontWeight: 500, borderRight: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
-                              {alumno.matricula ?? '—'}
                             </td>
 
                             {/* Botones P / A / J / R */}
                             {ESTADOS.map(e => {
                               const activo = estadoActual === e
                               return (
-                                <td key={e} style={{ padding: '0.375rem 0.25rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
-                                  <button
-                                    onClick={() => marcar(alumno.id, e)}
-                                    style={{
-                                      width: 36, height: 36, borderRadius: 10,
-                                      background: activo ? ESTADO_CFG[e].bgActivo : 'transparent',
-                                      color: activo ? ESTADO_COLOR[e] : '#d1d5db',
-                                      border: `1.5px solid ${activo ? ESTADO_BORDER_ACTIVO[e] : 'transparent'}`,
-                                      fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
-                                      transition: 'all 0.1s',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    }}
-                                    onMouseEnter={ev => {
-                                      if (!activo) {
-                                        ev.currentTarget.style.background = ESTADO_CFG[e].bgActivo
-                                        ev.currentTarget.style.color = ESTADO_COLOR[e]
-                                        ev.currentTarget.style.borderColor = ESTADO_BORDER_ACTIVO[e]
-                                        ev.currentTarget.style.opacity = '0.6'
-                                      }
-                                    }}
-                                    onMouseLeave={ev => {
-                                      if (!activo) {
-                                        ev.currentTarget.style.background = 'transparent'
-                                        ev.currentTarget.style.color = '#d1d5db'
-                                        ev.currentTarget.style.borderColor = 'transparent'
-                                        ev.currentTarget.style.opacity = '1'
-                                      }
-                                    }}
-                                  >
-                                    {e}
-                                  </button>
+                                <td key={e} style={{ padding: '0.875rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                                    <button
+                                      onClick={() => marcar(alumno.id, e)}
+                                      style={{
+                                        width: 36, height: 36, borderRadius: 10,
+                                        background: activo ? ESTADO_CFG[e].bgActivo : 'transparent',
+                                        color: activo ? ESTADO_COLOR[e] : '#d1d5db',
+                                        border: `1.5px solid ${activo ? ESTADO_BORDER_ACTIVO[e] : 'transparent'}`,
+                                        fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                                        transition: 'all 0.1s',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      }}
+                                      onMouseEnter={ev => {
+                                        if (!activo) {
+                                          ev.currentTarget.style.background = ESTADO_CFG[e].bgActivo
+                                          ev.currentTarget.style.color = ESTADO_COLOR[e]
+                                          ev.currentTarget.style.borderColor = ESTADO_BORDER_ACTIVO[e]
+                                          ev.currentTarget.style.opacity = '0.6'
+                                        }
+                                      }}
+                                      onMouseLeave={ev => {
+                                        if (!activo) {
+                                          ev.currentTarget.style.background = 'transparent'
+                                          ev.currentTarget.style.color = '#d1d5db'
+                                          ev.currentTarget.style.borderColor = 'transparent'
+                                          ev.currentTarget.style.opacity = '1'
+                                        }
+                                      }}
+                                    >
+                                      {e}
+                                    </button>
+                                  </div>
                                 </td>
                               )
                             })}
