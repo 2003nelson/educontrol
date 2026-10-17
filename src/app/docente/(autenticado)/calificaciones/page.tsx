@@ -120,12 +120,12 @@ export default function CalificacionesPage() {
   const [rubrosCount, setRubrosCount] = useState<Map<string, number>>(new Map())
   const [isRestored, setIsRestored]   = useState(false)
 
+  // Obtención inmediata de IDs de usuario
   useEffect(() => {
-    void Promise.resolve(supabase.auth.getUser()).then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      return Promise.resolve(
-        supabase.from('usuarios').select('id, plantel_id').eq('auth_id', user.id).single()
-      ).then(({ data }) => { if (data) { setDocenteId(data.id); setPlantelId(data.plantel_id) } })
+      supabase.from('usuarios').select('id, plantel_id').eq('auth_id', user.id).single()
+        .then(({ data }) => { if (data) { setDocenteId(data.id); setPlantelId(data.plantel_id) } })
     })
   }, [supabase])
 
@@ -139,7 +139,7 @@ export default function CalificacionesPage() {
       )
     : [], [docente])
 
-  // Restaurar vista guardada en sessionStorage al cargar los grupos del docente
+  // Restaurar vista guardada en sessionStorage al cargar los grupos
   useEffect(() => {
     if (isRestored || grupos.length === 0) return
     const savedVistaStr = sessionStorage.getItem('educontrol_cal_vista')
@@ -168,39 +168,33 @@ export default function CalificacionesPage() {
     setIsRestored(true)
   }, [grupos, isRestored])
 
-  const fetchRubrosCount = useCallback(() => {
-    if (!docenteId) return Promise.resolve(null)
-    return Promise.resolve(
-      supabase.from('calificacion_rubros')
+  const fetchRubrosCount = useCallback(async (): Promise<void> => {
+    if (!docenteId) return
+    try {
+      const res = await supabase.from('calificacion_rubros')
         .select('grupo_id, asignatura_id, periodo')
         .eq('docente_id', docenteId)
-    )
+      
+      if (!res?.data) return
+      const mapa = new Map<string, number>()
+      for (const r of res.data) {
+        const key = `${r.grupo_id}:${r.asignatura_id}:${r.periodo}`
+        mapa.set(key, (mapa.get(key) ?? 0) + 1)
+      }
+      setRubrosCount(mapa)
+    } catch (err) {
+      console.error(err)
+    }
   }, [docenteId, supabase])
 
   useEffect(() => {
     if (!docenteId) return
-    fetchRubrosCount().then(res => {
-      if (!res) return
-      const mapa = new Map<string, number>()
-      for (const r of (res.data ?? [])) {
-        const key = `${r.grupo_id}:${r.asignatura_id}:${r.periodo}`
-        mapa.set(key, (mapa.get(key) ?? 0) + 1)
-      }
-      setRubrosCount(mapa)
-    }).catch(console.error)
+    void fetchRubrosCount()
   }, [docenteId, fetchRubrosCount])
 
-  const recargarRubrosCount = useCallback(() =>
-    fetchRubrosCount().then(res => {
-      if (!res) return
-      const mapa = new Map<string, number>()
-      for (const r of (res.data ?? [])) {
-        const key = `${r.grupo_id}:${r.asignatura_id}:${r.periodo}`
-        mapa.set(key, (mapa.get(key) ?? 0) + 1)
-      }
-      setRubrosCount(mapa)
-    }).catch(console.error)
-  , [fetchRubrosCount])
+  const recargarRubrosCount = useCallback(async (): Promise<void> => {
+    await fetchRubrosCount()
+  }, [fetchRubrosCount])
 
   const vistaRef = useRef<Vista>({ tipo: 'grupos' })
 
@@ -267,7 +261,7 @@ export default function CalificacionesPage() {
     </div>
   )
 
-  // Vista notas
+  // Vista notas (renderiza la vista contenedora con soporte de carga inmediata)
   if (vista.tipo === 'notas') return (
     <>
       <CalificacionesView
@@ -355,12 +349,12 @@ export default function CalificacionesPage() {
                   display:'flex',
                   flexDirection:'column',
                   justifyContent:'space-between',
-                  minHeight:'220px' // Mismo alto exacto proporcionado a Asistencia
+                  minHeight:'220px'
                 }}
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.boxShadow='0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform='translateY(-2px)' }}
                 onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)'; e.currentTarget.style.transform='translateY(0)' }}>
                 
-                {/* Escritorio (Centrado con mas espacio vertical) */}
+                {/* Escritorio */}
                 <div className="cal-asig-pc" style={{ padding:'2rem 1.25rem 1rem', gap:'1rem', width:'100%', flexGrow:1, justifyContent:'center' }}>
                   <div style={{ width:68, height:68, borderRadius:18, background:'#fef9c3', border:'1px solid #fef08a', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(234,179,8,0.12)' }}>
                     <span style={{ fontSize:'2rem', lineHeight:1 }}>📒</span>

@@ -38,17 +38,20 @@ function formatFechaLegible(iso: string) {
 function SkeletonRow({ idx }: { idx: number }) {
   return (
     <tr style={{ background: idx % 2 === 0 ? 'white' : '#fafbfc' }}>
-      <td style={{ padding: '0.875rem 0.5rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
-        <div style={{ width: 20, height: 14, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
+      <td style={{ padding: '0.875rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 16, height: 14, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
       </td>
-      <td style={{ padding: '0.875rem 0.75rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
-        <div style={{ width: 100, height: 13, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
-      </td>
-      <td style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #eef1f6' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#e5e7eb', flexShrink: 0, animation: 'shimmer 1.4s infinite' }} />
-          <div style={{ width: '70%', height: 13, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
+      <td style={{ padding: '0.875rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e5e7eb', flexShrink: 0, animation: 'shimmer 1.4s infinite' }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ width: '80%', height: 12, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
+            <div style={{ width: '40%', height: 10, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
+          </div>
         </div>
+      </td>
+      <td className="mobile-col-matricula" style={{ padding: '0.875rem 0.5rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 80, height: 13, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.4s infinite' }} />
       </td>
       {ESTADOS.map(e => (
         <td key={e} style={{ padding: '0.875rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
@@ -247,11 +250,28 @@ export default function AsistenciaView({
           .asist-sidebar { width: 250px; flex-shrink: 0; position: sticky; top: 80px; }
           .asist-main    { flex: 1; min-width: 0; }
         }
-        .guardar-mobile { display: block; }
+        .guardar-mobile { display: block; margin-top: 1rem; }
         @media (min-width: 768px) { .guardar-mobile { display: none; } }
-        .asist-table-wrap { overflow-x: auto; }
-        .asist-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         
+        .asist-table-wrap {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .asist-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+
+        /* Estilos móviles para mostrar nombre completo con matrícula debajo */
+        .matricula-subtext { display: block; }
+        .mobile-col-matricula { display: none; }
+
+        @media (min-width: 640px) {
+          .matricula-subtext { display: none; }
+          .mobile-col-matricula { display: table-cell; }
+        }
+
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -401,18 +421,18 @@ export default function AsistenciaView({
         <div className="asist-main">
           <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
 
-            {/* Info bar con Barra de Búsqueda a la izquierda y Botón Excel a la derecha */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
+            {/* Info bar: Búsqueda a la izquierda y Botón Excel a la derecha */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.625rem 0.875rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
               
               {/* Esquina superior izquierda: Input de Búsqueda */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.35rem 0.65rem', width: '260px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.35rem 0.65rem', flex: '1', maxWidth: '260px' }}>
                 <svg width="14" height="14" fill="none" stroke="#64748b" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <circle cx="11" cy="11" r="8"/>
                   <path d="M21 21l-4.35-4.35"/>
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar alumno en este grupo..."
+                  placeholder="Buscar alumno..."
                   value={busqueda}
                   onChange={e => setBusqueda(e.target.value)}
                   style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.78rem', color: '#1e3a5f', width: '100%', fontWeight: 500 }}
@@ -428,7 +448,7 @@ export default function AsistenciaView({
               </div>
 
               {/* Esquina superior derecha: Total alumnos y Descargar Excel */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                 <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
                   {loading ? '—' : `${alumnosFiltrados.length} ${alumnosFiltrados.length === 1 ? 'alumno' : 'alumnos'}`}
                 </span>
@@ -439,21 +459,21 @@ export default function AsistenciaView({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.375rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: 6,
-                    background: 'transparent',
-                    border: 'none',
+                    padding: '0.35rem 0.65rem',
+                    borderRadius: 8,
+                    background: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
                     color: descargado ? '#16a34a' : '#334155',
                     fontWeight: 600,
                     fontSize: '0.75rem',
                     cursor: 'pointer',
-                    transition: 'color 0.15s'
+                    transition: 'all 0.15s'
                   }}
                   onMouseEnter={e => {
-                    if (!descargado) e.currentTarget.style.color = '#0f172a'
+                    if (!descargado) e.currentTarget.style.background = '#e2e8f0'
                   }}
                   onMouseLeave={e => {
-                    if (!descargado) e.currentTarget.style.color = '#334155'
+                    if (!descargado) e.currentTarget.style.background = '#f1f5f9'
                   }}
                 >
                   {descargado ? (
@@ -466,29 +486,22 @@ export default function AsistenciaView({
                       <polyline points="14 2 14 8 20 8"></polyline>
                       <line x1="8" y1="13" x2="16" y2="13"></line>
                       <line x1="8" y1="17" x2="16" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                   )}
-                  {descargado ? 'Documento descargado' : 'Descargar Excel'}
+                  {descargado ? 'Descargado' : 'Excel'}
                 </button>
               </div>
             </div>
 
             <div className="asist-table-wrap">
               <table className="asist-table">
-                <colgroup>
-                  <col style={{ width: '48px' }} />
-                  <col style={{ width: '160px' }} />
-                  <col style={{ minWidth: '220px' }} />
-                  {ESTADOS.map(e => <col key={e} style={{ width: '56px' }} />)}
-                </colgroup>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
-                    <th style={{ padding: '0.75rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>#</th>
-                    <th style={{ padding: '0.75rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Matrícula</th>
-                    <th style={{ padding: '0.75rem 1rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', borderLeft: '1.5px solid #e2e8f0' }}>Alumno</th>
+                    <th style={{ padding: '0.75rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', width: '36px' }}>#</th>
+                    <th style={{ padding: '0.75rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', minWidth: '180px' }}>Alumno</th>
+                    <th className="mobile-col-matricula" style={{ padding: '0.75rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', width: '130px' }}>Matrícula</th>
                     {ESTADOS.map(e => (
-                      <th key={e} style={{ padding: '0.75rem 0.25rem', fontSize: '0.68rem', fontWeight: 700, color: ESTADO_COLOR[e], textAlign: 'center', borderLeft: '1px solid #eef1f6' }}>
+                      <th key={e} style={{ padding: '0.75rem 0.25rem', fontSize: '0.68rem', fontWeight: 700, color: ESTADO_COLOR[e], textAlign: 'center', borderLeft: '1px solid #eef1f6', minWidth: '50px' }}>
                         {e}
                       </th>
                     ))}
@@ -514,31 +527,36 @@ export default function AsistenciaView({
                             onMouseEnter={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = '#f0f7ff' }}
                             onMouseLeave={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = par ? '#fafbfc' : 'white' }}>
 
-                            {/* # */}
-                            <td style={{ padding: '0.875rem 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                            {/* # (Número de lista con ancho mínimo) */}
+                            <td style={{ padding: '0.875rem 0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
                               {idx + 1}
                             </td>
 
-                            {/* Matrícula */}
-                            <td style={{ padding: '0.875rem 0.75rem', textAlign: 'center', borderBottom: '1px solid #eef1f6', borderRight: '1.5px solid #e2e8f0', transition: 'background 0.1s' }}>
+                            {/* Nombre Alumno + Matrícula debajo en móvil */}
+                            <td style={{ padding: '0.875rem 0.75rem', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.75rem' }}>
+                                  {alumno.nombre_completo.charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e3a5f', lineHeight: 1.25, wordBreak: 'break-word' }}>
+                                    {alumno.nombre_completo}
+                                  </span>
+                                  <span className="matricula-subtext" style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b', fontFamily: 'monospace, sans-serif', marginTop: '2px' }}>
+                                    {alumno.matricula ?? '—'}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Matrícula (solo en pantallas de escritorio/tablet) */}
+                            <td className="mobile-col-matricula" style={{ padding: '0.875rem 0.75rem', textAlign: 'center', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
                               <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', fontFamily: 'monospace, sans-serif', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
                                 {alumno.matricula ?? '—'}
                               </span>
                             </td>
 
-                            {/* Nombre Alumno */}
-                            <td style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #eef1f6', transition: 'background 0.1s' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: '#3b4a6b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
-                                  {alumno.nombre_completo.charAt(0).toUpperCase()}
-                                </div>
-                                <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#1e3a5f', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {alumno.nombre_completo}
-                                </span>
-                              </div>
-                            </td>
-
-                            {/* Botones P / A / J / R */}
+                            {/* Botones P / A / J / R deslizables hacia la derecha */}
                             {ESTADOS.map(e => {
                               const activo = estadoActual === e
                               return (
@@ -547,29 +565,14 @@ export default function AsistenciaView({
                                     <button
                                       onClick={() => marcar(alumno.id, e)}
                                       style={{
-                                        width: 36, height: 36, borderRadius: 10,
+                                        width: 38, height: 38, borderRadius: 10,
                                         background: activo ? ESTADO_CFG[e].bgActivo : 'transparent',
-                                        color: activo ? ESTADO_COLOR[e] : '#d1d5db',
-                                        border: `1.5px solid ${activo ? ESTADO_BORDER_ACTIVO[e] : 'transparent'}`,
-                                        fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                                        color: activo ? ESTADO_COLOR[e] : '#cbd5e1',
+                                        border: `1.5px solid ${activo ? ESTADO_BORDER_ACTIVO[e] : '#e2e8f0'}`,
+                                        fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
                                         transition: 'all 0.1s',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      }}
-                                      onMouseEnter={ev => {
-                                        if (!activo) {
-                                          ev.currentTarget.style.background = ESTADO_CFG[e].bgActivo
-                                          ev.currentTarget.style.color = ESTADO_COLOR[e]
-                                          ev.currentTarget.style.borderColor = ESTADO_BORDER_ACTIVO[e]
-                                          ev.currentTarget.style.opacity = '0.6'
-                                        }
-                                      }}
-                                      onMouseLeave={ev => {
-                                        if (!activo) {
-                                          ev.currentTarget.style.background = 'transparent'
-                                          ev.currentTarget.style.color = '#d1d5db'
-                                          ev.currentTarget.style.borderColor = 'transparent'
-                                          ev.currentTarget.style.opacity = '1'
-                                        }
+                                        touchAction: 'manipulation',
                                       }}
                                     >
                                       {e}
@@ -580,18 +583,17 @@ export default function AsistenciaView({
                             })}
                           </tr>
                         )
-                      })
-                  }
+                      })}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Guardar móvil */}
+          {/* Botón Guardar para vista Móvil */}
           {alumnos.length > 0 && (
-            <div style={{ marginTop: '1rem' }} className="guardar-mobile">
+            <div className="guardar-mobile">
               <button onClick={guardar} disabled={guardando}
-                style={{ width: '100%', padding: '0.875rem', borderRadius: 14, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.95rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1 }}>
+                style={{ width: '100%', padding: '0.875rem', borderRadius: 12, background: guardado ? '#dcfce7' : 'linear-gradient(135deg,#1e6fcc,#155ca0)', color: guardado ? '#16a34a' : 'white', border: guardado ? '1.5px solid #86efac' : 'none', fontWeight: 700, fontSize: '0.875rem', cursor: guardando ? 'not-allowed' : 'pointer', transition: 'all 0.3s', opacity: guardando ? 0.7 : 1, boxShadow: '0 4px 12px rgba(30,111,204,0.15)' }}>
                 {guardando ? 'Guardando...' : guardado ? '✓ Guardada' : esEdicion ? 'Guardar cambios' : 'Guardar asistencia'}
               </button>
             </div>

@@ -17,10 +17,10 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
 }) {
   const supabase = createClient()
   const [trabajos, setTrabajos]         = useState<Trabajo[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [guardando, setGuardando]       = useState(false)
+  const [loading, setLoading]          = useState(true)
+  const [guardando, setGuardando]      = useState(false)
   const [parcialesToCopy, setParcialesToCopy] = useState<{ periodo: string; label: string; count: number }[]>([])
-  const [copiando, setCopiando]         = useState(false)
+  const [copiando, setCopiando]        = useState(false)
   const [confirmarBorrar, setConfirmarBorrar] = useState(false)
 
   useEffect(() => {
@@ -203,7 +203,9 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
             <h2 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Trabajos del parcial</h2>
             <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.04em' }}>{ctx.asignatura_nombre} · {['1er','2do','3er'][parseInt(ctx.periodo)-1]} Parcial</p>
           </div>
-          <button onClick={onClose} style={{ width:28, height:28, borderRadius:'50%', background:'#f8fafc', border:'1px solid #e2e8f0', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:600, fontSize:'0.85rem' }}>✕</button>
+          {!guardando && (
+            <button onClick={onClose} style={{ width:28, height:28, borderRadius:'50%', background:'#f8fafc', border:'1px solid #e2e8f0', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:600, fontSize:'0.85rem' }}>✕</button>
+          )}
         </div>
 
         {/* Barra de pesos minimalista */}
@@ -220,8 +222,8 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
         {/* Lista de trabajos limpia */}
         <div style={{ flex:1, overflowY:'auto', padding:'1rem 1.5rem' }}>
           {loading ? (
-            <div style={{ display:'flex', justifyContent:'center', padding:'3rem' }}>
-              <div style={{ width:28, height:28, border:'2.5px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/>
+            <div style={{ display:'flex', justifyContent:'center', padding:'2rem' }}>
+              <div style={{ width:22, height:22, border:'2px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.4s linear infinite' }}/>
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
@@ -233,12 +235,10 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 const puedeBajar = pesoNum > 0
                 const esAsistencia = !!t.es_asistencia
 
-                // Estado de la guía para el usuario
                 const tieneNombre = t.nombre.trim() !== ''
                 const tienePeso = pesoNum > 0
 
                 return esAsistencia ? (
-                  /* ── Rubro fijo: Asistencia (Diseño limpio) ── */
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
                     <div style={{ width:30, height:30, borderRadius:8, background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#475569' }}>
                       <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round">
@@ -255,47 +255,46 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                     </div>
 
                     <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
-                      <button className="peso-btn btn-menos" disabled={!puedeBajar} onClick={() => cambiarPeso(i, -5)}
+                      <button className="peso-btn btn-menos" disabled={!puedeBajar || guardando} onClick={() => cambiarPeso(i, -5)}
                         style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
                       <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
                         <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
                       </div>
-                      <button className="peso-btn btn-mas" disabled={!puedeSubir} onClick={() => cambiarPeso(i, 5)}
+                      <button className="peso-btn btn-mas" disabled={!puedeSubir || guardando} onClick={() => cambiarPeso(i, 5)}
                         style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
                     </div>
 
                     <div style={{ width:24, flexShrink:0 }} />
                   </div>
                 ) : (
-                  /* ── Rubro normal editable con mensaje de ayuda dinámico ── */
                   <div key={t.id} className="rubro-row" style={{ display:'flex', flexDirection:'column', gap:'0.35rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', transition:'background 0.1s' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
                       <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', width:16, flexShrink:0, textAlign:'center' }}>{i}</span>
 
                       <input
                         value={t.nombre}
+                        disabled={guardando}
                         onChange={e => update(i, 'nombre', e.target.value)}
                         placeholder="Nombre del trabajo (ej. Tarea, Examen)"
                         style={{ flex:1, border:'none', background:'transparent', fontSize:'0.82rem', color:'#1e3a5f', outline:'none', fontWeight:500, minWidth:0 }}
                       />
 
                       <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
-                        <button className="peso-btn btn-menos" disabled={!puedeBajar} onClick={() => cambiarPeso(i, -5)}
+                        <button className="peso-btn btn-menos" disabled={!puedeBajar || guardando} onClick={() => cambiarPeso(i, -5)}
                           style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
                         <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
                           <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
                         </div>
-                        <button className="peso-btn btn-mas" disabled={!puedeSubir} onClick={() => cambiarPeso(i, 5)}
+                        <button className="peso-btn btn-mas" disabled={!puedeSubir || guardando} onClick={() => cambiarPeso(i, 5)}
                           style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
                       </div>
 
-                      <button onClick={() => remove(i)}
+                      <button onClick={() => remove(i)} disabled={guardando}
                         style={{ width:24, height:24, borderRadius:'50%', background:'transparent', border:'none', cursor:'pointer', color:'#cbd5e1', fontSize:'0.75rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'color 0.12s' }}
                         onMouseEnter={e => (e.currentTarget.style.color='#dc2626')}
                         onMouseLeave={e => (e.currentTarget.style.color='#cbd5e1')}>✕</button>
                     </div>
 
-                    {/* Mensaje de guía para docentes */}
                     <div style={{ paddingLeft: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       {!tieneNombre ? (
                         <p style={{ fontSize: '0.68rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -315,7 +314,6 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 )
               })}
 
-              {/* Copiar de otro parcial */}
               {parcialesToCopy.length > 0 && rubrosEditables.length === 0 && (
                 <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.55rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', marginTop:'0.25rem' }}>
                   <span style={{ fontSize:'0.72rem', color:'#64748b', fontWeight:500, flex:1 }}>Copiar de:</span>
@@ -328,8 +326,7 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 </div>
               )}
 
-              {/* Agregar trabajo */}
-              {mostrarAgregar && (
+              {mostrarAgregar && !guardando && (
                 <button onClick={addTrabajo}
                   style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'0.55rem', borderRadius:10, border:'1px dashed #cbd5e1', background:'transparent', cursor:'pointer', color:'#64748b', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor='#94a3b8'; e.currentTarget.style.color='#1e3a5f' }}
@@ -338,8 +335,7 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 </button>
               )}
 
-              {/* Botón Borrar Todos — ubicado en la parte inferior por debajo del botón de agregar */}
-              {rubrosEditables.length > 0 && (
+              {rubrosEditables.length > 0 && !guardando && (
                 <button
                   onClick={() => setConfirmarBorrar(true)}
                   style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.55rem', borderRadius:10, border:'1px solid #fecaca', background:'#fff1f1', cursor:'pointer', color:'#dc2626', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
@@ -357,10 +353,10 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
 
         {/* Footer */}
         <div className="rubros-footer" style={{ padding:'0.85rem 1.5rem', borderTop:'1px solid #f1f5f9', display:'flex', gap:'0.5rem', flexShrink:0 }}>
-          <button onClick={onClose} style={{ flex:1, padding:'0.65rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.82rem', fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+          <button onClick={onClose} disabled={guardando} style={{ flex:1, padding:'0.65rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.82rem', fontWeight:600, cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.6 : 1 }}>Cancelar</button>
           <button onClick={guardar} disabled={!pesoValido || guardando}
             style={{ flex:2, padding:'0.65rem', borderRadius:8, border:'none', background: !pesoValido ? '#e2e8f0' : '#1e3a5f', color: !pesoValido ? '#94a3b8' : 'white', fontSize:'0.82rem', fontWeight:600, cursor: !pesoValido || guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'background 0.15s' }}>
-            {guardando ? <><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Guardando...</> : 'Guardar trabajos'}
+            {guardando ? <><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.4s linear infinite' }}/> Guardando...</> : 'Guardar trabajos'}
           </button>
         </div>
 

@@ -214,7 +214,7 @@ function AsignaturasView({ grupo, onSelect, onBack }: { grupo: GrupoAgrupado; on
   const fechaHoy = new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
 
   return (
-    <div style={{ padding: '1.25rem 0.75rem 2rem', width: '100%', minHeight: '100vh', background: '#f0f4fa' }}>
+    <div className="page-slide-left" style={{ padding: '1.25rem 0.75rem 2rem', width: '100%', minHeight: '100vh', background: '#f0f4fa' }}>
       <style>{`
         .asig-grid-wrap {
           display: grid;
@@ -449,7 +449,7 @@ export default function GruposPage() {
 
   // ── Loading / Error ──
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="page-slide-left flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"/>
         <p className="text-sm" style={{ color: '#94a3b8' }}>Cargando tus grupos...</p>
@@ -458,48 +458,54 @@ export default function GruposPage() {
   )
 
   if (error || !docente) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="page-slide-left flex items-center justify-center min-h-[60vh]">
       <p className="text-sm" style={{ color: '#dc2626' }}>{error || 'Error al cargar datos'}</p>
     </div>
   )
 
-  // ── Sub-vistas ──
+  // ── Sub-vistas con animación suave ──
   if (vista.tipo === 'editar-asistencia') return (
-    <AsistenciaView
-      asignatura={vista.asignatura}
-      grupoId={vista.grupo.id}
-      fechaEditar={vista.fecha}
-      onBack={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
-      onGuardado={(fechaGuardada) => {
-        cargarCompletadas()
-        setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now(), fechaEditadaExito: fechaGuardada })
-      }}
-    />
+    <div className="page-slide-left">
+      <AsistenciaView
+        asignatura={vista.asignatura}
+        grupoId={vista.grupo.id}
+        fechaEditar={vista.fecha}
+        onBack={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
+        onGuardado={(fechaGuardada) => {
+          cargarCompletadas()
+          setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now(), fechaEditadaExito: fechaGuardada })
+        }}
+      />
+    </div>
   )
 
   if (vista.tipo === 'asistencia') return (
-    <AsistenciaView
-      asignatura={vista.asignatura}
-      grupoId={vista.grupo.id}
-      onBack={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
-      onGuardado={(fechaGuardada) => {
-        cargarCompletadas()
-        setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now(), fechaEditadaExito: fechaGuardada })
-      }}
-    />
+    <div className="page-slide-left">
+      <AsistenciaView
+        asignatura={vista.asignatura}
+        grupoId={vista.grupo.id}
+        onBack={() => setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now() })}
+        onGuardado={(fechaGuardada) => {
+          cargarCompletadas()
+          setVistaConHistorial({ tipo: 'confirmar', grupo: vista.grupo, asignatura: vista.asignatura, ts: Date.now(), fechaEditadaExito: fechaGuardada })
+        }}
+      />
+    </div>
   )
 
   if (vista.tipo === 'confirmar') return (
-    <ConfirmarFechaView
-      key={`${vista.grupo.id}-${vista.asignatura.id}-${vista.ts ?? 0}`}
-      asignatura={vista.asignatura}
-      grupo={vista.grupo}
-      onConfirmar={() => setVistaConHistorial({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
-      onBack={() => setVistaConHistorial({ tipo: 'asignaturas', grupo: vista.grupo })}
-      onEstadoHoy={marcarCompletada}
-      fechaEditadaExito={vista.fechaEditadaExito ?? null}
-      onEditarFecha={(fecha) => setVistaConHistorial({ tipo: 'editar-asistencia', grupo: vista.grupo, asignatura: vista.asignatura, fecha })}
-    />
+    <div className="page-slide-left">
+      <ConfirmarFechaView
+        key={`${vista.grupo.id}-${vista.asignatura.id}-${vista.ts ?? 0}`}
+        asignatura={vista.asignatura}
+        grupo={vista.grupo}
+        onConfirmar={() => setVistaConHistorial({ tipo: 'asistencia', grupo: vista.grupo, asignatura: vista.asignatura })}
+        onBack={() => setVistaConHistorial({ tipo: 'asignaturas', grupo: vista.grupo })}
+        onEstadoHoy={marcarCompletada}
+        fechaEditadaExito={vista.fechaEditadaExito ?? null}
+        onEditarFecha={(fecha) => setVistaConHistorial({ tipo: 'editar-asistencia', grupo: vista.grupo, asignatura: vista.asignatura, fecha })}
+      />
+    </div>
   )
 
   if (vista.tipo === 'asignaturas') return (
@@ -512,7 +518,7 @@ export default function GruposPage() {
 
   // ── Vista principal de grupos ──
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f4fa' }}>
+    <div className="page-slide-left" style={{ minHeight: '100vh', background: '#f0f4fa' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 

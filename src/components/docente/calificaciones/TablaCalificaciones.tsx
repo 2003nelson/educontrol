@@ -8,17 +8,60 @@ function bgNota(v: number | null)    { return v === null ? '#f8fafc' : v >= 60 ?
 
 function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, number | null>): number | null {
   if (trabajos.length === 0) return null
-  const suma = trabajos.reduce((s, t) => s + t.peso, 0)
-  if (suma === 0) return null
-  const total = trabajos.reduce((s, t) => {
+  
+  const trabajosValidos = trabajos.filter(t => {
+    const calif = notas.get(`${t.id}:${alumnoId}`)
+    return t.peso > 0 && calif !== null && calif !== undefined
+  })
+
+  if (trabajosValidos.length === 0) return null
+
+  const sumaPesosValidos = trabajosValidos.reduce((s, t) => s + t.peso, 0)
+  if (sumaPesosValidos === 0) return null
+
+  const total = trabajosValidos.reduce((s, t) => {
     const calif = notas.get(`${t.id}:${alumnoId}`) ?? 0
     const califClamp = Math.max(0, Math.min(100, calif))
     return s + (califClamp / 100) * t.peso
   }, 0)
-  return Math.round(total * 10) / 10
+
+  const notaFinalPonderada = (total / sumaPesosValidos) * 100
+  return Math.round(notaFinalPonderada * 10) / 10
 }
 
 const COL_RUBRO_WIDTH = 110
+
+// ── Skeleton row para cuando NI SIQUIERA se han cargado los alumnos ──────────
+function SkeletonTablaRow({ idx, obsContraido, numRubros = 3 }: { idx: number; obsContraido: boolean; numRubros?: number }) {
+  const par = idx % 2 === 1
+  const obsWidth = obsContraido ? 88 : 280
+  const matLeft = 280
+  const obsLeft = matLeft + 100
+  return (
+    <tr style={{ background: par ? '#fcfdfe' : 'white' }}>
+      <td style={{ position: 'sticky', left: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 16, height: 12, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+      </td>
+      <td style={{ position: 'sticky', left: 40, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: 240 }}>
+        <div style={{ width: '80%', height: 13, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
+      </td>
+      <td style={{ position: 'sticky', left: matLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 70, height: 11, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
+      </td>
+      <td style={{ position: 'sticky', left: obsLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: obsWidth }}>
+        <div style={{ width: '60%', height: 26, borderRadius: 8, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
+      </td>
+      {Array.from({ length: Math.max(numRubros, 3) }).map((_, i) => (
+        <td key={i} style={{ padding: '0.75rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+        </td>
+      ))}
+      <td style={{ position: 'sticky', right: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
+        <div style={{ width: 36, height: 26, borderRadius: 7, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+      </td>
+    </tr>
+  )
+}
 
 function CeldaNota({
   valor, onGuardar, onNavegar, cellRef,
@@ -132,6 +175,9 @@ export default function TablaCalificaciones({
   observacionesAlumnos,
   onNotaChange,
   onGuardarObservacionAlumno,
+  loading = false,
+  loadingAlumnos = false,
+  loadingNotas = false,
 }: {
   alumnos: Alumno[]
   trabajos: Trabajo[]
@@ -139,6 +185,9 @@ export default function TablaCalificaciones({
   observacionesAlumnos: Map<string, string>
   onNotaChange: (trabajoId: string, alumnoId: string, calif: number | null) => void
   onGuardarObservacionAlumno: (alumnoId: string, texto: string) => Promise<void>
+  loading?: boolean
+  loadingAlumnos?: boolean
+  loadingNotas?: boolean
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [editandoObsId, setEditandoObsId] = useState<string | null>(null)
@@ -146,7 +195,9 @@ export default function TablaCalificaciones({
   const [guardandoObsId, setGuardandoObsId] = useState<string | null>(null)
   const [obsContraido, setObsContraido] = useState<boolean>(false)
 
-  // Filtro dinámico de alumnos pertenecientes únicamente a este grupo
+  const esCargaGlobal = loading || loadingAlumnos
+  const esCargaNotas = loadingNotas
+
   const alumnosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return alumnos
     const query = busqueda.toLowerCase().trim()
@@ -237,13 +288,20 @@ export default function TablaCalificaciones({
   const sumaPesos = trabajosOrdenados.reduce((s, t) => s + t.peso, 0)
   const obsWidth = obsContraido ? 88 : 280
   const matLeft = 280
-  const obsLeft = matLeft + 100 // 380
+  const obsLeft = matLeft + 100
 
   return (
     <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-      {/* Barra Superior con Input de Búsqueda en Esquina Izquierda */}
+      <style>{`
+        @keyframes shimmer {
+          0%   { opacity: 1 }
+          50%  { opacity: 0.45 }
+          100% { opacity: 1 }
+        }
+      `}</style>
+
+      {/* Barra Superior */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
-        {/* Esquina Izquierda: Buscador de Alumnos del Grupo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.28rem 0.55rem', width: 240 }}>
           <svg width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8"/>
@@ -266,14 +324,13 @@ export default function TablaCalificaciones({
           )}
         </div>
 
-        {/* Esquina Derecha: Info de Rubros y Botones de Scroll */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {trabajosOrdenados.length > 0 && (
+          {!esCargaGlobal && trabajosOrdenados.length > 0 && (
             <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
               {trabajosOrdenados.length} {trabajosOrdenados.length === 1 ? 'rubro' : 'rubros'} · {sumaPesos}% · {alumnosFiltrados.length} alumnos
             </span>
           )}
-          {trabajosOrdenados.length > 0 && (
+          {!esCargaGlobal && trabajosOrdenados.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               {(() => {
                 const disabled = scrollX <= 0
@@ -307,13 +364,17 @@ export default function TablaCalificaciones({
       </div>
 
       <div style={{ overflowX: 'auto' }} ref={scrollRef} onScroll={updateScrollState}>
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: (obsLeft + obsWidth + 72) + trabajosOrdenados.length * COL_RUBRO_WIDTH }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: (obsLeft + obsWidth + 72) + (esCargaGlobal ? 3 : trabajosOrdenados.length) * COL_RUBRO_WIDTH }}>
           <colgroup>
             <col style={{ width: 40 }} />
             <col style={{ width: 240 }} />
             <col style={{ width: 100 }} />
             <col style={{ width: obsWidth }} />
-            {trabajosOrdenados.map(t => <col key={t.id} style={{ width: COL_RUBRO_WIDTH }} />)}
+            {esCargaGlobal && trabajosOrdenados.length === 0 ? (
+              Array.from({ length: 3 }).map((_, i) => <col key={i} style={{ width: COL_RUBRO_WIDTH }} />)
+            ) : (
+              trabajosOrdenados.map(t => <col key={t.id} style={{ width: COL_RUBRO_WIDTH }} />)
+            )}
             <col style={{ width: 72 }} />
           </colgroup>
           <thead>
@@ -322,7 +383,6 @@ export default function TablaCalificaciones({
               <th style={{ position: 'sticky', left: 40, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Alumno</th>
               <th style={{ position: 'sticky', left: matLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
               
-              {/* CABECERA OBSERVACIONES */}
               <th style={{ position: 'sticky', left: obsLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: obsContraido ? '0.5rem 0.25rem' : '0.5rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
                 {obsContraido ? (
                   <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
@@ -352,25 +412,38 @@ export default function TablaCalificaciones({
                 )}
               </th>
 
-              {trabajosOrdenados.map(t => (
-                <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.nombre}>{t.nombre}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
-                </th>
-              ))}
+              {esCargaGlobal && trabajosOrdenados.length === 0 ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <th key={i} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
+                    <div style={{ width: 50, height: 11, borderRadius: 4, background: '#e5e7eb', margin: '0 auto 4px', animation: 'shimmer 1.2s infinite' }} />
+                    <div style={{ width: 30, height: 9, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+                  </th>
+                ))
+              ) : (
+                trabajosOrdenados.map(t => (
+                  <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.nombre}>{t.nombre}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
+                  </th>
+                ))
+              )}
               <th style={{ position: 'sticky', right: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Final</th>
             </tr>
           </thead>
           <tbody>
-            {alumnosFiltrados.length === 0 ? (
+            {/* Si no hay ni lista de alumnos aún, muestra la estructura vacía animada */}
+            {esCargaGlobal && alumnos.length === 0 ? (
+              Array.from({ length: 8 }).map((_, i) => <SkeletonTablaRow key={i} idx={i} obsContraido={obsContraido} numRubros={3} />)
+            ) : alumnosFiltrados.length === 0 ? (
               <tr>
                 <td colSpan={trabajosOrdenados.length + 5} style={{ textAlign: 'center', padding: '2.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
                   {busqueda ? `No se encontraron alumnos que coincidan con "${busqueda}"` : 'Sin alumnos registrados'}
                 </td>
               </tr>
             ) : (
+              /* NOMBRES Y MATRÍCULAS SE DIBUJAN DE INMEDIATO AQUÍ */
               alumnosFiltrados.map((al, ai) => {
-                const notaFinal = calcNota(trabajosOrdenados, al.id, notas)
+                const notaFinal = esCargaNotas ? null : calcNota(trabajosOrdenados, al.id, notas)
                 const par = ai % 2 === 1
                 const obsActual = observacionesAlumnos.get(al.id) ?? ''
                 const tieneObs = obsActual.trim().length > 0
@@ -381,6 +454,7 @@ export default function TablaCalificaciones({
                     onMouseEnter={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = '#f0f7ff' }}
                     onMouseLeave={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = par ? '#fcfdfe' : 'white' }}>
                     
+                    {/* #, Nombre y Matrícula visibles sin esperas */}
                     <td style={{ position: 'sticky', left: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.375rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>{ai + 1}</td>
                     
                     <td style={{ position: 'sticky', left: 40, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.75rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #eef1f6', width: 240, maxWidth: 240 }} title={al.nombre_completo}>
@@ -494,25 +568,34 @@ export default function TablaCalificaciones({
                       )}
                     </td>
 
+                    {/* CELDAS DE NOTAS: Si están cargando, muestran el esqueleto shimmer individual */}
                     {trabajosOrdenados.map((t, ti) => {
+                      if (esCargaNotas) {
+                        return (
+                          <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
+                            <div style={{ width: 36, height: 26, borderRadius: 6, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+                          </td>
+                        )
+                      }
+
                       const valor = notas.get(`${t.id}:${al.id}`) ?? null
                       const esAsistencia = !!t.es_asistencia
 
                       if (esAsistencia) {
-                        const aprobado = valor !== null && valor >= 60
+                        const sinPorcentajeAsistencia = t.peso === 0
+
                         return (
                           <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}
-                            title="Calculado automáticamente desde el módulo de asistencia">
+                            title={sinPorcentajeAsistencia ? "Asistencia desactivada (0%)" : "Calculado automáticamente desde el módulo de asistencia"}>
                             <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <div style={{
-                                width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 borderRadius: 6, fontSize: '0.8rem', fontWeight: 700,
-                                color: valor === null ? '#9ca3af' : (aprobado ? '#16a34a' : '#dc2626'),
-                                background: valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
-                                padding: '4px 0',
+                                color: sinPorcentajeAsistencia || valor === null ? '#cbd5e1' : (valor >= 60 ? '#16a34a' : '#dc2626'),
+                                background: sinPorcentajeAsistencia || valor === null ? 'transparent' : (valor >= 60 ? '#f0fdf4' : '#fef2f2'),
+                                border: '1.5px solid transparent', boxSizing: 'border-box', minHeight: 44
                               }}>
-                                {valor === null ? '—' : valor}
-                                <span style={{ fontSize: '0.55rem', fontWeight: 600, color: '#93c5fd', marginTop: 1, letterSpacing: '0.02em' }}>AUTO</span>
+                                {sinPorcentajeAsistencia ? '—' : (valor === null ? '—' : valor)}
                               </div>
                             </div>
                           </td>
@@ -523,7 +606,7 @@ export default function TablaCalificaciones({
                         <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
                           <CeldaNota
                             valor={valor}
-                            onGuardar={calif => onNotaChange(t.id, al.id, calif)}
+                            onGuardar={pts => onNotaChange(t.id, al.id, pts)}
                             onNavegar={dir => handleNavegar(ai, ti, dir)}
                             cellRef={el => {
                               if (el) cellRefs.current.set(key(ai, ti), el)
@@ -534,11 +617,30 @@ export default function TablaCalificaciones({
                       )
                     })}
 
-                    <td style={{ position: 'sticky', right: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
-                      <span style={{ display: 'inline-flex', minWidth: 40, height: 26, borderRadius: 7, alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 800, color: colorNota(notaFinal), background: bgNota(notaFinal), padding: '0 6px' }}>
-                        {notaFinal ?? '—'}
-                      </span>
+                    {/* COLUMNA FINAL: Esqueleto mientras cargan las notas */}
+                    <td style={{
+                      position: 'sticky', right: 0, zIndex: 1,
+                      background: par ? '#fcfdfe' : 'white',
+                      padding: '0.5rem 0.375rem',
+                      textAlign: 'center',
+                      borderLeft: '1.5px solid #e2e8f0',
+                      borderBottom: '1px solid #eef1f6'
+                    }}>
+                      {esCargaNotas ? (
+                        <div style={{ width: 36, height: 24, borderRadius: 6, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+                      ) : (
+                        <div style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          minWidth: 42, padding: '3px 6px', borderRadius: 7,
+                          fontSize: '0.75rem', fontWeight: 800,
+                          color: colorNota(notaFinal),
+                          background: bgNota(notaFinal)
+                        }}>
+                          {notaFinal === null ? '—' : notaFinal}
+                        </div>
+                      )}
                     </td>
+
                   </tr>
                 )
               })
