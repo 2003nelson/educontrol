@@ -1,3 +1,4 @@
+// src/components/docente/AyudaPage.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -13,8 +14,8 @@ const FAQS = [
       </svg>
     ),
     color: '#2563eb', bg: '#eff6ff',
-    q: '¿Cómo registro la asistencia?',
-    a: 'Ve a la sección de Asistencia en el menú principal, selecciona tu grupo, luego elige la asignatura y finalmente presiona el botón "Tomar asistencia ahora".',
+    q: '¿Cómo puedo pasar y registrar la asistencia de mis alumnos?',
+    a: 'Para registrar la asistencia de manera digital, ingrese a la sección de Asistencia en el menú principal, seleccione su grupo y la asignatura correspondiente. El sistema le mostrará la lista de sus estudiantes para que pueda marcar la asistencia de forma rápida y sencilla con un solo toque.',
     extra: null,
   },
   {
@@ -25,8 +26,8 @@ const FAQS = [
       </svg>
     ),
     color: '#d97706', bg: '#fffbeb',
-    q: '¿Puedo editar una asistencia ya registrada?',
-    a: 'Sí. En la pantalla de confirmación de tu grupo aparecerá el botón "Editar" siempre y cuando la asistencia se haya registrado en el día en curso.',
+    q: '¿Es posible corregir o editar una asistencia ya guardada?',
+    a: 'Sí, estimado maestro. Si cometió un error al registrar la asistencia, podrá realizar modificaciones o correcciones en los registros de su grupo siempre y cuando se encuentre dentro del mismo día en curso.',
     extra: null,
   },
   {
@@ -37,8 +38,8 @@ const FAQS = [
       </svg>
     ),
     color: '#7c3aed', bg: '#f5f3ff',
-    q: '¿Qué significan P, A, J y R?',
-    a: 'El sistema maneja la siguiente nomenclatura oficial para el pase de lista:',
+    q: '¿Qué significan las letras P, A, J y R al pasar lista?',
+    a: 'Para mantener un control claro y ordenado, el sistema utiliza cuatro abreviaturas oficiales al momento de evaluar la presencia del alumno en el aula:',
     extra: 'estados',
   },
   {
@@ -50,9 +51,9 @@ const FAQS = [
       </svg>
     ),
     color: '#16a34a', bg: '#f0fdf4',
-    q: '¿Cómo contacto al administrador?',
-    a: 'Si presentas un error de sistema o necesitas recuperar tu acceso, el soporte técnico está disponible para ayudarte. Revisa el botón de "Contactar a Sistemas" en esta misma página.',
-    extra: 'dots',
+    q: '¿Para qué sirve el Módulo de Calificaciones?',
+    a: 'Este espacio digital está diseñado para que usted pueda asentar, organizar y consultar las calificaciones y evaluaciones de sus estudiantes de forma ordenada, facilitando el cálculo y el resguardo de los promedios del periodo académico.',
+    extra: null,
   },
   {
     id: 5,
@@ -62,8 +63,8 @@ const FAQS = [
       </svg>
     ),
     color: '#0d9488', bg: '#f0fdfa',
-    q: '¿Cuándo estará disponible Calificaciones?',
-    a: 'Estamos trabajando en el módulo de gestión de notas. Estará habilitado en la próxima actualización importante del sistema.',
+    q: '¿Qué otras herramientas encontraré en mi cuenta de docente?',
+    a: 'Su cuenta le brinda acceso centralizado a la administración de sus grupos escolares asignados, consulta de horarios, control de asistencias y futuros apartados diseñados para optimizar sus tareas administrativas y pedagógicas.',
     extra: null,
   },
   {
@@ -75,17 +76,17 @@ const FAQS = [
       </svg>
     ),
     color: '#db2777', bg: '#fdf2f8',
-    q: '¿Qué otros módulos tendrá la plataforma?',
-    a: 'Próximamente integraremos: Reportes avanzados de desempeño, Mensajería interna docente-alumno y un gestor de Planeaciones didácticas.',
+    q: '¿Cómo puedo recibir ayuda técnica si tengo dudas con la plataforma?',
+    a: 'Si en algún momento experimenta dificultades técnicas, dudas con su contraseña o el uso de alguna función, puede presionar el botón "Contactar a Sistemas" ubicado en esta misma pantalla para recibir asistencia directa de nuestro personal de apoyo.',
     extra: 'dots',
   },
 ]
 
 const ESTADOS = [
-  { letra: 'P', label: 'Presente',    bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
-  { letra: 'A', label: 'Ausente',     bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
-  { letra: 'J', label: 'Justificada', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
-  { letra: 'R', label: 'Retardo',     bg: '#f3e8ff', color: '#7c3aed', border: '#c4b5fd' },
+  { letra: 'P', label: 'Presente (Asistió puntualmente)', bg: '#dcfce7', color: '#16a34a', border: '#86efac' },
+  { letra: 'A', label: 'Ausente (Falta sin justificar)', bg: '#fee2e2', color: '#dc2626', border: '#fca5a5' },
+  { letra: 'J', label: 'Justificada (Falta con comprobante)', bg: '#fef3c7', color: '#d97706', border: '#fcd34d' },
+  { letra: 'R', label: 'Retardo (Llegada tarde al aula)', bg: '#f3e8ff', color: '#7c3aed', border: '#c4b5fd' },
 ]
 
 export default function AyudaPage() {
@@ -116,14 +117,12 @@ export default function AyudaPage() {
             align-items: stretch;
             gap: 3rem;
             padding: 2rem 2.5rem;
-            /* altura exacta del viewport menos el header */
             height: calc(100vh - 64px);
             overflow: hidden;
           }
           .ayuda-left {
             width: 340px;
             flex-shrink: 0;
-            /* sticky nativo — se queda fija mientras el lado derecho scrollea */
             position: sticky;
             top: 0;
             align-self: flex-start;
@@ -133,7 +132,6 @@ export default function AyudaPage() {
             flex: 1;
             overflow-y: auto;
             padding-right: 0.25rem;
-            /* scrollbar discreta */
             scrollbar-width: thin;
             scrollbar-color: #e2e8f0 transparent;
           }
@@ -151,29 +149,29 @@ export default function AyudaPage() {
 
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', marginBottom: '1rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', color: '#2563eb', background: 'rgba(219,234,254,0.7)', borderRadius: 9999, border: '1px solid #bfdbfe', textTransform: 'uppercase' }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', display: 'inline-block', animation: 'pulse 2s infinite' }}/>
-                Soporte EduControl
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563eb', display: 'inline-block' }}/>
+                Guía de Apoyo Docente
               </div>
               <h1 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.75rem)', fontWeight: 800, color: '#1e293b', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 1rem' }}>
-                ¿En qué podemos<br/>
+                Centro de Ayuda<br/>
                 <span style={{ backgroundImage: 'linear-gradient(135deg, #2563eb, #4f46e5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  ayudarte hoy?
+                  EduControl
                 </span>
               </h1>
               <p style={{ fontSize: '0.975rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>
-                Encuentra respuestas rápidas a las dudas más comunes sobre el uso de la plataforma.
+                Estimado profesor, aquí encontrará explicaciones sencillas y directas sobre el funcionamiento de su cuenta y herramientas digitales.
               </p>
             </div>
 
             {/* Tarjeta contacto */}
             <div style={{ background: 'white', borderRadius: '1.5rem', padding: '1.5rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ fontWeight: 700, color: '#1e293b', margin: '0 0 0.5rem', fontSize: '0.95rem' }}>¿No encuentras lo que buscas?</h3>
+              <h3 style={{ fontWeight: 700, color: '#1e293b', margin: '0 0 0.5rem', fontSize: '0.95rem' }}>¿Necesita asistencia personalizada?</h3>
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 1.25rem', lineHeight: 1.55 }}>
-                Nuestro equipo de soporte técnico está disponible para atender casos específicos.
+                Nuestro personal técnico está a su entera disposición para orientarle en el uso de la plataforma.
               </p>
               <button
                 onClick={() => setIsModalOpen(true)}
-                style={{ width: '100%', padding: '0.875rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '0.875rem', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'background 0.15s' }}
+                style={{ width: '100%', padding: '0.875rem 1rem', background: '#0f172a', color: 'white', border: 'none', borderRadius: '0.875rem', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'background 0.1s' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#1e293b')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#0f172a')}
               >
@@ -200,7 +198,7 @@ export default function AyudaPage() {
                     borderRadius: '1.25rem',
                     overflow: 'hidden',
                     boxShadow: isOpen ? '0 4px 20px rgba(37,99,235,0.08), 0 0 0 4px rgba(219,234,254,0.4)' : '0 1px 4px rgba(0,0,0,0.04)',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
                   }}
                 >
                   <button
@@ -212,8 +210,8 @@ export default function AyudaPage() {
                         flexShrink: 0, width: 44, height: 44, borderRadius: '0.875rem',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: faq.bg, color: faq.color,
-                        transform: isOpen ? 'scale(1.08)' : 'scale(1)',
-                        transition: 'transform 0.2s cubic-bezier(0.34,1.4,0.64,1)',
+                        transform: isOpen ? 'scale(1.04)' : 'scale(1)',
+                        transition: 'transform 0.15s ease',
                       }}>
                         {faq.icon}
                       </div>
@@ -221,7 +219,7 @@ export default function AyudaPage() {
                         {faq.q}
                       </span>
                     </div>
-                    <div style={{ flexShrink: 0, marginLeft: '1rem', color: isOpen ? '#2563eb' : '#94a3b8', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease, color 0.15s' }}>
+                    <div style={{ flexShrink: 0, marginLeft: '1rem', color: isOpen ? '#2563eb' : '#94a3b8', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease, color 0.15s' }}>
                       <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -233,7 +231,7 @@ export default function AyudaPage() {
                     display: 'grid',
                     gridTemplateRows: isOpen ? '1fr' : '0fr',
                     opacity: isOpen ? 1 : 0,
-                    transition: 'grid-template-rows 0.28s ease, opacity 0.22s ease',
+                    transition: 'grid-template-rows 0.2s ease, opacity 0.15s ease',
                   }}>
                     <div style={{ overflow: 'hidden' }}>
                       <div style={{ padding: '0 1.375rem 1.375rem', paddingLeft: 'calc(1.375rem + 44px + 0.875rem)' }}>
@@ -257,7 +255,7 @@ export default function AyudaPage() {
                         {faq.extra === 'dots' && (
                           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                             {DOTS_DECO.map((col, i) => (
-                              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: col, opacity: 0.6, animation: `pulse 1.5s ${i * 150}ms infinite` }}/>
+                              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: col, opacity: 0.7 }}/>
                             ))}
                           </div>
                         )}
@@ -277,7 +275,7 @@ export default function AyudaPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
         opacity: isModalOpen ? 1 : 0,
         visibility: isModalOpen ? 'visible' : 'hidden',
-        transition: 'opacity 0.25s, visibility 0.25s',
+        transition: 'opacity 0.2s, visibility 0.2s',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.35)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
           onClick={() => setIsModalOpen(false)} />
@@ -288,7 +286,7 @@ export default function AyudaPage() {
           boxShadow: '0 32px 80px rgba(0,0,0,0.2)',
           transform: isModalOpen ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.92)',
           opacity: isModalOpen ? 1 : 0,
-          transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease',
+          transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease',
         }}>
           <button
             onClick={() => setIsModalOpen(false)}
@@ -306,18 +304,16 @@ export default function AyudaPage() {
               </svg>
             </div>
             <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.375rem' }}>Soporte Técnico</h2>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, lineHeight: 1.55 }}>Comunícate con nosotros para resolver cualquier inconveniente con EduControl.</p>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, lineHeight: 1.55 }}>Utilice nuestros medios de contacto para hablar con soporte técnico.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {[
-              { icon: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>, label: 'Teléfono', value: '+52 (55) 1234 5678', dotBg: '#dcfce7', dotColor: '#16a34a' },
-              { icon: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></>, label: 'Correo', value: 'soporte@educontrol.com', dotBg: '#e0e7ff', dotColor: '#4f46e5' },
+              { icon: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>, label: 'Línea Telefónica 1', value: '+52 982 109 48 40', dotBg: '#dcfce7', dotColor: '#16a34a' },
+              { icon: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>, label: 'Línea Telefónica 2', value: '+52 982 102 8652', dotBg: '#fef3c7', dotColor: '#d97706' },
+              { icon: <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></>, label: 'Correo Electrónico', value: 'nelsoncontreras181@gmail.com', dotBg: '#e0e7ff', dotColor: '#4f46e5' },
             ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#f8fafc')}
-              >
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: '0.875rem', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: item.dotBg, color: item.dotColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">{item.icon}</svg>
                 </div>
@@ -330,7 +326,7 @@ export default function AyudaPage() {
           </div>
 
           <p style={{ textAlign: 'center', fontSize: '0.7rem', color: '#94a3b8', marginTop: '1.25rem', fontWeight: 500 }}>
-            Horario de atención: Lunes a Viernes, 8am – 4pm
+            Horario de atención: Lunes a Viernes, 08:00 – 10:00 hrs
           </p>
         </div>
       </div>
