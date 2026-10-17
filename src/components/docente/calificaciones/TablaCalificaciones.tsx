@@ -73,6 +73,7 @@ function CeldaNota({
 }) {
   const [editando, setEditando] = useState(false)
   const [texto, setTexto] = useState(valor === null ? '' : String(valor))
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   function empezarEdicion() {
     setTexto(valor === null ? '' : String(valor))
@@ -102,11 +103,19 @@ function CeldaNota({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') { e.preventDefault(); confirmar(); onNavegar('down') }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      confirmar()
+      inputRef.current?.blur()
+    }
     else if (e.key === 'Tab') { e.preventDefault(); confirmar(); onNavegar(e.shiftKey ? 'left' : 'right') }
     else if (e.key === 'Escape') { setEditando(false); setTexto(valor === null ? '' : String(valor)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); confirmar(); onNavegar('up') }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); confirmar(); onNavegar('down') }
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      confirmar()
+      inputRef.current?.blur()
+    }
     else if (e.key === 'ArrowLeft') {
       const input = e.currentTarget
       if (input.selectionStart === 0) { e.preventDefault(); confirmar(); onNavegar('left') }
@@ -130,7 +139,10 @@ function CeldaNota({
     >
       {editando ? (
         <input
-          ref={cellRef}
+          ref={el => {
+            inputRef.current = el
+            cellRef(el)
+          }}
           type="text"
           inputMode="numeric"
           autoFocus
@@ -285,6 +297,20 @@ export default function TablaCalificaciones({
     requestAnimationFrame(() => focusCell(r, c))
   }
 
+  // Función para desplazar la tabla en móvil al hacer clic en un encabezado de trabajo largo
+  const handleHeaderClick = (e: React.MouseEvent<HTMLTableHeaderCellElement>) => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) return
+    const th = e.currentTarget
+    const container = scrollRef.current
+    if (!container) return
+    const left = th.offsetLeft
+    container.scrollTo({
+      left: Math.max(0, left - 40),
+      behavior: 'smooth'
+    })
+    setTimeout(updateScrollState, 250)
+  }
+
   const sumaPesos = trabajosOrdenados.reduce((s, t) => s + t.peso, 0)
   const obsWidth = obsContraido ? 88 : 280
   const matLeft = 280
@@ -335,7 +361,7 @@ export default function TablaCalificaciones({
         }
       `}</style>
 
-      {/* Barra Superior adaptada: Búsqueda en esquina izquierda y Flechas en esquina derecha para móvil */}
+      {/* Barra Superior adaptada: Búsqueda en esquina izquierda y Resumen + Flechas a la derecha */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.28rem 0.55rem', flex: 1, maxWidth: 280 }}>
           <svg width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -359,10 +385,10 @@ export default function TablaCalificaciones({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
           {!esCargaGlobal && trabajosOrdenados.length > 0 && (
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', display: 'none' }} className="desktop-info">
-              {trabajosOrdenados.length} rubros · {sumaPesos}% · {alumnosFiltrados.length} alumnos
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>
+              {alumnosFiltrados.length} alumnos · trabajos {trabajosOrdenados.length}
             </span>
           )}
           {!esCargaGlobal && trabajosOrdenados.length > 0 && (
@@ -456,8 +482,8 @@ export default function TablaCalificaciones({
                 ))
               ) : (
                 trabajosOrdenados.map(t => (
-                  <th key={t.id} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0' }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.nombre}>{t.nombre}</div>
+                  <th key={t.id} onClick={handleHeaderClick} title={`${t.nombre} (Clic para centrar)`} style={{ position: 'sticky', top: 0, zIndex: 2, background: '#f8fafc', padding: '0.55rem 0.375rem', fontSize: '0.66rem', fontWeight: 700, color: '#475569', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1.5px solid #e2e8f0', cursor: 'pointer' }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.nombre}</div>
                     <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>vale {t.peso}%</div>
                   </th>
                 ))
@@ -590,86 +616,54 @@ export default function TablaCalificaciones({
                           style={{
                             background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 8,
                             padding: '0.35rem 0.5rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 600,
-                            cursor: 'pointer', width: '100%', textAlign: 'center', transition: 'all 0.15s ease'
+                            cursor: 'pointer', width: '100%', textAlign: 'center'
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#007aff'; e.currentTarget.style.color = '#007aff'; e.currentTarget.style.background = '#f0f7ff' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = '#f8fafc' }}
                         >
-                          + Observación
+                          + Agregar
                         </button>
                       )}
                     </td>
 
-                    {/* CELDAS DE NOTAS */}
-                    {trabajosOrdenados.map((t, ti) => {
-                      if (esCargaNotas) {
-                        return (
-                          <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
-                            <div style={{ width: 36, height: 26, borderRadius: 6, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
-                          </td>
-                        )
-                      }
-
-                      const valor = notas.get(`${t.id}:${al.id}`) ?? null
-                      const esAsistencia = !!t.es_asistencia
-
-                      if (esAsistencia) {
-                        const sinPorcentajeAsistencia = t.peso === 0
-
-                        return (
-                          <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}
-                            title={sinPorcentajeAsistencia ? "Asistencia desactivada (0%)" : "Calculado automáticamente desde el módulo de asistencia"}>
-                            <div style={{ minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <div style={{
-                                width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                borderRadius: 6, fontSize: '0.8rem', fontWeight: 700,
-                                color: sinPorcentajeAsistencia || valor === null ? '#cbd5e1' : (valor >= 60 ? '#16a34a' : '#dc2626'),
-                                background: sinPorcentajeAsistencia || valor === null ? 'transparent' : (valor >= 60 ? '#f0fdf4' : '#fef2f2'),
-                                border: '1.5px solid transparent', boxSizing: 'border-box', minHeight: 44
-                              }}>
-                                {sinPorcentajeAsistencia ? '—' : (valor === null ? '—' : valor)}
-                              </div>
-                            </div>
-                          </td>
-                        )
-                      }
-
-                      return (
-                        <td key={t.id} style={{ padding: 3, borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
-                          <CeldaNota
-                            valor={valor}
-                            onGuardar={pts => onNotaChange(t.id, al.id, pts)}
-                            onNavegar={dir => handleNavegar(ai, ti, dir)}
-                            cellRef={el => {
-                              if (el) cellRefs.current.set(key(ai, ti), el)
-                              else cellRefs.current.delete(key(ai, ti))
-                            }}
-                          />
+                    {/* CELDAS DE NOTAS POR RUBRO */}
+                    {esCargaGlobal && trabajosOrdenados.length === 0 ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <td key={i} style={{ padding: '0.5rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
                         </td>
-                      )
-                    })}
+                      ))
+                    ) : (
+                      trabajosOrdenados.map((t, ti) => {
+                        const cellKey = `${t.id}:${al.id}`
+                        const valorNota = notas.get(cellKey) ?? null
+                        return (
+                          <td key={t.id} style={{ padding: '0.35rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
+                            <CeldaNota
+                              valor={valorNota}
+                              onGuardar={(pts) => onNotaChange(t.id, al.id, pts)}
+                              onNavegar={(dir) => handleNavegar(ai, ti, dir)}
+                              cellRef={(el) => {
+                                if (el) cellRefs.current.set(key(ai, ti), el)
+                                else cellRefs.current.delete(key(ai, ti))
+                              }}
+                            />
+                          </td>
+                        )
+                      })
+                    )}
 
-                    {/* COLUMNA FINAL */}
-                    <td className="col-final-cell" style={{
-                      background: par ? '#fcfdfe' : 'white',
-                      padding: '0.5rem 0.375rem',
-                      textAlign: 'center',
-                      borderLeft: '1.5px solid #e2e8f0',
-                      borderBottom: '1px solid #eef1f6'
-                    }}>
-                      {esCargaNotas ? (
-                        <div style={{ width: 36, height: 24, borderRadius: 6, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
-                      ) : (
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          minWidth: 42, padding: '3px 6px', borderRadius: 7,
-                          fontSize: '0.75rem', fontWeight: 800,
-                          color: colorNota(notaFinal),
-                          background: bgNota(notaFinal)
-                        }}>
-                          {notaFinal === null ? '—' : notaFinal}
-                        </div>
-                      )}
+                    {/* CELDA CALIFICACIÓN FINAL */}
+                    <td className="col-final-cell" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: 42, height: 28, padding: '0 6px', borderRadius: 7,
+                        fontSize: '0.78rem', fontWeight: 800,
+                        color: notaFinal === null ? '#94a3b8' : (notaFinal >= 60 ? '#16a34a' : '#dc2626'),
+                        background: notaFinal === null ? '#f1f5f9' : (notaFinal >= 60 ? '#f0fdf4' : '#fef2f2'),
+                        border: '1px solid',
+                        borderColor: notaFinal === null ? '#e2e8f0' : (notaFinal >= 60 ? '#bbf7d0' : '#fecaca')
+                      }}>
+                        {notaFinal === null ? '—' : notaFinal}
+                      </div>
                     </td>
 
                   </tr>

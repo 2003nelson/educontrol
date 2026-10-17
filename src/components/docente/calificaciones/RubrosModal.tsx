@@ -166,9 +166,7 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
       )
     }
 
-    setGuardando(false)
-    onGuardado()
-    onClose()
+    // Recarga inmediata del navegador directamente para congelar la pantalla y evitar destellos
     window.location.reload()
   }
 
@@ -179,8 +177,8 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
   const mostrarAgregar = !ultimoEditable || (ultimoEditable.nombre.trim() !== '' && Number(ultimoEditable.peso) > 0)
 
   return createPortal(
-    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'1rem' }}>
-      <div onClick={e => e.stopPropagation()} className="rubros-modal-inner" style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:720, maxHeight:'92vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 24px 60px rgba(0,0,0,0.15)', animation:'cardIn 0.3s cubic-bezier(0.34,1.3,0.64,1)', position:'relative' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.45)', backdropFilter:'blur(6px)', padding:'0.75rem' }}>
+      <div onClick={e => e.stopPropagation()} className="rubros-modal-inner" style={{ background:'white', borderRadius:'1.25rem', width:'100%', maxWidth:720, maxHeight:'88vh', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 24px 60px rgba(0,0,0,0.15)', animation:'cardIn 0.3s cubic-bezier(0.34,1.3,0.64,1)', position:'relative' }}>
         <style>{`
           @keyframes cardIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
           @keyframes spin{to{transform:rotate(360deg)}}
@@ -191,43 +189,45 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
           .btn-menos:not(:disabled):hover { background: #fff1f2 !important; border-color: #fda4af !important; color: #e11d48 !important; }
           .btn-mas:not(:disabled):hover { background: #f0fdf4 !important; border-color: #86efac !important; color: #16a34a !important; }
           @media (max-width: 600px) {
-            .rubros-modal-inner { max-width: 100% !important; border-radius: 1rem 1rem 0 0 !important; max-height: 96vh !important; }
-            .rubros-footer { flex-direction: column !important; }
-            .rubros-footer button { flex: unset !important; width: 100% !important; }
+            .rubros-modal-inner { max-width: 100% !important; border-radius: 1rem !important; max-height: 86vh !important; }
+            .rubros-footer { flex-direction: column !important; padding: 0.65rem 1rem !important; }
+            .rubros-footer button { flex: unset !important; width: 100% !important; padding: 0.55rem !important; font-size: 0.78rem !important; }
+            .rubros-header { padding: 0.85rem 1rem 0.65rem !important; }
+            .rubros-body { padding: 0.75rem 1rem !important; gap: 0.45rem !important; }
+            .rubro-row-item { padding: 0.45rem 0.65rem !important; gap: 0.3rem !important; }
           }
         `}</style>
 
         {/* Header */}
-        <div style={{ padding:'1.25rem 1.5rem 1rem', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+        <div className="rubros-header" style={{ padding:'1.125rem 1.5rem 0.85rem', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
-            <h2 style={{ fontSize:'1rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Trabajos del parcial</h2>
-            <p style={{ fontSize:'0.7rem', color:'#94a3b8', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.04em' }}>{ctx.asignatura_nombre} · {['1er','2do','3er'][parseInt(ctx.periodo)-1]} Parcial</p>
+            <h2 style={{ fontSize:'0.95rem', fontWeight:700, color:'#1e3a5f', margin:0 }}>Trabajos del parcial</h2>
+            <p style={{ fontSize:'0.65rem', color:'#94a3b8', margin:'2px 0 0', textTransform:'uppercase', letterSpacing:'0.04em' }}>{ctx.asignatura_nombre} · {['1er','2do','3er'][parseInt(ctx.periodo)-1]} Parcial</p>
           </div>
           {!guardando && (
-            <button onClick={onClose} style={{ width:28, height:28, borderRadius:'50%', background:'#f8fafc', border:'1px solid #e2e8f0', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:600, fontSize:'0.85rem' }}>✕</button>
+            <button onClick={onClose} style={{ width:26, height:26, borderRadius:'50%', background:'#f8fafc', border:'1px solid #e2e8f0', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontWeight:600, fontSize:'0.78rem' }}>✕</button>
           )}
         </div>
 
         {/* Barra de pesos minimalista */}
-        <div style={{ padding:'0.55rem 1.5rem', background: pesoValido ? '#f8fafc' : sumaPesos > 100 ? '#fef2f2' : '#fffbeb', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'1rem' }}>
-          <span style={{ fontSize:'0.73rem', fontWeight:600, color: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#d97706', flexShrink:0 }}>
+        <div style={{ padding:'0.45rem 1.25rem', background: pesoValido ? '#f8fafc' : sumaPesos > 100 ? '#fef2f2' : '#fffbeb', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0, gap:'0.75rem' }}>
+          <span style={{ fontSize:'0.7rem', fontWeight:600, color: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#d97706', flexShrink:0 }}>
             {pesoValido ? '✓ Suma 100%' : `Suma ${sumaPesos}% — debe ser 100%`}
           </span>
-          <div style={{ flex:1, height:5, borderRadius:9999, background:'#e2e8f0', overflow:'hidden' }}>
+          <div style={{ flex:1, height:4, borderRadius:9999, background:'#e2e8f0', overflow:'hidden' }}>
             <div style={{ height:'100%', width:`${Math.min(sumaPesos,100)}%`, background: pesoValido ? '#16a34a' : sumaPesos > 100 ? '#dc2626' : '#f59e0b', borderRadius:9999, transition:'width 0.25s' }}/>
           </div>
-          <span style={{ fontSize:'0.72rem', fontWeight:700, color:'#475569', flexShrink:0, minWidth:34, textAlign:'right' }}>{sumaPesos}%</span>
+          <span style={{ fontSize:'0.7rem', fontWeight:700, color:'#475569', flexShrink:0, minWidth:30, textAlign:'right' }}>{sumaPesos}%</span>
         </div>
 
-        {/* Lista de trabajos limpia */}
-        <div style={{ flex:1, overflowY:'auto', padding:'1rem 1.5rem' }}>
+        {/* Lista de trabajos compacta y desplazable */}
+        <div className="rubros-body" style={{ flex:1, overflowY:'auto', padding:'0.85rem 1.5rem', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
           {loading ? (
             <div style={{ display:'flex', justifyContent:'center', padding:'2rem' }}>
               <div style={{ width:22, height:22, border:'2px solid #e2e8f0', borderTopColor:'#1e3a5f', borderRadius:'50%', animation:'spin 0.4s linear infinite' }}/>
             </div>
           ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
-
+            <>
               {trabajos.map((t, i) => {
                 const pesoNum = Number(t.peso) || 0
                 const otrosPesos = trabajos.reduce((s, tj, j) => j === i ? s : s + (Number(tj.peso) || 0), 0)
@@ -239,73 +239,73 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
                 const tienePeso = pesoNum > 0
 
                 return esAsistencia ? (
-                  <div key={t.id} style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
-                    <div style={{ width:30, height:30, borderRadius:8, background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#475569' }}>
-                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round">
+                  <div key={t.id} className="rubro-row-item" style={{ display:'flex', alignItems:'center', gap:'0.6rem', padding:'0.55rem 0.75rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0' }}>
+                    <div style={{ width:26, height:26, borderRadius:7, background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#475569' }}>
+                      <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                       </svg>
                     </div>
 
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap: '0.35rem' }}>
-                        <p style={{ fontSize:'0.82rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Asistencia</p>
-                        <span style={{ fontSize:'0.58rem', fontWeight:700, color:'#64748b', background:'#e2e8f0', borderRadius:4, padding:'1px 4px' }}>AUTOMÁTICO</span>
+                      <div style={{ display:'flex', alignItems:'center', gap: '0.3rem' }}>
+                        <p style={{ fontSize:'0.78rem', fontWeight:600, color:'#1e3a5f', margin:0 }}>Asistencia</p>
+                        <span style={{ fontSize:'0.52rem', fontWeight:700, color:'#64748b', background:'#e2e8f0', borderRadius:4, padding:'1px 3px' }}>AUTOMÁTICO</span>
                       </div>
-                      <p style={{ fontSize:'0.65rem', color:'#94a3b8', margin:0 }}>Calculada desde asistencia</p>
+                      <p style={{ fontSize:'0.6rem', color:'#94a3b8', margin:0 }}>Calculada desde asistencia</p>
                     </div>
 
-                    <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.15rem', flexShrink:0 }}>
                       <button className="peso-btn btn-menos" disabled={!puedeBajar || guardando} onClick={() => cambiarPeso(i, -5)}
-                        style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
-                      <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
-                        <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
+                        style={{ width:24, height:24, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.7rem' }}>-</button>
+                      <div style={{ width:38, height:24, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
+                        <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
                       </div>
                       <button className="peso-btn btn-mas" disabled={!puedeSubir || guardando} onClick={() => cambiarPeso(i, 5)}
-                        style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
+                        style={{ width:24, height:24, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.7rem' }}>+</button>
                     </div>
 
-                    <div style={{ width:24, flexShrink:0 }} />
+                    <div style={{ width:20, flexShrink:0 }} />
                   </div>
                 ) : (
-                  <div key={t.id} className="rubro-row" style={{ display:'flex', flexDirection:'column', gap:'0.35rem', padding:'0.65rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', transition:'background 0.1s' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                      <span style={{ fontSize:'0.7rem', fontWeight:600, color:'#94a3b8', width:16, flexShrink:0, textAlign:'center' }}>{i}</span>
+                  <div key={t.id} className="rubro-row rubro-row-item" style={{ display:'flex', flexDirection:'column', gap:'0.25rem', padding:'0.55rem 0.75rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', transition:'background 0.1s' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.6rem' }}>
+                      <span style={{ fontSize:'0.65rem', fontWeight:600, color:'#94a3b8', width:14, flexShrink:0, textAlign:'center' }}>{i}</span>
 
                       <input
                         value={t.nombre}
                         disabled={guardando}
                         onChange={e => update(i, 'nombre', e.target.value)}
                         placeholder="Nombre del trabajo (ej. Tarea, Examen)"
-                        style={{ flex:1, border:'none', background:'transparent', fontSize:'0.82rem', color:'#1e3a5f', outline:'none', fontWeight:500, minWidth:0 }}
+                        style={{ flex:1, border:'none', background:'transparent', fontSize:'0.78rem', color:'#1e3a5f', outline:'none', fontWeight:500, minWidth:0 }}
                       />
 
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.2rem', flexShrink:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.15rem', flexShrink:0 }}>
                         <button className="peso-btn btn-menos" disabled={!puedeBajar || guardando} onClick={() => cambiarPeso(i, -5)}
-                          style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>-</button>
-                        <div style={{ width:42, height:26, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
-                          <span style={{ fontSize:'0.8rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
+                          style={{ width:24, height:24, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.7rem' }}>-</button>
+                        <div style={{ width:38, height:24, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:'1px solid #e2e8f0', background:'white' }}>
+                          <span style={{ fontSize:'0.75rem', fontWeight:700, color:'#1e3a5f' }}>{pesoNum}%</span>
                         </div>
                         <button className="peso-btn btn-mas" disabled={!puedeSubir || guardando} onClick={() => cambiarPeso(i, 5)}
-                          style={{ width:26, height:26, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.75rem' }}>+</button>
+                          style={{ width:24, height:24, borderRadius:6, border:'1px solid #e2e8f0', background:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#64748b', fontSize:'0.7rem' }}>+</button>
                       </div>
 
                       <button onClick={() => remove(i)} disabled={guardando}
-                        style={{ width:24, height:24, borderRadius:'50%', background:'transparent', border:'none', cursor:'pointer', color:'#cbd5e1', fontSize:'0.75rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'color 0.12s' }}
+                        style={{ width:20, height:20, borderRadius:'50%', background:'transparent', border:'none', cursor:'pointer', color:'#cbd5e1', fontSize:'0.7rem', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'color 0.12s' }}
                         onMouseEnter={e => (e.currentTarget.style.color='#dc2626')}
                         onMouseLeave={e => (e.currentTarget.style.color='#cbd5e1')}>✕</button>
                     </div>
 
-                    <div style={{ paddingLeft: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <div style={{ paddingLeft: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                       {!tieneNombre ? (
-                        <p style={{ fontSize: '0.68rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontSize: '0.75rem' }}>ℹ️</span> Asigna un nombre a tu rubro
+                        <p style={{ fontSize: '0.62rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span>ℹ️</span> Asigna un nombre a tu rubro
                         </p>
                       ) : !tienePeso ? (
-                        <p style={{ fontSize: '0.68rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontSize: '0.75rem' }}>ℹ️</span> Añade un porcentaje a este trabajo
+                        <p style={{ fontSize: '0.62rem', color: '#2563eb', margin: 0, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span>ℹ️</span> Añade un porcentaje a este trabajo
                         </p>
                       ) : (
-                        <p style={{ fontSize: '0.68rem', color: '#16a34a', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <p style={{ fontSize: '0.62rem', color: '#16a34a', margin: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
                           <span>✓</span> Rubro cargado correctamente
                         </p>
                       )}
@@ -315,11 +315,11 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
               })}
 
               {parcialesToCopy.length > 0 && rubrosEditables.length === 0 && (
-                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.55rem 0.85rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', marginTop:'0.25rem' }}>
-                  <span style={{ fontSize:'0.72rem', color:'#64748b', fontWeight:500, flex:1 }}>Copiar de:</span>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.45rem 0.75rem', borderRadius:10, background:'#f8fafc', border:'1px solid #e2e8f0', marginTop:'0.15rem' }}>
+                  <span style={{ fontSize:'0.68rem', color:'#64748b', fontWeight:500, flex:1 }}>Copiar de:</span>
                   {parcialesToCopy.map(p => (
                     <button key={p.periodo} onClick={() => void copiarDeParcial(p.periodo)} disabled={copiando}
-                      style={{ padding:'3px 8px', borderRadius:6, border:'1px solid #cbd5e1', background:'white', color:'#475569', fontSize:'0.7rem', fontWeight:600, cursor: copiando ? 'not-allowed' : 'pointer' }}>
+                      style={{ padding:'2px 6px', borderRadius:5, border:'1px solid #cbd5e1', background:'white', color:'#475569', fontSize:'0.66rem', fontWeight:600, cursor: copiando ? 'not-allowed' : 'pointer' }}>
                       {p.label}
                     </button>
                   ))}
@@ -328,7 +328,7 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
 
               {mostrarAgregar && !guardando && (
                 <button onClick={addTrabajo}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'0.55rem', borderRadius:10, border:'1px dashed #cbd5e1', background:'transparent', cursor:'pointer', color:'#64748b', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, padding:'0.45rem', borderRadius:10, border:'1px dashed #cbd5e1', background:'transparent', cursor:'pointer', color:'#64748b', fontSize:'0.74rem', fontWeight:600, marginTop:'0.15rem', transition:'all 0.12s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor='#94a3b8'; e.currentTarget.style.color='#1e3a5f' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor='#cbd5e1'; e.currentTarget.style.color='#64748b' }}>
                   + Agregar trabajo
@@ -338,24 +338,24 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
               {rubrosEditables.length > 0 && !guardando && (
                 <button
                   onClick={() => setConfirmarBorrar(true)}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'0.55rem', borderRadius:10, border:'1px solid #fecaca', background:'#fff1f1', cursor:'pointer', color:'#dc2626', fontSize:'0.78rem', fontWeight:600, marginTop:'0.25rem', transition:'all 0.12s' }}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'0.45rem', borderRadius:10, border:'1px solid #fecaca', background:'#fff1f1', cursor:'pointer', color:'#dc2626', fontSize:'0.74rem', fontWeight:600, marginTop:'0.15rem', transition:'all 0.12s' }}
                   onMouseEnter={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.borderColor='#fca5a5' }}
                   onMouseLeave={e => { e.currentTarget.style.background='#fff1f1'; e.currentTarget.style.borderColor='#fecaca' }}>
-                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
                   </svg>
                   Borrar todos los trabajos
                 </button>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="rubros-footer" style={{ padding:'0.85rem 1.5rem', borderTop:'1px solid #f1f5f9', display:'flex', gap:'0.5rem', flexShrink:0 }}>
-          <button onClick={onClose} disabled={guardando} style={{ flex:1, padding:'0.65rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.82rem', fontWeight:600, cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.6 : 1 }}>Cancelar</button>
+        <div className="rubros-footer" style={{ padding:'0.75rem 1.5rem', borderTop:'1px solid #f1f5f9', display:'flex', gap:'0.5rem', flexShrink:0 }}>
+          <button onClick={onClose} disabled={guardando} style={{ flex:1, padding:'0.55rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.78rem', fontWeight:600, cursor: guardando ? 'not-allowed' : 'pointer', opacity: guardando ? 0.6 : 1 }}>Cancelar</button>
           <button onClick={guardar} disabled={!pesoValido || guardando}
-            style={{ flex:2, padding:'0.65rem', borderRadius:8, border:'none', background: !pesoValido ? '#e2e8f0' : '#1e3a5f', color: !pesoValido ? '#94a3b8' : 'white', fontSize:'0.82rem', fontWeight:600, cursor: !pesoValido || guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'background 0.15s' }}>
+            style={{ flex:2, padding:'0.55rem', borderRadius:8, border:'none', background: !pesoValido ? '#e2e8f0' : '#1e3a5f', color: !pesoValido ? '#94a3b8' : 'white', fontSize:'0.78rem', fontWeight:600, cursor: !pesoValido || guardando ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'background 0.15s' }}>
             {guardando ? <><div style={{ width:12, height:12, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.4s linear infinite' }}/> Guardando...</> : 'Guardar trabajos'}
           </button>
         </div>
@@ -363,18 +363,18 @@ export default function RubrosModal({ ctx, docenteId, plantelId, onClose, onGuar
         {/* Modal de confirmación: borrar todos */}
         {confirmarBorrar && (
           <div style={{ position:'absolute', inset:0, zIndex:10, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.35)', backdropFilter:'blur(4px)', borderRadius:'1.25rem' }}>
-            <div style={{ background:'white', borderRadius:'1rem', width:'calc(100% - 3rem)', maxWidth:340, padding:'1.5rem', boxShadow:'0 16px 40px rgba(0,0,0,0.15)', animation:'modalBorrarIn 0.2s cubic-bezier(0.34,1.3,0.64,1)' }}>
-              <h3 style={{ fontSize:'0.95rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.35rem' }}>¿Borrar todos los trabajos?</h3>
-              <p style={{ fontSize:'0.75rem', color:'#64748b', textAlign:'center', margin:'0 0 1.25rem', lineHeight:1.5 }}>
+            <div style={{ background:'white', borderRadius:'1rem', width:'calc(100% - 3rem)', maxWidth:340, padding:'1.25rem', boxShadow:'0 16px 40px rgba(0,0,0,0.15)', animation:'modalBorrarIn 0.2s cubic-bezier(0.34,1.3,0.64,1)' }}>
+              <h3 style={{ fontSize:'0.9rem', fontWeight:700, color:'#1e3a5f', textAlign:'center', margin:'0 0 0.35rem' }}>¿Borrar todos los trabajos?</h3>
+              <p style={{ fontSize:'0.72rem', color:'#64748b', textAlign:'center', margin:'0 0 1rem', lineHeight:1.4 }}>
                 Se eliminarán todos los trabajos de este parcial. El rubro de Asistencia se conservará.
               </p>
               <div style={{ display:'flex', gap:'0.5rem' }}>
                 <button onClick={() => setConfirmarBorrar(false)}
-                  style={{ flex:1, padding:'0.6rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.8rem', fontWeight:600, cursor:'pointer' }}>
+                  style={{ flex:1, padding:'0.5rem', borderRadius:8, border:'1px solid #e2e8f0', background:'white', color:'#475569', fontSize:'0.76rem', fontWeight:600, cursor:'pointer' }}>
                   Cancelar
                 </button>
                 <button onClick={borrarTodos}
-                  style={{ flex:1, padding:'0.6rem', borderRadius:8, border:'none', background:'#dc2626', color:'white', fontSize:'0.8rem', fontWeight:600, cursor:'pointer' }}>
+                  style={{ flex:1, padding:'0.5rem', borderRadius:8, border:'none', background:'#dc2626', color:'white', fontSize:'0.76rem', fontWeight:600, cursor:'pointer' }}>
                   Sí, borrar
                 </button>
               </div>

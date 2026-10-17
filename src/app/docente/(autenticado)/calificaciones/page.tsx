@@ -261,7 +261,7 @@ export default function CalificacionesPage() {
     </div>
   )
 
-  // Vista notas (renderiza la vista contenedora con soporte de carga inmediata)
+  // Vista notas
   if (vista.tipo === 'notas') return (
     <>
       <CalificacionesView
@@ -330,10 +330,7 @@ export default function CalificacionesPage() {
           <div className="cal-asig-grid" style={{ display:'flex', flexDirection:'column', gap:'0.625rem' }}>
             <style>{`
               @media(min-width:640px){ .cal-asig-grid { display:grid !important; grid-template-columns:repeat(2,1fr); gap:1rem; } }
-              @media(min-width:1024px){ .cal-asig-grid { grid-template-columns:repeat(3,1fr); gap:1.25rem; } }
-              .cal-asig-pc { display:none; }
-              .cal-asig-mob { display:flex; }
-              @media(min-width:640px){ .cal-asig-pc { display:flex !important; flex-direction:column; align-items:center; } .cal-asig-mob { display:none !important; } }
+              @media(min-width:1024px){ .cal-asig-grid { display:grid !important; grid-template-columns:repeat(3,1fr); gap:1.25rem; } }
             `}</style>
             {vista.grupo.asignaturas.map((asig) => (
               <button key={asig.id} onClick={() => navegar({ tipo:'parcial', grupo:vista.grupo, asignatura:asig })}
@@ -354,25 +351,12 @@ export default function CalificacionesPage() {
                 onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#bfdbfe'; e.currentTarget.style.boxShadow='0 6px 20px rgba(59,130,246,0.10)'; e.currentTarget.style.transform='translateY(-2px)' }}
                 onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.borderColor='#e5e5ea'; e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)'; e.currentTarget.style.transform='translateY(0)' }}>
                 
-                {/* Escritorio */}
-                <div className="cal-asig-pc" style={{ padding:'2rem 1.25rem 1rem', gap:'1rem', width:'100%', flexGrow:1, justifyContent:'center' }}>
+                {/* Cuerpo del Card (Diseño unificado centrado) */}
+                <div style={{ padding:'2rem 1.25rem 1rem', display:'flex', flexDirection:'column', alignItems:'center', gap:'1rem', width:'100%', flexGrow:1, justifyContent:'center' }}>
                   <div style={{ width:68, height:68, borderRadius:18, background:'#fef9c3', border:'1px solid #fef08a', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(234,179,8,0.12)' }}>
                     <span style={{ fontSize:'2rem', lineHeight:1 }}>📒</span>
                   </div>
                   <span style={{ fontSize:'0.88rem', fontWeight:800, color:'#1e3a5f', lineHeight:1.3, textAlign:'center', textTransform:'uppercase', letterSpacing:'0.02em', padding:'0 0.5rem' }}>{asig.nombre}</span>
-                </div>
-                
-                {/* Móvil */}
-                <div className="cal-asig-mob" style={{ padding:'1.125rem 1rem 0.875rem', alignItems:'center', justifyContent:'space-between', gap:'0.75rem', width:'100%' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                    <div style={{ width:44, height:44, borderRadius:12, background:'#fef9c3', border:'1px solid #fef08a', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontSize:'1.3rem', lineHeight:1 }}>📒</span>
-                    </div>
-                    <span style={{ fontSize:'0.85rem', fontWeight:700, color:'#1e3a5f', textTransform:'uppercase' }}>{asig.nombre}</span>
-                  </div>
-                  <svg width="16" height="16" fill="none" stroke="#c7c7cc" strokeWidth="2.5" viewBox="0 0 24 24" style={{ flexShrink:0 }} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
                 </div>
                 
                 {/* Footer del card */}
