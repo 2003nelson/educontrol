@@ -25,7 +25,7 @@ function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, numb
 // ── Skeletons para Métrica y Tarjeta Superior ──────────────────────────────
 function SkeletonCardsHeader() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem', marginBottom: '1.125rem' }}>
+    <div className="cal-cards-grid" style={{ marginBottom: '1.125rem' }}>
       {/* Skeleton Card Izquierda (Métricas) */}
       <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e8eaf0', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 110 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -368,6 +368,16 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
           50%  { opacity: 0.45 }
           100% { opacity: 1 }
         }
+        .cal-cards-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 0.875rem;
+        }
+        @media (min-width: 768px) {
+          .cal-cards-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
       `}</style>
 
       {/* Header sticky */}
@@ -420,10 +430,10 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
 
             {alumnos.length > 0 && trabajos.length > 0 && (
               <>
-                {/* GRID PRINCIPAL: 2 Tarjetas idénticas en altura y estructura */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem', marginBottom: mostrarObsAlumnos ? '0.875rem' : '1.125rem' }}>
+                {/* GRID PRINCIPAL: Apilados en Móvil (1fr), 2 Columnas en Escritorio (min-width: 768px) */}
+                <div className="cal-cards-grid" style={{ marginBottom: mostrarObsAlumnos ? '0.875rem' : '1.125rem' }}>
 
-                  {/* Card Izquierda: Métricas */}
+                  {/* Card Arriba (Móvil) / Izquierda (PC): Métricas y Estadística */}
                   <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e8eaf0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1rem 1.25rem' }}>
                     
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -494,7 +504,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
 
                   </div>
 
-                  {/* Card Derecha: Observación del Grupo */}
+                  {/* Card Abajo (Móvil) / Derecha (PC): Observación del Grupo */}
                   <ObservacionesCard
                     ctx={ctx}
                     docenteId={docenteId}
@@ -504,7 +514,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
 
                 </div>
 
-                {/* SECCIÓN DESPLEGABLE */}
+                {/* SECCIÓN DESPLEGABLE DE OBSERVACIONES */}
                 {mostrarObsAlumnos && alumnosConObsCalculados && (
                   <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e8eaf0', padding: '1rem 1.25rem', marginBottom: '1.125rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', animation: 'fadeUp 0.2s ease-out' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -549,7 +559,7 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
           </>
         )}
 
-        {/* Renderizado continuo de la tabla con soporte para su propio skeleton interno */}
+        {/* Renderizado continuo de la tabla */}
         <TablaCalificaciones
           alumnos={alumnos}
           trabajos={trabajos}

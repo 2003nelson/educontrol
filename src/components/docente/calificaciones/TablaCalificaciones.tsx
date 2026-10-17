@@ -31,7 +31,7 @@ function calcNota(trabajos: Trabajo[], alumnoId: string, notas: Map<string, numb
 
 const COL_RUBRO_WIDTH = 110
 
-// ── Skeleton row para cuando NI SIQUIERA se han cargado los alumnos ──────────
+// ── Skeleton row para carga inicial ─────────────────────────────────────
 function SkeletonTablaRow({ idx, obsContraido, numRubros = 3 }: { idx: number; obsContraido: boolean; numRubros?: number }) {
   const par = idx % 2 === 1
   const obsWidth = obsContraido ? 88 : 280
@@ -39,24 +39,24 @@ function SkeletonTablaRow({ idx, obsContraido, numRubros = 3 }: { idx: number; o
   const obsLeft = matLeft + 100
   return (
     <tr style={{ background: par ? '#fcfdfe' : 'white' }}>
-      <td style={{ position: 'sticky', left: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
+      <td className="sticky-col-0" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.375rem', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>
         <div style={{ width: 16, height: 12, borderRadius: 4, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
       </td>
-      <td style={{ position: 'sticky', left: 40, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: 240 }}>
+      <td className="sticky-col-40" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: 240 }}>
         <div style={{ width: '80%', height: 13, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
       </td>
-      <td style={{ position: 'sticky', left: matLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
+      <td className="sticky-col-mat" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.5rem', borderBottom: '1px solid #eef1f6' }}>
         <div style={{ width: 70, height: 11, borderRadius: 4, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
       </td>
-      <td style={{ position: 'sticky', left: obsLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: obsWidth }}>
-        <div style={{ width: '60%', height: 26, borderRadius: 8, background: '#e5e7eb', animation: 'shimmer 1.2s infinite' }} />
+      <td className="sticky-col-obs" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.75rem', borderBottom: '1px solid #eef1f6', width: obsWidth }}>
+        <div style={{ width: '60%', height: 26, borderRadius: 8, background: '#e5e7eb', animation: 'shimmer 1.4s infinite' }} />
       </td>
       {Array.from({ length: Math.max(numRubros, 3) }).map((_, i) => (
         <td key={i} style={{ padding: '0.75rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
         </td>
       ))}
-      <td style={{ position: 'sticky', right: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.75rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
+      <td className="col-final-cell" style={{ padding: '0.75rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
         <div style={{ width: 36, height: 26, borderRadius: 7, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
       </td>
     </tr>
@@ -298,18 +298,53 @@ export default function TablaCalificaciones({
           50%  { opacity: 0.45 }
           100% { opacity: 1 }
         }
+
+        /* Por defecto en móvil: ninguna columna está anclada (sticky horizontal desactivado) */
+        .sticky-col-0, .sticky-col-40, .sticky-col-mat, .sticky-col-obs, .col-final-head, .col-final-cell {
+          position: relative !important;
+          z-index: 1;
+        }
+
+        /* En Escritorio (>= 768px): Activamos las columnas fijas laterales y finales */
+        @media (min-width: 768px) {
+          .sticky-col-0 {
+            position: sticky !important;
+            left: 0;
+            z-index: 2 !important;
+          }
+          .sticky-col-40 {
+            position: sticky !important;
+            left: 40px;
+            z-index: 2 !important;
+          }
+          .sticky-col-mat {
+            position: sticky !important;
+            left: ${matLeft}px;
+            z-index: 2 !important;
+          }
+          .sticky-col-obs {
+            position: sticky !important;
+            left: ${obsLeft}px;
+            z-index: 2 !important;
+          }
+          .col-final-head, .col-final-cell {
+            position: sticky !important;
+            right: 0;
+            z-index: 2 !important;
+          }
+        }
       `}</style>
 
-      {/* Barra Superior */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.28rem 0.55rem', width: 240 }}>
+      {/* Barra Superior adaptada: Búsqueda en esquina izquierda y Flechas en esquina derecha para móvil */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', borderBottom: '1px solid #e2e8f0', background: '#fafbfc', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.28rem 0.55rem', flex: 1, maxWidth: 280 }}>
           <svg width="13" height="13" fill="none" stroke="#64748b" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8"/>
             <path d="M21 21l-4.35-4.35"/>
           </svg>
           <input
             type="text"
-            placeholder="Buscar alumno en grupo..."
+            placeholder="Buscar alumno..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
             style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.75rem', color: '#1e3a5f', width: '100%', fontWeight: 500 }}
@@ -324,10 +359,10 @@ export default function TablaCalificaciones({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
           {!esCargaGlobal && trabajosOrdenados.length > 0 && (
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8' }}>
-              {trabajosOrdenados.length} {trabajosOrdenados.length === 1 ? 'rubro' : 'rubros'} · {sumaPesos}% · {alumnosFiltrados.length} alumnos
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', display: 'none' }} className="desktop-info">
+              {trabajosOrdenados.length} rubros · {sumaPesos}% · {alumnosFiltrados.length} alumnos
             </span>
           )}
           {!esCargaGlobal && trabajosOrdenados.length > 0 && (
@@ -339,7 +374,7 @@ export default function TablaCalificaciones({
                     onClick={() => scrollBy(-COL_RUBRO_WIDTH * 2)}
                     disabled={disabled}
                     style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${disabled ? '#d1d5db' : '#111827'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', background: 'white', color: disabled ? '#d1d5db' : '#111827', opacity: disabled ? 0.45 : 1 }}
-                    aria-label="Ver rubros anteriores"
+                    aria-label="Rubros anteriores"
                   >
                     <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                   </button>
@@ -352,7 +387,7 @@ export default function TablaCalificaciones({
                     onClick={() => scrollBy(COL_RUBRO_WIDTH * 2)}
                     disabled={disabled}
                     style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${disabled ? '#d1d5db' : '#111827'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', background: 'white', color: disabled ? '#d1d5db' : '#111827', opacity: disabled ? 0.45 : 1 }}
-                    aria-label="Ver más rubros"
+                    aria-label="Más rubros"
                   >
                     <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                   </button>
@@ -363,7 +398,7 @@ export default function TablaCalificaciones({
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }} ref={scrollRef} onScroll={updateScrollState}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }} ref={scrollRef} onScroll={updateScrollState}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', minWidth: (obsLeft + obsWidth + 72) + (esCargaGlobal ? 3 : trabajosOrdenados.length) * COL_RUBRO_WIDTH }}>
           <colgroup>
             <col style={{ width: 40 }} />
@@ -379,11 +414,11 @@ export default function TablaCalificaciones({
           </colgroup>
           <thead>
             <tr>
-              <th style={{ position: 'sticky', left: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1.5px solid #e2e8f0' }}>#</th>
-              <th style={{ position: 'sticky', left: 40, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Alumno</th>
-              <th style={{ position: 'sticky', left: matLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
+              <th className="sticky-col-0" style={{ top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderBottom: '1.5px solid #e2e8f0' }}>#</th>
+              <th className="sticky-col-40" style={{ top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.75rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Alumno</th>
+              <th className="sticky-col-mat" style={{ top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderBottom: '1.5px solid #e2e8f0' }}>Matrícula</th>
               
-              <th style={{ position: 'sticky', left: obsLeft, top: 0, zIndex: 3, background: '#f8fafc', padding: obsContraido ? '0.5rem 0.25rem' : '0.5rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
+              <th className="sticky-col-obs" style={{ top: 0, zIndex: 3, background: '#f8fafc', padding: obsContraido ? '0.5rem 0.25rem' : '0.5rem 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', borderRight: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
                 {obsContraido ? (
                   <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                     <button
@@ -427,11 +462,11 @@ export default function TablaCalificaciones({
                   </th>
                 ))
               )}
-              <th style={{ position: 'sticky', right: 0, top: 0, zIndex: 3, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Final</th>
+              
+              <th className="col-final-head" style={{ top: 0, background: '#f8fafc', padding: '0.7rem 0.375rem', fontSize: '0.64rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1.5px solid #e2e8f0' }}>Final</th>
             </tr>
           </thead>
           <tbody>
-            {/* Si no hay ni lista de alumnos aún, muestra la estructura vacía animada */}
             {esCargaGlobal && alumnos.length === 0 ? (
               Array.from({ length: 8 }).map((_, i) => <SkeletonTablaRow key={i} idx={i} obsContraido={obsContraido} numRubros={3} />)
             ) : alumnosFiltrados.length === 0 ? (
@@ -441,7 +476,6 @@ export default function TablaCalificaciones({
                 </td>
               </tr>
             ) : (
-              /* NOMBRES Y MATRÍCULAS SE DIBUJAN DE INMEDIATO AQUÍ */
               alumnosFiltrados.map((al, ai) => {
                 const notaFinal = esCargaNotas ? null : calcNota(trabajosOrdenados, al.id, notas)
                 const par = ai % 2 === 1
@@ -454,18 +488,16 @@ export default function TablaCalificaciones({
                     onMouseEnter={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = '#f0f7ff' }}
                     onMouseLeave={e => { for (const c of e.currentTarget.children) (c as HTMLElement).style.background = par ? '#fcfdfe' : 'white' }}>
                     
-                    {/* #, Nombre y Matrícula visibles sin esperas */}
-                    <td style={{ position: 'sticky', left: 0, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.375rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>{ai + 1}</td>
+                    <td className="sticky-col-0" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.375rem', fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', borderBottom: '1px solid #eef1f6' }}>{ai + 1}</td>
                     
-                    <td style={{ position: 'sticky', left: 40, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.75rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #eef1f6', width: 240, maxWidth: 240 }} title={al.nombre_completo}>
+                    <td className="sticky-col-40" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.75rem', fontSize: '0.78rem', fontWeight: 600, color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #eef1f6', width: 240, maxWidth: 240 }} title={al.nombre_completo}>
                       {al.nombre_completo}
                     </td>
                     
-                    <td style={{ position: 'sticky', left: matLeft, zIndex: 1, background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
+                    <td className="sticky-col-mat" style={{ background: par ? '#fcfdfe' : 'white', padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
 
                     {/* CELDA OBSERVACIONES */}
-                    <td style={{
-                      position: 'sticky', left: obsLeft, zIndex: 1,
+                    <td className="sticky-col-obs" style={{
                       background: !obsContraido && tieneObs && !estaEditando ? '#fefce8' : (par ? '#fcfdfe' : 'white'),
                       borderLeft: !obsContraido && tieneObs && !estaEditando ? '3px solid #facc15' : 'none',
                       borderRight: '1.5px solid #e2e8f0',
@@ -568,7 +600,7 @@ export default function TablaCalificaciones({
                       )}
                     </td>
 
-                    {/* CELDAS DE NOTAS: Si están cargando, muestran el esqueleto shimmer individual */}
+                    {/* CELDAS DE NOTAS */}
                     {trabajosOrdenados.map((t, ti) => {
                       if (esCargaNotas) {
                         return (
@@ -617,9 +649,8 @@ export default function TablaCalificaciones({
                       )
                     })}
 
-                    {/* COLUMNA FINAL: Esqueleto mientras cargan las notas */}
-                    <td style={{
-                      position: 'sticky', right: 0, zIndex: 1,
+                    {/* COLUMNA FINAL */}
+                    <td className="col-final-cell" style={{
                       background: par ? '#fcfdfe' : 'white',
                       padding: '0.5rem 0.375rem',
                       textAlign: 'center',
