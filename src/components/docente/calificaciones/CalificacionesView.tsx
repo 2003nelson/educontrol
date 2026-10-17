@@ -568,6 +568,9 @@ export default function CalificacionesView({ ctx, onBack, onAbrirRubros }: {
           onNotaChange={handleNotaChange}
           onGuardarObservacionAlumno={handleGuardarObservacionAlumno}
           loading={loading}
+          grupoId={ctx.grupo_id}
+          asignaturaId={ctx.asignatura_id}
+          periodo={ctx.periodo}
         />
       </div>
     </div>
