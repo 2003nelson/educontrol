@@ -63,9 +63,17 @@ function SkeletonTablaRow({ idx, obsContraido, numRubros = 3 }: { idx: number; o
 }
 
 function CeldaNota({
-  valor, onGuardar, onNavegar, cellRef, esAsistencia = false, onToggleAsistencia, estaAbiertoAsistencia = false
+  valor,
+  peso,
+  onGuardar,
+  onNavegar,
+  cellRef,
+  esAsistencia = false,
+  onToggleAsistencia,
+  estaAbiertoAsistencia = false
 }: {
   valor: number | null
+  peso: number
   onGuardar: (pts: number | null) => void
   onNavegar: (dir: 'up' | 'down' | 'left' | 'right' | 'enter') => void
   cellRef: (el: HTMLInputElement | null) => void
@@ -77,7 +85,10 @@ function CeldaNota({
   const [texto, setTexto] = useState(valor === null ? '' : String(valor))
   const inputRef = useRef<HTMLInputElement | null>(null)
 
+  const esDeshabilitado = peso === 0
+
   function empezarEdicion() {
+    if (esDeshabilitado) return
     setTexto(valor === null ? '' : String(valor))
     setEditando(true)
   }
@@ -137,8 +148,19 @@ function CeldaNota({
         position: 'relative', boxSizing: 'border-box'
       }}
     >
-      <div onClick={empezarEdicion} onDoubleClick={empezarEdicion} style={{ width: '100%', height: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {editando ? (
+      <div 
+        onClick={empezarEdicion} 
+        onDoubleClick={empezarEdicion} 
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          cursor: esDeshabilitado ? 'default' : 'pointer', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}
+      >
+        {editando && !esDeshabilitado ? (
           <input
             ref={el => {
               inputRef.current = el
@@ -161,25 +183,25 @@ function CeldaNota({
         ) : (
           <div
             ref={el => cellRef(el as unknown as HTMLInputElement)}
-            tabIndex={0}
+            tabIndex={esDeshabilitado ? -1 : 0}
             onFocus={empezarEdicion}
-            title={valor === null ? undefined : `${valor}/100`}
+            title={esDeshabilitado ? undefined : (valor === null ? undefined : `${valor}/100`)}
             style={{
               width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 6, fontSize: '0.8rem', fontWeight: 700, lineHeight: 1.15,
-              color: valor === null ? '#cbd5e1' : (aprobado ? '#16a34a' : '#dc2626'),
-              background: valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
+              color: esDeshabilitado || valor === null ? '#cbd5e1' : (aprobado ? '#16a34a' : '#dc2626'),
+              background: esDeshabilitado || valor === null ? 'transparent' : (aprobado ? '#f0fdf4' : '#fef2f2'),
               border: '1.5px solid transparent', outline: 'none', boxSizing: 'border-box',
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#bfdbfe' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent' }}
+            onMouseEnter={e => { if (!esDeshabilitado) e.currentTarget.style.borderColor = '#bfdbfe' }}
+            onMouseLeave={e => { if (!esDeshabilitado) e.currentTarget.style.borderColor = 'transparent' }}
           >
-            {valor === null ? '—' : valor}
+            {esDeshabilitado || valor === null ? '—' : valor}
           </div>
         )}
       </div>
 
-      {esAsistencia && onToggleAsistencia && (
+      {esAsistencia && !esDeshabilitado && onToggleAsistencia && (
         <span
           onClick={(e) => {
             e.stopPropagation()
@@ -626,7 +648,7 @@ export default function TablaCalificaciones({
                       
                       <td className="sticky-col-mat" style={{ background: rowBg, padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
 
-                      {/* CELDA OBSERVACIONES (DISEÑO ORIGINAL RESTAURADO) */}
+                      {/* CELDA OBSERVACIONES */}
                       <td className="sticky-col-obs" style={{
                         background: !obsContraido && tieneObs && !estaEditando ? '#fefce8' : rowBg,
                         borderLeft: !obsContraido && tieneObs && !estaEditando ? '3px solid #facc15' : 'none',
@@ -764,6 +786,7 @@ export default function TablaCalificaciones({
                           <td key={t.id} style={{ padding: '0.35rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', background: rowBg }}>
                             <CeldaNota
                               valor={val}
+                              peso={t.peso}
                               onGuardar={pts => onNotaChange(t.id, al.id, pts)}
                               onNavegar={dir => handleNavegar(ai, ti, dir)}
                               cellRef={el => {
@@ -791,7 +814,7 @@ export default function TablaCalificaciones({
                     </tr>
 
                     {/* Fila expandida de Asistencia Detallada */}
-                    {asistenciaAbierta && trabajoAsistencia && (
+                    {asistenciaAbierta && trabajoAsistencia && trabajoAsistencia.peso > 0 && (
                       <tr>
                         <FilaAsistenciaDetalle
                           alumnoId={al.id}
