@@ -179,7 +179,6 @@ function CeldaNota({
         )}
       </div>
 
-      {/* Texto discreto "ver" en gris oscuro para asistencia */}
       {esAsistencia && onToggleAsistencia && (
         <span
           onClick={(e) => {
@@ -197,6 +196,9 @@ function CeldaNota({
             userSelect: 'none',
             letterSpacing: '0.02em',
             transition: 'color 0.15s ease',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 2,
           }}
           onMouseEnter={e => {
             e.currentTarget.style.color = '#1e293b'
@@ -207,7 +209,11 @@ function CeldaNota({
             e.currentTarget.style.textDecoration = 'none'
           }}
         >
-          {estaAbiertoAsistencia ? 'ocultar' : 'ver'}
+          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span>{estaAbiertoAsistencia ? 'ocultar' : 'ver'}</span>
         </span>
       )}
     </div>
@@ -481,6 +487,19 @@ export default function TablaCalificaciones({
                   </button>
                 )
               })()}
+              {asistenciaAbiertaAlumnoId && (
+                <button
+                  onClick={() => setAsistenciaAbiertaAlumnoId(null)}
+                  title="Cerrar desglose de asistencia"
+                  style={{ width: 28, height: 28, borderRadius: 8, border: '1.5px solid #111827', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'white', color: '#111827' }}
+                  aria-label="Cerrar desglose de asistencia"
+                >
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -591,6 +610,8 @@ export default function TablaCalificaciones({
                 const asistenciaAbierta = asistenciaAbiertaAlumnoId === al.id
                 const rowBg = par ? '#fcfdfe' : 'white'
 
+                const trabajoAsistencia = trabajosOrdenados.find(t => t.es_asistencia)
+
                 return (
                   <Fragment key={al.id}>
                     <tr style={{ background: rowBg }}
@@ -605,7 +626,7 @@ export default function TablaCalificaciones({
                       
                       <td className="sticky-col-mat" style={{ background: rowBg, padding: '0.5rem 0.5rem', fontSize: '0.7rem', color: '#94a3b8', fontWeight: 500, borderBottom: '1px solid #eef1f6' }}>{al.matricula}</td>
 
-                      {/* CELDA OBSERVACIONES */}
+                      {/* CELDA OBSERVACIONES (DISEÑO ORIGINAL RESTAURADO) */}
                       <td className="sticky-col-obs" style={{
                         background: !obsContraido && tieneObs && !estaEditando ? '#fefce8' : rowBg,
                         borderLeft: !obsContraido && tieneObs && !estaEditando ? '3px solid #facc15' : 'none',
@@ -649,14 +670,14 @@ export default function TablaCalificaciones({
                                   onMouseEnter={e => e.currentTarget.style.background = '#e5e5ea'}
                                   onMouseLeave={e => e.currentTarget.style.background = '#f2f2f7'}
                                 >
-                                  Volver
+                                  Cancelar
                                 </button>
                                 <button
-                                  onClick={() => void handleGuardarObs(al.id)}
+                                  onClick={() => handleGuardarObs(al.id)}
                                   disabled={guardandoObsId === al.id}
-                                  style={{ background: '#007aff', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,122,255,0.2)' }}
-                                  onMouseEnter={e => e.currentTarget.style.background = '#0062cc'}
-                                  onMouseLeave={e => e.currentTarget.style.background = '#007aff'}
+                                  style={{ background: '#007aff', border: 'none', cursor: 'pointer', fontSize: '0.68rem', color: '#fff', fontWeight: 600, padding: '4px 12px', borderRadius: 6, opacity: guardandoObsId === al.id ? 0.6 : 1, transition: 'background 0.15s' }}
+                                  onMouseEnter={e => { if (guardandoObsId !== al.id) e.currentTarget.style.background = '#0062cc' }}
+                                  onMouseLeave={e => { if (guardandoObsId !== al.id) e.currentTarget.style.background = '#007aff' }}
                                 >
                                   {guardandoObsId === al.id ? 'Guardando...' : 'Guardar'}
                                 </button>
@@ -668,103 +689,117 @@ export default function TablaCalificaciones({
                             <span
                               onClick={() => handleIniciarEdicionObs(al.id)}
                               title={obsActual}
-                              style={{ fontSize: '0.75rem', color: '#854d0e', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 170, cursor: 'pointer' }}
+                              style={{
+                                fontSize: '0.76rem',
+                                color: '#9a6700',
+                                fontWeight: 600,
+                                textAlign: 'left',
+                                flex: 1,
+                                cursor: 'pointer',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
                             >
                               Ver observación
                             </span>
                             <button
-                              onClick={() => void handleEliminarObs(al.id)}
-                              disabled={guardandoObsId === al.id}
-                              style={{
-                                background: '#fef2f2',
-                                color: '#dc2626',
-                                border: '1px solid #fecaca',
-                                borderRadius: 6,
-                                padding: '3px 8px',
-                                fontSize: '0.65rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fecaca' }}
+                              onClick={() => handleEliminarObs(al.id)}
                               title="Borrar observación"
+                              style={{
+                                background: 'white',
+                                border: '1px solid #fecaca',
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                padding: '3px 10px',
+                                borderRadius: 6,
+                                flexShrink: 0
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'white'}
                             >
-                              {guardandoObsId === al.id ? '...' : 'Borrar'}
+                              Borrar
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleIniciarEdicionObs(al.id)}
-                            style={{
-                              background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 8,
-                              padding: '0.35rem 0.5rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 600,
-                              cursor: 'pointer', width: '100%', textAlign: 'center'
-                            }}
-                          >
-                            + Agregar
-                          </button>
+                          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                            <button
+                              onClick={() => handleIniciarEdicionObs(al.id)}
+                              title="Agregar observación"
+                              style={{
+                                background: 'white',
+                                border: '1px dashed #cbd5e1',
+                                color: '#64748b',
+                                cursor: 'pointer',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                padding: '5px 0',
+                                width: '100%',
+                                borderRadius: 8,
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.borderColor = '#94a3b8'
+                                e.currentTarget.style.color = '#1e293b'
+                                e.currentTarget.style.background = '#f8fafc'
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = '#cbd5e1'
+                                e.currentTarget.style.color = '#64748b'
+                                e.currentTarget.style.background = 'white'
+                              }}
+                            >
+                              + Agregar
+                            </button>
+                          </div>
                         )}
                       </td>
 
-                      {/* CELDAS DE NOTAS POR RUBRO */}
-                      {esCargaGlobal && trabajosOrdenados.length === 0 ? (
-                        Array.from({ length: 3 }).map((_, i) => (
-                          <td key={i} style={{ padding: '0.5rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6' }}>
-                            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e5e7eb', margin: '0 auto', animation: 'shimmer 1.2s infinite' }} />
+                      {/* Celdas de Notas o Asistencia */}
+                      {trabajosOrdenados.map((t, ti) => {
+                        const val = notas.get(`${t.id}:${al.id}`) ?? null
+                        return (
+                          <td key={t.id} style={{ padding: '0.35rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', background: rowBg }}>
+                            <CeldaNota
+                              valor={val}
+                              onGuardar={pts => onNotaChange(t.id, al.id, pts)}
+                              onNavegar={dir => handleNavegar(ai, ti, dir)}
+                              cellRef={el => {
+                                if (el) cellRefs.current.set(key(ai, ti), el)
+                                else cellRefs.current.delete(key(ai, ti))
+                              }}
+                              esAsistencia={t.es_asistencia}
+                              onToggleAsistencia={() => {
+                                setAsistenciaAbiertaAlumnoId(prev => prev === al.id ? null : al.id)
+                              }}
+                              estaAbiertoAsistencia={asistenciaAbierta}
+                            />
                           </td>
-                        ))
-                      ) : (
-                        trabajosOrdenados.map((t, ti) => {
-                          const cellKey = `${t.id}:${al.id}`
-                          const valorNota = notas.get(cellKey) ?? null
-                          const esAsis = t.es_asistencia || t.nombre.toLowerCase() === 'asistencia'
+                        )
+                      })}
 
-                          return (
-                            <td key={t.id} style={{ background: rowBg, padding: '0.35rem 0.375rem', textAlign: 'center', borderLeft: '1px solid #eef1f6', borderBottom: '1px solid #eef1f6', boxSizing: 'border-box' }}>
-                              <CeldaNota
-                                valor={valorNota}
-                                onGuardar={(pts) => onNotaChange(t.id, al.id, pts)}
-                                onNavegar={(dir) => handleNavegar(ai, ti, dir)}
-                                cellRef={(el) => {
-                                  if (el) cellRefs.current.set(key(ai, ti), el)
-                                  else cellRefs.current.delete(key(ai, ti))
-                                }}
-                                esAsistencia={esAsis}
-                                estaAbiertoAsistencia={asistenciaAbierta}
-                                onToggleAsistencia={() => setAsistenciaAbiertaAlumnoId(asistenciaAbierta ? null : al.id)}
-                              />
-                            </td>
-                          )
-                        })
-                      )}
-
-                      {/* CELDA CALIFICACIÓN FINAL */}
-                      <td className="col-final-cell" style={{ background: rowBg, padding: '0.5rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
-                        <div style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          minWidth: 42, height: 28, padding: '0 6px', borderRadius: 7,
-                          fontSize: '0.78rem', fontWeight: 800,
-                          color: notaFinal === null ? '#94a3b8' : (notaFinal >= 60 ? '#16a34a' : '#dc2626'),
-                          background: notaFinal === null ? '#f1f5f9' : (notaFinal >= 60 ? '#f0fdf4' : '#fef2f2'),
-                          border: '1px solid',
-                          borderColor: notaFinal === null ? '#e2e8f0' : (notaFinal >= 60 ? '#bbf7d0' : '#fecaca')
-                        }}>
-                          {notaFinal === null ? '—' : notaFinal}
+                      {/* Nota Final */}
+                      <td className="col-final-cell" style={{ background: rowBg, padding: '0.35rem 0.375rem', textAlign: 'center', borderLeft: '1.5px solid #e2e8f0', borderBottom: '1px solid #eef1f6' }}>
+                        <div style={{ width: '100%', height: '100%', minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ background: bgNota(notaFinal), color: colorNota(notaFinal), border: `1px solid ${notaFinal !== null && notaFinal >= 60 ? '#bbf7d0' : '#fecaca'}`, borderRadius: 7, padding: '3px 8px', fontSize: '0.75rem', fontWeight: 700, display: 'inline-block', minWidth: 32 }}>
+                            {notaFinal === null ? '—' : notaFinal}
+                          </span>
                         </div>
                       </td>
-
                     </tr>
 
-                    {/* FILA DESPLEGABLE DE HISTORIAL DE ASISTENCIA */}
-                    {asistenciaAbierta && (
-                      <tr style={{ background: '#f8fafc' }}>
+                    {/* Fila expandida de Asistencia Detallada */}
+                    {asistenciaAbierta && trabajoAsistencia && (
+                      <tr>
                         <FilaAsistenciaDetalle
                           alumnoId={al.id}
                           grupoId={grupoId}
                           asignaturaId={asignaturaId}
                           periodo={periodo}
                           colSpan={totalColumnas}
+                          onCerrar={() => setAsistenciaAbiertaAlumnoId(null)}
                         />
                       </tr>
                     )}

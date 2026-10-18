@@ -31,27 +31,39 @@ export default function FilaAsistenciaDetalle({
   grupoId,
   asignaturaId,
   colSpan,
+  onCerrar,
 }: {
   alumnoId: string
   grupoId: string
   asignaturaId: string
   periodo: string
   colSpan: number
+  onCerrar?: () => void
 }) {
   const supabase = createClient()
   const [asistencias, setAsistencias] = useState<AsistenciaRegistro[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Referencia y estados para el scroll de los meses
+  const containerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [visibleWidth, setVisibleWidth] = useState<number>(1000)
   const [scrollX, setScrollX] = useState(0)
   const [maxScrollX, setMaxScrollX] = useState(0)
 
   const updateScrollState = useCallback(() => {
+    if (containerRef.current) {
+      const scrollWrapper = containerRef.current.closest('div[style*="overflow"]') || containerRef.current.parentElement?.closest('div')
+      if (scrollWrapper instanceof HTMLElement) {
+        setVisibleWidth(scrollWrapper.clientWidth - 24)
+      } else {
+        setVisibleWidth(window.innerWidth - 48)
+      }
+    }
     const el = scrollContainerRef.current
-    if (!el) return
-    setScrollX(el.scrollLeft)
-    setMaxScrollX(el.scrollWidth - el.clientWidth)
+    if (el) {
+      setScrollX(el.scrollLeft)
+      setMaxScrollX(el.scrollWidth - el.clientWidth)
+    }
   }, [])
 
   function scrollBy(delta: number) {
@@ -60,6 +72,17 @@ export default function FilaAsistenciaDetalle({
     el.scrollBy({ left: delta, behavior: 'smooth' })
     setTimeout(updateScrollState, 250)
   }
+
+  useEffect(() => {
+    updateScrollState()
+    const observer = new ResizeObserver(() => updateScrollState())
+    if (containerRef.current) observer.observe(containerRef.current)
+    window.addEventListener('resize', updateScrollState)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateScrollState)
+    }
+  }, [updateScrollState])
 
   useEffect(() => {
     if (!alumnoId || !grupoId || !asignaturaId) {
@@ -96,7 +119,7 @@ export default function FilaAsistenciaDetalle({
     }
   }, [alumnoId, grupoId, asignaturaId, supabase])
 
-  // Agrupación de datos por mes y métricas
+  // Agrupación de datos por mes
   const { total, presentes, retardos, faltas, justificadas, mesesAgrupados } = useMemo(() => {
     const tot = asistencias.length
     const pres = asistencias.filter((a) => a.estado === 'presente').length
@@ -115,7 +138,11 @@ export default function FilaAsistenciaDetalle({
       const mesClave = `${anio}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}`
       const mesTitulo = `${mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)} ${anio}`
 
-      const diaNombreFmt = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1, 3)
+      let diaNombreFmt = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1, 3)
+      if (fechaObj.getDay() === 3) {
+        diaNombreFmt = 'Mié'
+      }
+
       const mesCortoFmt = mesCorto.charAt(0).toUpperCase() + mesCorto.slice(1, 3)
       const fechaFmt = `${diaNombreFmt}, ${diaNum}-${mesCortoFmt}`
 
@@ -126,9 +153,9 @@ export default function FilaAsistenciaDetalle({
       let label = 'Presente'
 
       if (a.estado === 'retardo') {
-        bg = '#fffbeb'
-        color = '#b45309'
-        border = '#fef08a'
+        bg = '#f3e8ff'
+        color = '#7c3aed'
+        border = '#ddd6fe'
         tag = 'R'
         label = 'Retardo'
       } else if (a.estado === 'ausente') {
@@ -184,12 +211,7 @@ export default function FilaAsistenciaDetalle({
   }, [asistencias])
 
   useEffect(() => {
-    const el = scrollContainerRef.current
-    if (!el) return
     updateScrollState()
-    const ro = new ResizeObserver(() => updateScrollState())
-    ro.observe(el)
-    return () => ro.disconnect()
   }, [updateScrollState, mesesAgrupados])
 
   const canScrollLeft = scrollX > 2
@@ -202,10 +224,10 @@ export default function FilaAsistenciaDetalle({
         padding: '0.85rem 1rem',
         borderBottom: '2px solid #cbd5e1',
         background: '#f8fafc',
-        width: '100%',
       }}
     >
       <div
+        ref={containerRef}
         style={{
           width: '100%',
           display: 'flex',
@@ -215,51 +237,52 @@ export default function FilaAsistenciaDetalle({
           position: 'relative',
         }}
       >
-        {/* ENCABEZADO FIJO / ANCLADO AL ANCHO VISIBLE DE LA PANTALLA */}
+        {/* HEADER ESTÁTICO FIJO AL ANCHO VISIBLE */}
         <div
           style={{
             position: 'sticky',
             left: 0,
-            width: '100vw',
-            maxWidth: 'calc(100vw - 60px)',
+            width: `${visibleWidth}px`,
+            maxWidth: 'calc(100vw - 32px)',
             zIndex: 10,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '0.5rem',
+            gap: '0.75rem',
             background: '#f8fafc',
-            paddingRight: '2rem',
             paddingBottom: '0.25rem',
+            boxSizing: 'border-box',
           }}
         >
-          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a5f', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>📅</span> Desglose de Asistencia — Días impartidos ({total})
-          </span>
-
+          {/* Lado izquierdo: Título y Badges */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e3a5f', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              <span>📅</span> Días de clase impartidos ({total})
+            </span>
+
             {total > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.68rem', fontWeight: 700, flexWrap: 'wrap' }}>
-                <span style={{ color: '#16a34a', background: '#f0fdf4', padding: '2px 8px', borderRadius: 6, border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.68rem', fontWeight: 700, flexWrap: 'wrap' }}>
+                <span style={{ color: '#16a34a', background: '#f0fdf4', padding: '3px 8px', borderRadius: 6, border: '1px solid #bbf7d0', whiteSpace: 'nowrap' }}>
                   ✓ {presentes} Asistencias
                 </span>
-                <span style={{ color: '#d97706', background: '#fffbeb', padding: '2px 8px', borderRadius: 6, border: '1px solid #fef08a', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ color: '#7c3aed', background: '#f3e8ff', padding: '3px 8px', borderRadius: 6, border: '1px solid #ddd6fe', whiteSpace: 'nowrap' }}>
                   ⏱ {retardos} Retardos
                 </span>
-                <span style={{ color: '#dc2626', background: '#fef2f2', padding: '2px 8px', borderRadius: 6, border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ color: '#dc2626', background: '#fef2f2', padding: '3px 8px', borderRadius: 6, border: '1px solid #fecaca', whiteSpace: 'nowrap' }}>
                   ✕ {faltas} Faltas
                 </span>
-                {justificadas > 0 && (
-                  <span style={{ color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6, border: '1px solid #bfdbfe', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                    📄 {justificadas} Justificadas
-                  </span>
-                )}
+                <span style={{ color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: 6, border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
+                  📄 {justificadas} Justificadas
+                </span>
               </div>
             )}
+          </div>
 
-            {/* Flechas con borde y color negro ancladas */}
+          {/* Lado derecho: Flechas de navegación + Botón de Cierre (✕) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
             {!loading && mesesAgrupados.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', zIndex: 11, pointerEvents: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <button
                   type="button"
                   onClick={() => scrollBy(-260)}
@@ -268,20 +291,21 @@ export default function FilaAsistenciaDetalle({
                     width: 28,
                     height: 28,
                     borderRadius: 8,
-                    border: `1.5px solid ${!canScrollLeft ? '#d1d5db' : '#111827'}`,
+                    border: `1.5px solid ${!canScrollLeft ? '#e2e8f0' : '#111827'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: !canScrollLeft ? 'default' : 'pointer',
                     background: '#ffffff',
-                    color: !canScrollLeft ? '#d1d5db' : '#111827',
-                    opacity: !canScrollLeft ? 0.45 : 1,
+                    color: !canScrollLeft ? '#cbd5e1' : '#111827',
+                    opacity: !canScrollLeft ? 0.35 : 1,
+                    boxShadow: canScrollLeft ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                   aria-label="Meses anteriores"
                   title="Meses anteriores"
                 >
-                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M15 18l-6-6 6-6" />
                   </svg>
                 </button>
@@ -294,29 +318,69 @@ export default function FilaAsistenciaDetalle({
                     width: 28,
                     height: 28,
                     borderRadius: 8,
-                    border: `1.5px solid ${!canScrollRight ? '#d1d5db' : '#111827'}`,
+                    border: `1.5px solid ${!canScrollRight ? '#e2e8f0' : '#111827'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: !canScrollRight ? 'default' : 'pointer',
                     background: '#ffffff',
-                    color: !canScrollRight ? '#d1d5db' : '#111827',
-                    opacity: !canScrollRight ? 0.45 : 1,
+                    color: !canScrollRight ? '#cbd5e1' : '#111827',
+                    opacity: !canScrollRight ? 0.35 : 1,
+                    boxShadow: canScrollRight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                   aria-label="Siguientes meses"
                   title="Siguientes meses"
                 >
-                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 18l6-6-6-6" />
                   </svg>
                 </button>
               </div>
             )}
+
+            {/* BOTÓN CERRAR ✕ */}
+            {onCerrar && (
+              <button
+                type="button"
+                onClick={onCerrar}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  border: '1.5px solid #111827',
+                  background: '#ffffff',
+                  color: '#111827',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  transition: 'all 0.15s ease',
+                  marginLeft: '0.2rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#fef2f2'
+                  e.currentTarget.style.borderColor = '#dc2626'
+                  e.currentTarget.style.color = '#dc2626'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#ffffff'
+                  e.currentTarget.style.borderColor = '#111827'
+                  e.currentTarget.style.color = '#111827'
+                }}
+                title="Cerrar desglose"
+                aria-label="Cerrar desglose"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
-        {/* CONTENIDO DESPLAZABLE (TABLAS POR MES) */}
+        {/* CONTENEDOR DESLIZABLE HORIZONTAL DE LAS TABLAS */}
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: '#94a3b8', padding: '0.5rem 0' }}>
             <div style={{ width: 14, height: 14, border: '2px solid #cbd5e1', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.5s linear infinite' }} />
@@ -334,20 +398,26 @@ export default function FilaAsistenciaDetalle({
               display: 'flex',
               gap: '0.75rem',
               overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-x',
               paddingBottom: '0.4rem',
               scrollBehavior: 'smooth',
               scrollbarWidth: 'thin',
               scrollbarColor: '#cbd5e1 transparent',
-              width: '100%',
+              width: `${visibleWidth}px`,
+              maxWidth: 'calc(100vw - 32px)',
+              position: 'sticky',
+              left: 0,
+              boxSizing: 'border-box',
             }}
           >
             {mesesAgrupados.map((grupo) => (
               <div
                 key={grupo.titulo}
                 style={{
-                  minWidth: 220,
-                  flex: '1 0 220px',
-                  maxWidth: 280,
+                  minWidth: 210,
+                  flex: '0 0 220px',
+                  maxWidth: 260,
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
                   borderRadius: 8,
